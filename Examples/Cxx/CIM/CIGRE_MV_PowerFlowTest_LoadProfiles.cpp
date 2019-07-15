@@ -83,7 +83,7 @@ int main(int argc, char** argv){
 	CSVReader csvreader(simName, loadProfilePath, assignList, Logger::Level::info);
 	csvreader.assignLoadProfile(system, 0, 1.5, 15, CSVReader::Mode::MANUAL);
 
-	auto logger = DPsim::DataLogger::make(simName);
+	auto logger = DPsim::CSVDataLogger::make(simName);
 	for (auto node : system.mNodes)
 	{
 		logger->addAttribute(node->name(), node->attribute("v"));

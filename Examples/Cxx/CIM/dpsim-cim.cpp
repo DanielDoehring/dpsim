@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
 
 	Simulation sim(simName, sys, args.timeStep, args.duration, args.solver.domain, args.solver.type);
 
-	// ToDO: add DataLoggers
+	// ToDO: add CSVDataLoggers
 
 	sim.run();
 

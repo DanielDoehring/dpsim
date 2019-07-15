@@ -89,7 +89,7 @@ int main(int argc, char* argv[]) {
 	fault->connect({Node::GND, n1});
 
 	// Logging
-	auto logger = DataLogger::make(simName);
+	auto logger = CSVDataLogger::make(simName);
 	logger->addAttribute("v1", n1->attribute("v"));
 	logger->addAttribute("i_gen", gen->attribute("i_intf"));
 

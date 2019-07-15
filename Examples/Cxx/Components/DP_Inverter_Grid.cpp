@@ -96,8 +96,13 @@ int main(int argc, char* argv[]) {
 	sim.doHarmonicParallelization(false);
 
 	// Logging
+<<<<<<< HEAD:Examples/Cxx/Components/DP_Inverter_Grid.cpp
 	auto logger = DataLogger::make(simName);
 	logger->addAttribute("v1", n1->attributeMatrixComp("v"), 1, 9);
+=======
+	auto logger = CSVDataLogger::make(simName);
+	logger->addAttribute("v1", n1->attributeMatrixComp("v"), 1, 5);
+>>>>>>> examples: use new CSVDataLogger class:Examples/Cxx/Inverter/DP_Inverter_Grid_Test.cpp
 	logger->addAttribute("v2", n2->attributeMatrixComp("v"), 1, 1);
 	logger->addAttribute("v3", n3->attributeMatrixComp("v"), 1, 9);
 	logger->addAttribute("v4", n4->attributeMatrixComp("v"), 1, 1);

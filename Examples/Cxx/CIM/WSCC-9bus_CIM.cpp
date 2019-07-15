@@ -49,7 +49,7 @@ int main(int argc, char *argv[]) {
 	SystemTopology sys = reader.loadCIM(60, filenames);
 
 	// Logging
-	auto logger = DataLogger::make(simName);
+	auto logger = CSVDataLogger::make(simName);
 	logger->addAttribute("v1", sys.node<Node>("BUS1")->attribute("v"));
 	logger->addAttribute("v2", sys.node<Node>("BUS2")->attribute("v"));
 	logger->addAttribute("v3", sys.node<Node>("BUS3")->attribute("v"));

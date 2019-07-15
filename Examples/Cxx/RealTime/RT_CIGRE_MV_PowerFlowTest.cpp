@@ -52,7 +52,7 @@ int main(int argc, char** argv){
     CIM::Reader reader(simName, Logger::Level::debug, Logger::Level::off);
     SystemTopology system = reader.loadCIM(system_freq, filenames, CPS::Domain::SP);
 
-	auto logger = DPsim::DataLogger::make(simName);
+	auto logger = DPsim::CSVDataLogger::make(simName);
 	for (auto node : system.mNodes)
 	{
 		logger->addAttribute(node->name(), node->attribute("v"));

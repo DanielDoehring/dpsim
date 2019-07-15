@@ -100,6 +100,22 @@ int main(int argc, char* argv[]) {
 	sim.setTimeStep(timeStep);
 	sim.setFinalTime(finalTime);
 	sim.doHarmonicParallelization(true);
+<<<<<<< HEAD:Examples/Cxx/Components/DP_Inverter_Grid_Sequential_FreqSplit.cpp
+=======
+	sim.initialize();
+	sim.setScheduler(scheduler);
+
+	// Logging
+	auto logger = CSVDataLogger::make(simName);
+	logger->addAttribute("v1", n1->attributeMatrixComp("v"), 1, 5);
+	logger->addAttribute("v2", n2->attributeMatrixComp("v"), 1, 1);
+	logger->addAttribute("v3", n3->attributeMatrixComp("v"), 1, 5);
+	logger->addAttribute("v4", n4->attributeMatrixComp("v"), 1, 1);
+	logger->addAttribute("v5", n5->attributeMatrixComp("v"), 1, 1);
+	logger->addAttribute("i12", r1->attributeMatrixComp("i_intf"), 1, 1);
+	logger->addAttribute("i34", r2->attributeMatrixComp("i_intf"), 1, 1);
+	//sim.addLogger(logger);
+>>>>>>> examples: use new CSVDataLogger class:Examples/Cxx/Inverter/DP_Vsrc_Grid_Parallel.cpp
 
 	sim.run();
 	sim.logStepTimes(simName + "_step_times");

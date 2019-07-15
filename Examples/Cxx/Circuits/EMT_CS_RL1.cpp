@@ -51,8 +51,13 @@ int main(int argc, char* argv[]) {
 	// Define system topology
 	auto sys = SystemTopology(50, SystemNodeList{n1}, SystemComponentList{cs, r1, l1});
 
+<<<<<<< HEAD:Examples/Cxx/Circuits/EMT_CS_RL1.cpp
 	// Logger
 	auto logger = DataLogger::make(simName);
+=======
+	// Logging
+	auto logger = CSVDataLogger::make(simName);
+>>>>>>> examples: use new CSVDataLogger class:Examples/Cxx/Circuits/EMT_CS_R1.cpp
 	logger->addAttribute("v1", n1->attribute("v"));
 	logger->addAttribute("iR1", r1->attribute("i_intf"));
 	logger->addAttribute("iL1", l1->attribute("i_intf"));

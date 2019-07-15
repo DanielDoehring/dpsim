@@ -19,7 +19,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *********************************************************************************/
 
-
 #include <DPsim.h>
 
 using namespace DPsim;
@@ -27,49 +26,54 @@ using namespace CPS::DP;
 using namespace CPS::DP::Ph1;
 
 int main(int argc, char* argv[]) {
+	// Define simulation scenario
+	Real timeStep = 0.0001;
+	Real finalTime = 0.1;
+	String simName = "DP_VS_R2L3";
+	Logger::setLogDir("logs/"+simName);
+
 	// Nodes
 	auto n1 = Node::make("n1");
 	auto n2 = Node::make("n2");
 	auto n3 = Node::make("n3");
+	auto n4 = Node::make("n4");
 
 	// Components
-	auto v1 = VoltageSource::make("v_1");
-//	auto l1 = Inductor::make("l_1");
-//	auto r2 = Resistor::make("r_2");
-	auto t1 = Transformer::make("trafo_1");
+	auto vs = VoltageSource::make("vs");
+	vs->setParameters(10);
 	auto r1 = Resistor::make("r_1");
+	r1->setParameters(1);
+	auto l1 = Inductor::make("l_1");
+	l1->setParameters(0.02);
+	auto l2 = Inductor::make("l_2");
+	l2->setParameters(0.1);
+	auto l3 = Inductor::make("l_3");
+	l3->setParameters(0.05);
+	auto r2 = Resistor::make("r_2");
+	r2->setParameters(2);
 
 	// Topology
-	v1->connect({ Node::GND, n1 });
-//	l1->connect({ n1, n2 });
-//	r2->connect({ n2, Node::GND });
-	t1->connect({ n1, n2 });
-	r1->connect({ n2, Node::GND });
+	vs->connect(Node::List{ Node::GND, n1 });
+	r1->connect(Node::List{ n1, n2 });
+	l1->connect(Node::List{ n2, n3 });
+	l2->connect(Node::List{ n3, Node::GND });
+	l3->connect(Node::List{ n3, n4 });
+	r2->connect(Node::List{ n4, Node::GND });
 
-	// Parameters
-	v1->setParameters(CPS::Math::polarDeg(100., 0 * -90.));
-//	l1->setParameters(0.1);
-//	r2->setParameters(1);
-	t1->setParameters(10, 0, 0, 0.1);
-	r1->setParameters(1);
+	auto sys = SystemTopology(50, SystemNodeList{n1, n2, n3, n4}, SystemComponentList{vs, r1, l1, l2, l3, r2});
 
-<<<<<<< HEAD:Examples/Cxx/Circuits/DP_VS_Trafo_R.cpp
-	// Define system topology
-	SystemTopology system(50, SystemNodeList{n1, n2, n3, Node::GND}, SystemComponentList{v1, t1, r1});
-=======
 	// Logging
 	auto logger = CSVDataLogger::make(simName);
 	logger->addAttribute("v1", n1->attribute("v"));
 	logger->addAttribute("v2", n2->attribute("v"));
+	logger->addAttribute("v3", n3->attribute("v"));
+	logger->addAttribute("v4", n4->attribute("v"));
 	logger->addAttribute("i12", r1->attribute("i_intf"));
->>>>>>> examples: use new CSVDataLogger class:Examples/Cxx/Circuits/EMT_VS_RC1.cpp
+	logger->addAttribute("i34", l3->attribute("i_intf"));
 
-	// Define simulation scenario
-	Real timeStep = 0.00005;
-	Real finalTime = 0.2;
-	String simName = "DP_IdealVS_Trafo_" + std::to_string(timeStep);
+	Simulation sim(simName, sys, timeStep, finalTime);
+	sim.addLogger(logger);
 
-	Simulation sim(simName, system, timeStep, finalTime);
 	sim.run();
 
 	return 0;

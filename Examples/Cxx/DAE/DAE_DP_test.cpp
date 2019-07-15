@@ -52,7 +52,13 @@ int main(int argc, char* argv[])
     //ll->setParameters(1);
 	rL->setParameters(1000);
 
+<<<<<<< HEAD:Examples/Cxx/DAE/DAE_DP_test.cpp
 	String simName = "DAE_DP_test" + std::to_string(timeStep);
+=======
+	// Logging
+	auto logger = CSVDataLogger::make(simName);
+	logger->addAttribute("v1", n1->attribute("v"));
+>>>>>>> examples: use new CSVDataLogger class:Examples/Cxx/Circuits/EMT_VS_R1.cpp
 
     auto sys = SystemTopology(50, SystemNodeList{Node::GND, n1, n2}, SystemComponentList{vs, rl, rL});
 	Simulation sim(simName, sys, timeStep, 1.0, Domain::DP, Solver::Type::DAE);

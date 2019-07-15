@@ -27,38 +27,51 @@ using namespace CPS::EMT::Ph1;
 
 int main(int argc, char* argv[]) {
 	// Define simulation scenario
-	Real timeStep = 0.0001;
-	Real finalTime = 0.1;
-	String simName = "EMT_VS_RL1";
+	Real timeStep = 0.01;
+	Real finalTime = 0.2;
+	String simName = "EMT_VS_RL_f60_largeTs";
 	Logger::setLogDir("logs/"+simName);
 
 	// Nodes
 	auto n1 = Node::make("n1");
 	auto n2 = Node::make("n2");
+	auto n3 = Node::make("n3");
 
 	// Components
 	auto vs = VoltageSource::make("vs");
-	vs->setParameters(Complex(10, 0), 50);
-	auto r1 = Resistor::make("r_1");
-	r1->setParameters(5);
-	auto l1 = Inductor::make("l_1");
-	l1->setParameters(0.02);
+	vs->setParameters(Complex(230, 0), 60);
+	auto rline = Resistor::make("r_line");
+	rline->setParameters(1);
+	auto lline = Inductor::make("l_line");
+	lline->setParameters(0.02);
+	auto rload = Resistor::make("r_load");
+	rload->setParameters(10);
 
-	// Topology
-	vs->connect(Node::List{ Node::GND, n1 });
-	r1->connect(Node::List{ n1, n2 });
-	l1->connect(Node::List{ n2, Node::GND });
+	// Connections
+	vs->connect({ Node::GND, n1 });
+	rline->connect({ n1, n2 });
+	lline->connect({ n2, n3 });
+	rload->connect({ n3, Node::GND });
 
 	// Define system topology
-	auto sys = SystemTopology(50, SystemNodeList{n1, n2}, SystemComponentList{vs, r1, l1});
+	auto sys = SystemTopology(50,
+		SystemNodeList{n1, n2, n3},
+		SystemComponentList{vs, rline, lline, rload});
 
 	// Logger
 	auto logger = CSVDataLogger::make(simName);
-	logger->addAttribute("v1", n1->attribute("v"));
-	logger->addAttribute("v2", n2->attribute("v"));
-	logger->addAttribute("i12", r1->attribute("i_intf"));
+	logger->addAttribute("v1", n1->attributeMatrixReal("v"));
+	logger->addAttribute("v2", n2->attributeMatrixReal("v"));
+	logger->addAttribute("v3", n3->attributeMatrixReal("v"));
+	logger->addAttribute("i_line", rline->attributeMatrixReal("i_intf"));
 
-	Simulation sim(simName, sys, timeStep, finalTime, Domain::EMT);
+	Simulation sim(simName, Logger::Level::INFO);
+	sim.setSystem(sys);
+	sim.setTimeStep(timeStep);
+	sim.setFinalTime(finalTime);
+	sim.setDomain(Domain::EMT);
+	sim.initialize();
+
 	sim.addLogger(logger);
 
 	sim.run();

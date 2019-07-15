@@ -67,7 +67,7 @@ int main(int argc, char* argv[]) {
 	auto sys = SystemTopology(60, SystemNodeList{n1}, SystemComponentList{gen, load});
 
 	// Logging
-	auto logger = DataLogger::make(simName);
+	auto logger = CSVDataLogger::make(simName);
 	logger->addAttribute("v1", n1->attributeMatrixComp("v"));
 	logger->addAttribute("i_gen", gen->attributeMatrixComp("i_intf"));
 	logger->addAttribute("i_load", load->attributeMatrixComp("i_intf"));

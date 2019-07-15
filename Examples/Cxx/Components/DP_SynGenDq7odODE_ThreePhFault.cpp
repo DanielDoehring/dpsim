@@ -90,7 +90,14 @@ int main(int argc, char* argv[]) {
 	fault->connect({Node::GND, n1});
 
 	// Logging
+<<<<<<< HEAD
 	auto logger = DataLogger::make(simName);
+=======
+	auto logger = CSVDataLogger::make(simName);
+	//logger->addAttribute("v1", n1->attribute("v"));
+	//logger->addAttribute("i_gen", gen->attribute("i_intf"));
+	//logger->addAttribute("i_load", res->attribute("i_intf"));
+>>>>>>> examples: use new CSVDataLogger class
 	logger->addAttribute("v1", n1->attributeMatrixComp("v"));
 	logger->addAttribute("i_gen", gen->attributeMatrixComp("i_intf"));
 	logger->addAttribute("i_load", res->attributeMatrixComp("i_intf"));

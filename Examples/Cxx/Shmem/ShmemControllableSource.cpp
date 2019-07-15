@@ -44,8 +44,15 @@ int main(int argc, char *argv[]) {
 	ecs->connect({ Node::GND, n1 });
 	r1->connect({ Node::GND, n1 });
 
+<<<<<<< HEAD:Examples/Cxx/Shmem/ShmemControllableSource.cpp
 	ecs->setAttributeRef("I_ref", intf.importComplex(0));
 	intf.exportComplex(ecs->attributeMatrixComp("v_intf")->coeff(0, 0), 0);
+=======
+	// Logging
+	auto logger = CSVDataLogger::make(simName);
+	logger->addAttribute("v1", n1->attribute("v"));
+	logger->addAttribute("i10", r1->attribute("i_intf"));
+>>>>>>> examples: use new CSVDataLogger class:Examples/Cxx/Circuits/DP_CS_R1.cpp
 
 	auto sys = SystemTopology(50, SystemNodeList{n1}, SystemComponentList{ecs, r1});
 	RealTimeSimulation sim(simName, sys, timeStep, finalTime,

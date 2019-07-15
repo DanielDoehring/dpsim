@@ -54,7 +54,7 @@ int main(int argc, char* argv[]) {
 		SystemComponentList{vs, r1, l1});
 
 	// Logger
-	auto logger = DataLogger::make(simName);
+	auto logger = CSVDataLogger::make(simName);
 	logger->addAttribute("v1", n1->attribute("v"));
 	logger->addAttribute("v2", n2->attribute("v"));
 	logger->addAttribute("i12", r1->attribute("i_intf"));

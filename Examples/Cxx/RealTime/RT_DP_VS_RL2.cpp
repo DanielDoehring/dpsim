@@ -56,7 +56,13 @@ int main(int argc, char* argv[]) {
 		SystemNodeList{Node::GND, n1, n2, n3},
 		SystemComponentList{vs, rl, ll, rL});
 
+<<<<<<< HEAD:Examples/Cxx/RealTime/RT_DP_VS_RL2.cpp
 	RealTimeSimulation sim(simName, sys, timeStep, finalTime);
+=======
+	// Logging
+	auto logger = CSVDataLogger::make(simName);
+	logger->addAttribute("v1", n1->attribute("v"));
+>>>>>>> examples: use new CSVDataLogger class:Examples/Cxx/Circuits/DP_VS_R1.cpp
 
 	auto startIn = std::chrono::seconds(5);
 	sim.run(startIn);
