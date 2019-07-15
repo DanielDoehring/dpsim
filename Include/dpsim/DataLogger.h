@@ -67,12 +67,12 @@ namespace DPsim {
 			open();
 		}
 
-		void addAttribute(const String &name, CPS::AttributeBase::Ptr attr);
-		void addAttribute(const String &name, CPS::Attribute<Int>::Ptr attr);
-		void addAttribute(const String &name, CPS::Attribute<Real>::Ptr attr);
-		void addAttribute(const String &name, CPS::Attribute<Complex>::Ptr attr);
-		void addAttribute(const String &name, CPS::MatrixRealAttribute::Ptr attr);
-		void addAttribute(const String &name, CPS::MatrixCompAttribute::Ptr attr, UInt rowsMax = 0, UInt colsMax = 0);
+		virtual void addAttribute(const String &name, CPS::AttributeBase::Ptr attr);
+		virtual void addAttribute(const String &name, CPS::Attribute<Int>::Ptr attr);
+		virtual void addAttribute(const String &name, CPS::Attribute<Real>::Ptr attr);
+		virtual void addAttribute(const String &name, CPS::Attribute<Complex>::Ptr attr);
+		virtual void addAttribute(const String &name, CPS::MatrixRealAttribute::Ptr attr);
+		virtual void addAttribute(const String &name, CPS::MatrixCompAttribute::Ptr attr, UInt rowsMax = 0, UInt colsMax = 0);
 
 		template<typename VarType>
 		void addNode(typename CPS::Node<VarType>::Ptr node) {
