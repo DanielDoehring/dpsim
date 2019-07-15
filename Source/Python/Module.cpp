@@ -36,11 +36,17 @@
 #include <dpsim/Python/Simulation.h>
 #include <dpsim/Python/LoadCim.h>
 #include <dpsim/Python/Logger.h>
-#ifndef _MSC_VER
-#include <dpsim/Python/Interface.h>
+
+#ifdef WITH_SHMEM
+  #include <dpsim/Python/Interface.h>
 #endif
 
 #include <cps/Components.h>
+
+#ifdef WITH_NUMPY
+  #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
+  #include <numpy/arrayobject.h>
+#endif
 
 using namespace DPsim::Python;
 
@@ -159,6 +165,10 @@ PyMODINIT_FUNC PyInit__dpsim(void) {
 	PyModule_AddObject(m, "_dp_Node", (PyObject*) &Node<CPS::Complex>::type);
 	Py_INCREF(&Node<CPS::Real>::type);
 	PyModule_AddObject(m, "_emt_Node", (PyObject*) &Node<CPS::Real>::type);
+
+#ifdef WITH_NUMPY
+	import_array();
+#endif
 
 	return m;
 }
