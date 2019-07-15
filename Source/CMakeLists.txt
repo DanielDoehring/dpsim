@@ -8,6 +8,7 @@ set(SOURCES
 	Timer.cpp
 	Event.cpp
 	DataLogger.cpp
+	CSVDataLogger.cpp
 	Scheduler.cpp
 	SequentialScheduler.cpp
 	ThreadScheduler.cpp

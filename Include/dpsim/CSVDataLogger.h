@@ -1,5 +1,4 @@
-/** Python Logger
- *
+/*
  * @file
  * @author Steffen Vogel <stvogel@eonerc.rwth-aachen.de>
  * @copyright 2017-2018, Institute for Automation of Complex Power Systems, EONERC
@@ -22,41 +21,34 @@
 
 #pragma once
 
-#ifdef _DEBUG
-#undef _DEBUG
-#include <Python.h>
-#define _DEBUG
-#else
-#include <Python.h>
-#endif
+#include <experimental/filesystem>
+namespace fs = std::experimental::filesystem;
 
-#include <cps/Definitions.h>
+#include <dpsim/DataLogger.h>
 
 namespace DPsim {
-	class CSVDataLogger;
 
-namespace Python {
+	class CSVDataLogger : public DataLogger, public SharedFactory<CSVDataLogger> {
+	protected:
+		std::ofstream mLogFile;
+		fs::path mLogFileName;
 
-	// Thin Python wrapper around Logger
-	struct Logger {
-		PyObject_HEAD
+		void logDataLine(Real time, Real data);
+		void logDataLine(Real time, const Matrix& data);
+		void logDataLine(Real time, const MatrixComp& data);
 
-		std::vector<PyObject *> refs;
+	public:
+		using Ptr = std::shared_ptr<CSVDataLogger>;
 
-		DPsim::CSVDataLogger::Ptr logger;
-		const char *filename;
+		CSVDataLogger(String name, Bool enabled = true, UInt downsampling = 1);
 
-		static void dealloc(Logger *self);
+		void logPhasorNodeValues(Real time, const Matrix& data);
+		void logEMTNodeValues(Real time, const Matrix& data);
+		void setColumnNames(std::vector<String> names);
 
-		static int init(Logger *self, PyObject *args, PyObject *kwds);
-		static PyObject* newfunc(PyTypeObject *type, PyObject *args, PyObject *kwds);
-		static PyObject* logAttribute(Logger *self, PyObject *args, PyObject *kwargs);
+		virtual void close();
+		virtual void open();
 
-		static PyMethodDef methods[];
-		static PyMemberDef members[];
-		static PyTypeObject type;
-		static const char* doc;
-		static const char* docLogAttribute;
+		virtual void log(Real time, Int timeStepCount);
 	};
-}
-}
+};

@@ -21,7 +21,7 @@
 
 #include <dpsim/Config.h>
 
-#include <dpsim/DataLogger.h>
+#include <dpsim/CSVDataLogger.h>
 #include <dpsim/Python/Logger.h>
 #include <dpsim/Python/Component.h>
 #include <cps/AttributeList.h>
@@ -37,7 +37,7 @@ PyObject* Python::Logger::newfunc(PyTypeObject *type, PyObject *args, PyObject *
 	self = (Python::Logger*) type->tp_alloc(type, 0);
 	if (self) {
 		using PyObjectVector = std::vector<PyObject *>;
-		using SharedLoggerPtr = std::shared_ptr<DPsim::DataLogger>;
+		using SharedLoggerPtr = std::shared_ptr<DPsim::CSVDataLogger>;
 
 		new (&self->refs) PyObjectVector();
 		new (&self->logger) SharedLoggerPtr();
@@ -49,7 +49,7 @@ PyObject* Python::Logger::newfunc(PyTypeObject *type, PyObject *args, PyObject *
 void Python::Logger::dealloc(Python::Logger* self)
 {
 	using PyObjectVector = std::vector<PyObject *>;
-	using SharedLoggerPtr = std::shared_ptr<DPsim::DataLogger>;
+	using SharedLoggerPtr = std::shared_ptr<DPsim::CSVDataLogger>;
 
 	for (PyObject *pyRef : self->refs)
 		Py_DECREF(pyRef);
@@ -127,7 +127,7 @@ int Python::Logger::init(Python::Logger *self, PyObject *args, PyObject *kwds)
 		return -1;
 	}
 
-	self->logger = DPsim::DataLogger::make(self->filename, true, downsampling);
+	self->logger = DPsim::CSVDataLogger::make(self->filename, true, downsampling);
 
 	return 0;
 }

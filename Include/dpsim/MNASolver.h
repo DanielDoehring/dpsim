@@ -28,7 +28,7 @@
 #include <bitset>
 
 #include <dpsim/Solver.h>
-#include <dpsim/DataLogger.h>
+#include <dpsim/CSVDataLogger.h>
 #include <cps/AttributeList.h>
 #include <cps/Solver/MNASwitchInterface.h>
 #include <cps/SignalComponent.h>
@@ -104,9 +104,9 @@ namespace DPsim {
 		/// Last simulation time step when log was updated
 		Int mLastLogTimeStep = 0;
 		/// Left side vector logger
-		std::shared_ptr<DataLogger> mLeftVectorLog;
+		std::shared_ptr<CSVDataLogger> mLeftVectorLog;
 		/// Right side vector logger
-		std::shared_ptr<DataLogger> mRightVectorLog;
+		std::shared_ptr<CSVDataLogger> mRightVectorLog;
 
 		/// Initialization of individual components
 		void initializeComponents();

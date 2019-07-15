@@ -36,10 +36,9 @@ namespace fs = std::experimental::filesystem;
 
 namespace DPsim {
 
-	class DataLogger : public SharedFactory<DataLogger> {
+	class DataLogger {
 
 	protected:
-		std::ofstream mLogFile;
 		String mName;
 		Bool mEnabled;
 		UInt mDownsampling;
@@ -47,15 +46,10 @@ namespace DPsim {
 
 		std::map<String, CPS::AttributeBase::Ptr> mAttributes;
 
-		void logDataLine(Real time, Real data);
-		void logDataLine(Real time, const Matrix& data);
-		void logDataLine(Real time, const MatrixComp& data);
-
 	public:
 		typedef std::shared_ptr<DataLogger> Ptr;
 		typedef std::vector<DataLogger::Ptr> List;
 
-		DataLogger(Bool enabled = true);
 		DataLogger(String name, Bool enabled = true, UInt downsampling = 1);
 
 		void open();
@@ -68,7 +62,10 @@ namespace DPsim {
 		void logPhasorNodeValues(Real time, const Matrix& data, Int freqNum = 1);
 		void logEMTNodeValues(Real time, const Matrix& data);
 
-		void setColumnNames(std::vector<String> names);
+		virtual void reset() {
+			close();
+			open();
+		}
 
 		void addAttribute(const String &name, CPS::AttributeBase::Ptr attr);
 		void addAttribute(const String &name, CPS::Attribute<Int>::Ptr attr);
@@ -81,8 +78,6 @@ namespace DPsim {
 		void addNode(typename CPS::Node<VarType>::Ptr node) {
 			addAttribute(node->name() + ".voltage", node->attributeMatrix("voltage"));
 		}
-
-		void log(Real time, Int timeStepCount);
 
 		CPS::Task::Ptr getTask();
 

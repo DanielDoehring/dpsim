@@ -24,7 +24,7 @@
 #include <cps/AttributeList.h>
 #include <cps/Solver/MNAInterface.h>
 #include <cps/SignalComponent.h>
-#include <dpsim/DataLogger.h>
+#include <dpsim/CSVDataLogger.h>
 #include <dpsim/Solver.h>
 
 #include <unordered_map>

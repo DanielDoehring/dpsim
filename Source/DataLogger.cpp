@@ -25,13 +25,6 @@
 
 using namespace DPsim;
 
-DataLogger::DataLogger(Bool enabled) :
-	mLogFile(),
-	mEnabled(enabled),
-	mDownsampling(1) {
-	mLogFile.setstate(std::ios_base::badbit);
-}
-
 DataLogger::DataLogger(String name, Bool enabled, UInt downsampling) :
 	mName(name),
 	mEnabled(enabled),

@@ -24,7 +24,7 @@
 #include <vector>
 
 #include <dpsim/Config.h>
-#include <dpsim/DataLogger.h>
+#include <dpsim/CSVDataLogger.h>
 #include <dpsim/Solver.h>
 #include <dpsim/Scheduler.h>
 #include <dpsim/Event.h>
