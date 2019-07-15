@@ -21,7 +21,7 @@
 #include <iomanip>
 
 #include <dpsim/CSVDataLogger.h>
-#include <cps/Logger.h>
+#include <fmt/core.h>
 
 using namespace DPsim;
 
