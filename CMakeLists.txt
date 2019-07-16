@@ -68,7 +68,6 @@ add_subdirectory(Dependencies/libcps)
 
 find_package(PythonInterp 3.6)
 find_package(PythonLibs 3.6)
-find_package(NumPy)
 find_package(Sundials)
 
 find_package(OpenMP)
