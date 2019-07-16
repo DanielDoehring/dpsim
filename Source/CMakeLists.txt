@@ -44,6 +44,11 @@ if(WITH_PYTHON)
 	list(APPEND INCLUDE_DIRS ${PYTHON_INCLUDE_DIRS})
 	#list(APPEND LIBRARIES ${PYTHON_LIBRARIES})
 
+	if (WITH_NUMPY)
+		list(APPEND SOURCES PythonDataLogger.cpp)
+		list(APPEND INCLUDE_DIRS ${NUMPY_INCLUDE_DIRS})
+	endif()
+
 	add_subdirectory(Python)
 endif()
 

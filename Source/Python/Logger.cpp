@@ -21,7 +21,7 @@
 
 #include <dpsim/Config.h>
 
-#include <dpsim/CSVDataLogger.h>
+#include <dpsim/PythonDataLogger.h>
 #include <dpsim/Python/Logger.h>
 #include <dpsim/Python/Component.h>
 #include <cps/AttributeList.h>
@@ -37,7 +37,7 @@ PyObject* Python::Logger::newfunc(PyTypeObject *type, PyObject *args, PyObject *
 	self = (Python::Logger*) type->tp_alloc(type, 0);
 	if (self) {
 		using PyObjectVector = std::vector<PyObject *>;
-		using SharedLoggerPtr = std::shared_ptr<DPsim::CSVDataLogger>;
+		using SharedLoggerPtr = std::shared_ptr<DPsim::PythonDataLogger>;
 
 		new (&self->refs) PyObjectVector();
 		new (&self->logger) SharedLoggerPtr();
@@ -49,7 +49,7 @@ PyObject* Python::Logger::newfunc(PyTypeObject *type, PyObject *args, PyObject *
 void Python::Logger::dealloc(Python::Logger* self)
 {
 	using PyObjectVector = std::vector<PyObject *>;
-	using SharedLoggerPtr = std::shared_ptr<DPsim::CSVDataLogger>;
+	using SharedLoggerPtr = std::shared_ptr<DPsim::PythonDataLogger>;
 
 	for (PyObject *pyRef : self->refs)
 		Py_DECREF(pyRef);
@@ -118,27 +118,53 @@ PyObject* Python::Logger::logAttribute(Logger* self, PyObject* args, PyObject *k
 	Py_RETURN_NONE;
 }
 
+const char* Python::Logger::docGetAttribute =
+"get_attribute(attr)\n"
+"Get logged data as ndarray\n"
+"\n"
+":param attr: the logged attribute name\n"
+PyObject* Python::Logger::getAttribute(Logger* self, PyObject* args, PyObject *kwargs)
+{
+	PyObject *pyObj;
+	CPS::IdentifiedObject::Ptr obj;
+	const char *attrName;
+
+	const char *kwlist[] = {"attribute", nullptr};
+
+	if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s", (char **) kwlist, &attrName))
+		return nullptr;
+
+	// Fetch a data chunks from data logger queue
+	self->logger->drain();
+
+	PyObject *arr = self->data(attr);
+	Py_INCREF(arr);
+
+	return arr;
+}
+
 int Python::Logger::init(Python::Logger *self, PyObject *args, PyObject *kwds)
 {
-	static const char *kwlist[] = {"filename", "down_sampling", nullptr};
+	static const char *kwlist[] = {"filename", "down_sampling", "chunk_size", nullptr};
 	int downsampling = 1;
+	int chunkSize = 100;
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "s|i", (char **) kwlist, &self->filename, &downsampling)) {
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "s|ii", (char **) kwlist, &self->filename, &downsampling, &chunkSize)) {
 		return -1;
 	}
 
-	self->logger = DPsim::CSVDataLogger::make(self->filename, true, downsampling);
+	self->logger = DPsim::PythonDataLogger::make(self->filename, true, downsampling, chunkSize);
 
 	return 0;
 }
 
 PyMemberDef Python::Logger::members[] = {
-	{(char *) "filename", T_STRING, offsetof(Python::Logger, filename), READONLY, nullptr},
 	{nullptr}
 };
 
 PyMethodDef Python::Logger::methods[] = {
 	{"log_attribute", (PyCFunction) Python::Logger::logAttribute, METH_VARARGS | METH_KEYWORDS, Python::Logger::docLogAttribute},
+	{"get_attribute", (PyCFunction) Python::Logger::getAttribute, METH_VARARGS | METH_KEYWORDS, Python::Logger::docGetAttribute},
 	{nullptr},
 };
 

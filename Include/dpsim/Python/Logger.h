@@ -31,9 +31,9 @@
 #endif
 
 #include <cps/Definitions.h>
+#include <dpsim/PythonDataLogger.h>
 
 namespace DPsim {
-	class CSVDataLogger;
 
 namespace Python {
 
@@ -43,7 +43,7 @@ namespace Python {
 
 		std::vector<PyObject *> refs;
 
-		DPsim::CSVDataLogger::Ptr logger;
+		DPsim::PythonDataLogger::Ptr logger;
 		const char *filename;
 
 		static void dealloc(Logger *self);
@@ -51,12 +51,14 @@ namespace Python {
 		static int init(Logger *self, PyObject *args, PyObject *kwds);
 		static PyObject* newfunc(PyTypeObject *type, PyObject *args, PyObject *kwds);
 		static PyObject* logAttribute(Logger *self, PyObject *args, PyObject *kwargs);
+		static PyObject* getAttribute(Logger *self, PyObject *args, PyObject *kwargs);
 
 		static PyMethodDef methods[];
 		static PyMemberDef members[];
 		static PyTypeObject type;
 		static const char* doc;
 		static const char* docLogAttribute;
+		static const char* docGetAttribute;
 	};
 }
 }

@@ -29,6 +29,12 @@
 #endif
 
 #include <dpsim/Config.h>
+
+#ifdef WITH_NUMPY
+  #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
+  #include <numpy/arrayobject.h>
+#endif
+
 #include <dpsim/Python/Module.h>
 #include <dpsim/Python/Component.h>
 #include <dpsim/Python/Node.h>
@@ -42,11 +48,6 @@
 #endif
 
 #include <cps/Components.h>
-
-#ifdef WITH_NUMPY
-  #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
-  #include <numpy/arrayobject.h>
-#endif
 
 using namespace DPsim::Python;
 
