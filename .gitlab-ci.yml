@@ -1,9 +1,9 @@
 variables:
   RSYNC_OPTS: --recursive --ignore-missing-args --chown ${DEPLOY_USER}:${DEPLOY_USER}
   DOCKER_TAG: ${CI_COMMIT_REF_NAME}
-  DOCKER_TAG_DEV: ${CI_COMMIT_REF_NAME}
   DOCKER_IMAGE: rwthacs/dpsim
   DOCKER_IMAGE_DEV: rwthacs/dpsim-dev
+  DOCKER_IMAGE_MANY_LINUX: rwthacs/dpsim-manylinux
 
 before_script:
   - git config --local core.longpaths true
@@ -17,12 +17,12 @@ stages:
   - generate
   - deploy
 
-docker:
+docker:fedora:
   stage: prepare
   script:
     - docker build
         --file Packaging/Docker/Dockerfile.dev
-        --tag ${DOCKER_IMAGE_DEV}:${DOCKER_TAG_DEV}
+        --tag ${DOCKER_IMAGE_DEV}:${DOCKER_TAG}
         --tag ${DOCKER_IMAGE_DEV}:latest .
 # build dedicated jupyter image in the future
     - docker build
@@ -35,6 +35,17 @@ docker:
     - shell
     - linux
 
+docker:manylinux:
+  stage: prepare
+  script:
+    - docker build
+        --file Packaging/Docker/Dockerfile.manylinux
+        --tag ${DOCKER_IMAGE_MANY_LINUX}:${DOCKER_TAG}
+        --tag ${DOCKER_IMAGE_MANY_LINUX}:latest .
+  tags:
+    - shell
+    - linux
+
 build:linux:
   stage: build
   script:
@@ -42,7 +53,7 @@ build:linux:
     - cd build
     - cmake ..
     - make -j 32
-  image: ${DOCKER_IMAGE_DEV}:${DOCKER_TAG_DEV}
+  image: ${DOCKER_IMAGE_DEV}:${DOCKER_TAG}
   cache:
     paths:
       - build
@@ -102,7 +113,7 @@ test:pytest:
     - pytest -v Examples/Python/Circuits
     - pytest -v Examples/Python/RealTime
     #- pytest -v Examples/Python/Shmem
-  image: ${DOCKER_IMAGE_DEV}:${DOCKER_TAG_DEV}
+  image: ${DOCKER_IMAGE_DEV}:${DOCKER_TAG}
   dependencies:
     - build:linux
   tags:
@@ -113,7 +124,7 @@ generate:docs:
   script:
     - make -j$(nproc) -C build docs
     - make -j$(nproc) -C build docs_cxx
-  image: ${DOCKER_IMAGE_DEV}:${DOCKER_TAG_DEV}
+  image: ${DOCKER_IMAGE_DEV}:${DOCKER_TAG}
   dependencies:
     - build:linux
   artifacts:
@@ -131,7 +142,7 @@ generate:packages:
     - tags
   tags:
     - docker
-  image: ${DOCKER_IMAGE_DEV}:${DOCKER_TAG_DEV}
+  image: ${DOCKER_IMAGE_DEV}:${DOCKER_TAG}
   dependencies:
     - build:linux
   artifacts:
@@ -157,13 +168,28 @@ build:docker:
   only:
     - tags
 
+build:wheels:
+  stage: build
+  script:
+    - ./Packaging/Python/build_wheels.sh
+  image: ${DOCKER_IMAGE_MANYLINUX}:${DOCKER_TAG}
+  tags:
+    - docker
+  artifacts:
+    paths:
+      - wheelhouse
+  cache:
+    paths:
+      - /root/.cache/pip
+    key: linux-pip
+
 test:jupyter:
   stage: test
   variables:
     PYTHONPATH: "build/Source/Python:Source/Python"
   script:
     - pytest -v Examples/Notebooks
-  image: ${DOCKER_IMAGE_DEV}:${DOCKER_TAG_DEV}
+  image: ${DOCKER_IMAGE_DEV}:${DOCKER_TAG}
   dependencies:
     - build:linux
   tags:
@@ -175,7 +201,7 @@ test:jupyter:
 deploy:docker:
   stage: deploy
   script:
-    - docker push ${DOCKER_IMAGE_DEV}:${DOCKER_TAG_DEV}
+    - docker push ${DOCKER_IMAGE_DEV}:${DOCKER_TAG}
     - docker push ${DOCKER_IMAGE_DEV}:latest
     - docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
     - docker push ${DOCKER_IMAGE}:latest
@@ -202,6 +228,39 @@ deploy:docs:
     - fein-deploy
     - shell
     - linux
+
+deploy:python-fein:
+  stage: deploy
+  before_script:
+    - pip install twine
+  script:
+    - twine upload
+        --repository-url ${PYTHON_DEPLOY_URL}
+        -u ${PYTHON_DEPLOY_USER}
+        -p ${PYTHON_DEPLOY_PASS}
+        wheelhouse/dpsim-*-manylinux*.whl
+  dependencies:
+    - build:wheels
+  image: python:3
+  tags:
+    - docker
+
+deploy:python-pypi:
+  stage: deploy
+  before_script:
+    - pip install twine
+  script:
+    - twine upload
+        -u ${PYTHON_PYPI_USER}
+        -p ${PYTHON_PYPI_PASS}
+        wheelhouse/dpsim-*-manylinux*.whl
+  dependencies:
+    - build:wheels
+  image: python:3
+  tags:
+    - docker
+  only:
+    - tags
 
 deploy:packages:
   stage: deploy
