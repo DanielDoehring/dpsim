@@ -3,7 +3,7 @@ variables:
   DOCKER_TAG: ${CI_COMMIT_REF_NAME}
   DOCKER_IMAGE: rwthacs/dpsim
   DOCKER_IMAGE_DEV: rwthacs/dpsim-dev
-  DOCKER_IMAGE_MANY_LINUX: rwthacs/dpsim-manylinux
+  DOCKER_IMAGE_MANYLINUX: rwthacs/dpsim-manylinux
 
 before_script:
   - git config --local core.longpaths true
@@ -40,8 +40,8 @@ docker:manylinux:
   script:
     - docker build
         --file Packaging/Docker/Dockerfile.manylinux
-        --tag ${DOCKER_IMAGE_MANY_LINUX}:${DOCKER_TAG}
-        --tag ${DOCKER_IMAGE_MANY_LINUX}:latest .
+        --tag ${DOCKER_IMAGE_MANYLINUX}:${DOCKER_TAG}
+        --tag ${DOCKER_IMAGE_MANYLINUX}:latest .
   tags:
     - shell
     - linux
