@@ -177,7 +177,8 @@ build:wheels:
     - docker
   artifacts:
     paths:
-      - wheelhouse
+      - wheelhouse/dpsim-*-manylinux*.whl
+    expire_in: 6 months
   cache:
     paths:
       - /root/.cache/pip
