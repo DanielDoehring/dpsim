@@ -12,12 +12,8 @@ case $(uname -s) in
 	Linux)
 		PLATFORM=Linux
 		REQUIREMENTS="" # Are bundled in Manylinux image
-<<<<<<< HEAD
 		#PYDIRS=(/opt/python/{cp36,cp37}-*)
 		PYDIRS=(/opt/python/cp37-*)
-=======
-		PYDIRS=(/opt/python/{cp34,cp35,cp36,cp37}-*)
->>>>>>> python: prepare wheel builds for other platforms
 		CMAKE_OPTS_BASE="-DCMAKE_BUILD_PARALLEL_LEVEL=$(nproc) \
 						 -DWITH_EIGEN_SUBMODULE=ON \
 						 -DWITH_CIM_SUBMODULE=ON \
@@ -63,8 +59,4 @@ elif [ ${PLATFORM} == "macOS" ]; then
 	done
 elif [ ${PLATFORM} == "Windows" ]; then
 	# Nothing to do here yet.
-<<<<<<< HEAD
 fi
-=======
-fi
->>>>>>> python: prepare wheel builds for other platforms
