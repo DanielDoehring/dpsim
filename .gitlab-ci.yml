@@ -284,8 +284,8 @@ deploy:python-fein:
         wheelhouse/dpsim-*.whl
   dependencies:
     - generate:wheels:linux
-    - generate:wheels:macos
-    - generate:wheels:win
+#    - generate:wheels:macos
+#    - generate:wheels:win
   image: python:3
   tags:
     - docker
@@ -301,8 +301,8 @@ deploy:python-pypi:
         wheelhouse/dpsim-*.whl
   dependencies:
     - generate:wheels:linux
-    - generate:wheels:macos
-    - generate:wheels:win
+#    - generate:wheels:macos
+#    - generate:wheels:win
   image: python:3
   tags:
     - docker
