@@ -17,6 +17,10 @@ stages:
   - generate
   - deploy
 
+#
+# Stage: prepare
+##############################################################
+
 docker:fedora:
   stage: prepare
   script:
@@ -45,6 +49,10 @@ docker:manylinux:
   tags:
     - shell
     - linux
+
+#
+# Stage: build
+##############################################################
 
 build:linux:
   stage: build
@@ -100,6 +108,40 @@ build:windows:
 #  tags:
 #    - mac
 
+generate:docs:
+  stage: generate
+  script:
+    - make -j$(nproc) -C build docs
+    - make -j$(nproc) -C build docs_cxx
+  image: ${DOCKER_IMAGE_DEV}:${DOCKER_TAG}
+  dependencies:
+    - build:linux
+  artifacts:
+    paths:
+      - build/Documentation/html
+      - build/Documentation/Cxx/html
+  tags:
+    - docker
+
+#
+# Stage: test
+##############################################################
+
+test:jupyter:
+  stage: test
+  variables:
+    PYTHONPATH: "build/Source/Python:Source/Python"
+  script:
+    - pytest -v Examples/Notebooks
+  image: ${DOCKER_IMAGE_DEV}:${DOCKER_TAG}
+  dependencies:
+    - build:linux
+  tags:
+    - docker
+  artifacts:
+    paths:
+      - outputs/Examples/Notebooks/
+
 test:pytest:
   stage: test
   variables:
@@ -119,22 +161,11 @@ test:pytest:
   tags:
     - docker
 
-generate:docs:
-  stage: generate
-  script:
-    - make -j$(nproc) -C build docs
-    - make -j$(nproc) -C build docs_cxx
-  image: ${DOCKER_IMAGE_DEV}:${DOCKER_TAG}
-  dependencies:
-    - build:linux
-  artifacts:
-    paths:
-      - build/Documentation/html
-      - build/Documentation/Cxx/html
-  tags:
-    - docker
+#
+# Stage: generate
+##############################################################
 
-generate:packages:
+generate:rpm:
   stage: generate
   script:
     - make -j$(nproc) -C build package
@@ -150,8 +181,8 @@ generate:packages:
       - build/*.rpm
       - build/*.tar.gz
 
-build:docker:
-  stage: build
+generate:docker:
+  stage: generate
   script:
     - docker build 
         --file Packaging/Docker/Dockerfile
@@ -168,8 +199,8 @@ build:docker:
   only:
     - tags
 
-build:wheels:
-  stage: build
+generate:wheels:linux:
+  stage: generate
   script:
     - ./Packaging/Python/build_wheels.sh
   image: ${DOCKER_IMAGE_MANYLINUX}:${DOCKER_TAG}
@@ -184,20 +215,31 @@ build:wheels:
       - /root/.cache/pip
     key: linux-pip
 
-test:jupyter:
-  stage: test
-  variables:
-    PYTHONPATH: "build/Source/Python:Source/Python"
+.generate:wheels:macos:
+  stage: generate
   script:
-    - pytest -v Examples/Notebooks
-  image: ${DOCKER_IMAGE_DEV}:${DOCKER_TAG}
-  dependencies:
-    - build:linux
+    - ./Packaging/Python/build_wheels.sh
   tags:
-    - docker
+    - mac
   artifacts:
     paths:
-      - outputs/Examples/Notebooks/
+      - wheelhouse/dpsim-*.whl
+    expire_in: 6 months
+
+.generate:wheels:win:
+  stage: generate
+  script:
+    - ./Packaging/Python/build_wheels.sh
+  tags:
+    - win10
+  artifacts:
+    paths:
+      - wheelhouse/dpsim-*.whl
+    expire_in: 6 months
+
+#
+# Stage: deploy
+##############################################################
 
 deploy:docker:
   stage: deploy
@@ -207,7 +249,7 @@ deploy:docker:
     - docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
     - docker push ${DOCKER_IMAGE}:latest
   dependencies:
-    - build:docker
+    - generate:docker
   tags:
     - shell
     - linux
@@ -239,9 +281,11 @@ deploy:python-fein:
         --repository-url ${PYTHON_DEPLOY_URL}
         -u ${PYTHON_DEPLOY_USER}
         -p ${PYTHON_DEPLOY_PASS}
-        wheelhouse/dpsim-*-manylinux*.whl
+        wheelhouse/dpsim-*.whl
   dependencies:
-    - build:wheels
+    - generate:wheels:linux
+    - generate:wheels:macos
+    - generate:wheels:win
   image: python:3
   tags:
     - docker
@@ -254,23 +298,25 @@ deploy:python-pypi:
     - twine upload
         -u ${PYTHON_PYPI_USER}
         -p ${PYTHON_PYPI_PASS}
-        wheelhouse/dpsim-*-manylinux*.whl
+        wheelhouse/dpsim-*.whl
   dependencies:
-    - build:wheels
+    - generate:wheels:linux
+    - generate:wheels:macos
+    - generate:wheels:win
   image: python:3
   tags:
     - docker
   only:
     - tags
 
-deploy:packages:
+deploy:rpm:
   stage: deploy
   script:
     - rsync ${RSYNC_OPTS} build/*.rpm ${DEPLOY_USER}@${DEPLOY_HOST}:/var/www/packages/fedora/29/x86_64
     - rsync ${RSYNC_OPTS} build/*.tar.gz ${DEPLOY_USER}@${DEPLOY_HOST}:/var/www/dpsim/src
     - ssh ${DEPLOY_USER}@${DEPLOY_HOST} createrepo /var/www/packages/fedora/29
   dependencies:
-    - generate:packages
+    - generate:rpm
   only:
     - tags
   tags:
