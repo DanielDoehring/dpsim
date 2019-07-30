@@ -96,15 +96,15 @@ int main(int argc, char* argv[]) {
 	sim.doHarmonicParallelization(false);
 
 	// Logging
-	auto logger = DataLogger::make(simName);
-	logger->addAttribute("v1", n1->attributeMatrixComp("v"), 1, 5);
-	logger->addAttribute("v2", n2->attributeMatrixComp("v"), 1, 1);
-	logger->addAttribute("v3", n3->attributeMatrixComp("v"), 1, 5);
-	logger->addAttribute("v4", n4->attributeMatrixComp("v"), 1, 1);
-	logger->addAttribute("v5", n5->attributeMatrixComp("v"), 1, 1);
-	logger->addAttribute("i12", r1->attributeMatrixComp("i_intf"), 1, 1);
-	logger->addAttribute("i34", r2->attributeMatrixComp("i_intf"), 1, 1);
-	sim.addLogger(logger);
+//	auto logger = DataLogger::make(simName);
+//	logger->addAttribute("v1", n1->attributeMatrixComp("v"), 1, 5);
+//	logger->addAttribute("v2", n2->attributeMatrixComp("v"), 1, 1);
+//	logger->addAttribute("v3", n3->attributeMatrixComp("v"), 1, 5);
+//	logger->addAttribute("v4", n4->attributeMatrixComp("v"), 1, 1);
+//	logger->addAttribute("v5", n5->attributeMatrixComp("v"), 1, 1);
+//	logger->addAttribute("i12", r1->attributeMatrixComp("i_intf"), 1, 1);
+//	logger->addAttribute("i34", r2->attributeMatrixComp("i_intf"), 1, 1);
+//	sim.addLogger(logger);
 
 	sim.run();
 
