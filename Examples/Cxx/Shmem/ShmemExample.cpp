@@ -23,11 +23,14 @@
 
 #include <DPsim.h>
 
+#include <dpsim/VillasTask.h>
+
 using namespace DPsim;
 using namespace CPS::DP;
 using namespace CPS::DP::Ph1;
 
 int main(int argc, char* argv[]) {
+	/*
 	// Very simple test circuit. Just a few resistors and an inductance.
 	// Voltage is read from VILLASnode and current through everything is written back.
 	String simName = "Shmem_Example";
@@ -87,7 +90,10 @@ int main(int argc, char* argv[]) {
 	sim.addLogger(logger);
 
 	sim.run();
+	*/
 
 	//std::ofstream of("task_dependencies.svg");
 	//sim.dependencyGraph().render(of);
+	fs::path filename = "Configs/Shmem/ShmemExample.conf";
+	VillasTask test(filename);
 }
