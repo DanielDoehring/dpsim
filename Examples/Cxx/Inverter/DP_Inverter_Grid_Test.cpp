@@ -34,6 +34,8 @@ int main(int argc, char* argv[]) {
 	// Set system frequencies
 	Matrix frequencies(5,1);
 	frequencies << 50, 19850, 19950, 20050, 20150;
+//	Matrix frequencies(8, 1);
+//	frequencies << 50, 19850, 19950, 20050, 20150, 39950, 40050, 40150;
 	//Matrix frequencies(1,1);
 	//frequencies << 50;
 
