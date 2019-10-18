@@ -35,6 +35,8 @@ int main(int argc, char* argv[]) {
 	// Set system frequencies
 	Matrix frequencies(5,1);
 	frequencies << 50, 19850, 19950, 20050, 20150;
+//	Matrix frequencies(8, 1);
+//	frequencies << 50, 19850, 19950, 20050, 20150, 39950, 40050, 40150;
 	//Matrix frequencies(1,1);
 	//frequencies << 50;
 
@@ -97,15 +99,15 @@ int main(int argc, char* argv[]) {
 	sim.doHarmonicParallelization(false);
 
 	// Logging
-	auto logger = DataLogger::make(simName);
-	logger->addAttribute("v1", n1->attributeMatrixComp("v"), 1, 5);
-	logger->addAttribute("v2", n2->attributeMatrixComp("v"), 1, 1);
-	logger->addAttribute("v3", n3->attributeMatrixComp("v"), 1, 5);
-	logger->addAttribute("v4", n4->attributeMatrixComp("v"), 1, 1);
-	logger->addAttribute("v5", n5->attributeMatrixComp("v"), 1, 1);
-	logger->addAttribute("i12", r1->attributeMatrixComp("i_intf"), 1, 1);
-	logger->addAttribute("i34", r2->attributeMatrixComp("i_intf"), 1, 1);
-	sim.addLogger(logger);
+//	auto logger = DataLogger::make(simName);
+//	logger->addAttribute("v1", n1->attributeMatrixComp("v"), 1, 5);
+//	logger->addAttribute("v2", n2->attributeMatrixComp("v"), 1, 1);
+//	logger->addAttribute("v3", n3->attributeMatrixComp("v"), 1, 5);
+//	logger->addAttribute("v4", n4->attributeMatrixComp("v"), 1, 1);
+//	logger->addAttribute("v5", n5->attributeMatrixComp("v"), 1, 1);
+//	logger->addAttribute("i12", r1->attributeMatrixComp("i_intf"), 1, 1);
+//	logger->addAttribute("i34", r2->attributeMatrixComp("i_intf"), 1, 1);
+//	sim.addLogger(logger);
 
 	sim.run();
 

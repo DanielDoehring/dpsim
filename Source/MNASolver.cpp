@@ -51,7 +51,6 @@ MnaSolver<VarType>::MnaSolver(String name, CPS::SystemTopology system,
 
 template <typename VarType>
 void MnaSolver<VarType>::initialize(CPS::SystemTopology system) {
-	mSLog->info("Solver domain {}", static_cast<Int>(mDomain));
 	mSLog->info("---- Start initialization ----");
 	mSLog->info("-- Process system components");
 	mSystem = system;
@@ -103,7 +102,7 @@ void MnaSolver<VarType>::initialize(CPS::SystemTopology system) {
 
 	mSLog->info("--- Initialization finished ---");
 	mSLog->info("--- Initial system matrices and vectors ---");
-	logSystemMatrices();
+//	logSystemMatrices();
 
 	mSLog->flush();
 }
@@ -212,8 +211,8 @@ void MnaSolver<VarType>::initializeSystem() {
 			for (auto comp : mPowerComponents) {
 				comp->mnaApplySystemMatrixStamp(mSwitchedMatrices[std::bitset<SWITCH_NUM>(0)]);
 				auto idObj = std::dynamic_pointer_cast<IdentifiedObject>(comp);
-				mSLog->debug("Stamping {:s} {:s} into system matrix: \n{:s}",
-					idObj->type(), idObj->name(), Logger::matrixToString(mSwitchedMatrices[std::bitset<SWITCH_NUM>(0)]));
+//				mSLog->debug("Stamping {:s} {:s} into system matrix: \n{:s}",
+//					idObj->type(), idObj->name(), Logger::matrixToString(mSwitchedMatrices[std::bitset<SWITCH_NUM>(0)]));
 			}
 			mLuFactorizations[std::bitset<SWITCH_NUM>(0)] = Eigen::PartialPivLU<Matrix>(mSwitchedMatrices[std::bitset<SWITCH_NUM>(0)]);
 		}
