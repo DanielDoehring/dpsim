@@ -92,6 +92,7 @@ if(WITH_CIM)
 		CIM/WSCC-9bus_CIM.cpp
 		CIM/WSCC-9bus_CIM_Dyn.cpp
 		CIM/WSCC-9bus_CIM_Dyn_Switch.cpp
+		CIM/WSCC-9bus_CIM_dev.cpp
 
 		# powerflow example		
 		CIM/Slack_Trafo_Load.cpp
