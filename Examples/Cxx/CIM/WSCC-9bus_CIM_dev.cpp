@@ -62,9 +62,9 @@ int main(int argc, char *argv[]) {
 	auto distLine2 = CPS::DP::Ph1::PiLine::make("distLine2");
 	auto distLine3 = CPS::DP::Ph1::PiLine::make("distLine3");
 
-	distLine1->setParameters(100, 200);
-	distLine2->setParameters(100, 200);
-	distLine3->setParameters(100, 200);
+	distLine1->setParameters(5.30, 0.12, -1.0, 0.000001);
+	distLine2->setParameters(5.30, 0.12, -1.0, 0.000001);
+	distLine3->setParameters(5.30, 0.12, -1.0, 0.000001);
 
 	distLine1->connect({sys.node<Node>("BUS5"), distNode1});
 	distLine2->connect({distNode1, distNode2});
@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
 
 	// Loads
 	
-	auto distLoad1 = CPS::DP::Ph1::RXLoad::make("distLoad1", 30000000, 10000000.0, 222222);
+	auto distLoad1 = CPS::DP::Ph1::RXLoad::make("distLoad1", 30000000, 10000000, 222222);
 	auto distLoad2 = CPS::DP::Ph1::RXLoad::make("distLoad2", 30000000, 10000000, 222222);
 	auto distLoad3 = CPS::DP::Ph1::RXLoad::make("distLoad3", 30000000, 10000000, 222222);
 
@@ -126,7 +126,12 @@ int main(int argc, char *argv[]) {
 	logger->addAttribute("Q_dist3", sys.component<Ph1::RXLoad>("distLoad3")->attribute("Q"));
 	logger->addAttribute("Vnom_dist3", sys.component<Ph1::RXLoad>("distLoad3")->attribute("V_nom"));
 
-	
+	logger->addAttribute("Rdist_series", sys.component<Ph1::PiLine>("distLine1")->attribute("R_series"));
+	logger->addAttribute("Ldist_series", sys.component<Ph1::PiLine>("distLine1")->attribute("L_series"));
+	logger->addAttribute("Cdist_parallel", sys.component<Ph1::PiLine>("distLine1")->attribute("C_parallel"));
+	logger->addAttribute("Gdist_parallel", sys.component<Ph1::PiLine>("distLine1")->attribute("G_parallel"));
+
+
 	logger->addAttribute("Pload_5", sys.component<Ph1::RXLoad>("LOAD5")->attribute("P"));
 	logger->addAttribute("Qload_5", sys.component<Ph1::RXLoad>("LOAD5")->attribute("Q"));
 	logger->addAttribute("V_nom_5", sys.component<Ph1::RXLoad>("LOAD5")->attribute("V_nom"));
@@ -166,10 +171,10 @@ int main(int argc, char *argv[]) {
 	// logger->addAttribute("C75_parallel", sys.component<Ph1::PiLine>("LINE75")->attribute("C_parallel"));
 	// logger->addAttribute("G75_parallel", sys.component<Ph1::PiLine>("LINE75")->attribute("G_parallel"));
 
-	// logger->addAttribute("R54_series", sys.component<Ph1::PiLine>("LINE54")->attribute("R_series"));
-	// logger->addAttribute("L54_series", sys.component<Ph1::PiLine>("LINE54")->attribute("L_series"));
-	// logger->addAttribute("C54_parallel", sys.component<Ph1::PiLine>("LINE54")->attribute("C_parallel"));
-	// logger->addAttribute("G54_parallel", sys.component<Ph1::PiLine>("LINE54")->attribute("G_parallel"));
+	logger->addAttribute("R54_series", sys.component<Ph1::PiLine>("LINE54")->attribute("R_series"));
+	logger->addAttribute("L54_series", sys.component<Ph1::PiLine>("LINE54")->attribute("L_series"));
+	logger->addAttribute("C54_parallel", sys.component<Ph1::PiLine>("LINE54")->attribute("C_parallel"));
+	logger->addAttribute("G54_parallel", sys.component<Ph1::PiLine>("LINE54")->attribute("G_parallel"));
 
 	Simulation sim(simName, sys, 0.0001, 0.1,
 		Domain::DP, Solver::Type::MNA, Logger::Level::info, true);
