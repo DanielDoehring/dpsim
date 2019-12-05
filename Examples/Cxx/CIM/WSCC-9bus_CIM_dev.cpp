@@ -62,9 +62,9 @@ int main(int argc, char *argv[]) {
 	auto distLine2 = CPS::DP::Ph1::PiLine::make("distLine2");
 	auto distLine3 = CPS::DP::Ph1::PiLine::make("distLine3");
 
-	distLine1->setParameters(5.30, 0.12, -1.0, 0.000001);
-	distLine2->setParameters(5.30, 0.12, -1.0, 0.000001);
-	distLine3->setParameters(5.30, 0.12, -1.0, 0.000001);
+	distLine1->setParameters(5.29, 0.143128, -1.0, 0.000001);
+	distLine2->setParameters(5.29, 0.143128, -1.0, 0.000001);
+	distLine3->setParameters(5.29, 0.143128, -1.0, 0.000001);
 
 	distLine1->connect({sys.node<Node>("BUS5"), distNode1});
 	distLine2->connect({distNode1, distNode2});
