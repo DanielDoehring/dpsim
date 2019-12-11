@@ -43,23 +43,34 @@ int main(int argc, char *argv[]) {
 	CIMReader reader(simName, Logger::Level::info, Logger::Level::info);
 	SystemTopology sys = reader.loadCIM(60, filenames);
 
+
 	RealTimeSimulation sim(simName, sys, 0.001, 120,
 		Domain::DP, Solver::Type::MNA, Logger::Level::debug, true);
-
-	Interface intf("/dpsim-villas", "/villas-dpsim");
 	
+	Interface intf("/dpsim-villas", "/villas-dpsim", nullptr, false);
 
+	auto evs = VoltageSource::make("v_t");
+	evs->connect({Node::GND, sys.node<Node>("BUS5")});
+	evs->setParameters(Complex(0,0));
 
-	auto bus = sys.node<Node>("BUS5");
-	std::cout << "this is a teeest" << std::endl;
-	auto busAttribute = bus->attributeComplex("v");
-	std::cout << "this is a teeest" << std::endl;
+	sys.addComponent(evs);	
 
-	DPsim::UInt test = 0;
-	std::cout << "this is a teeest" << std::endl;
+	DPsim::UInt o = 0;
+	// intf.exportComplex(evs->attributeMatrixComp("i_intf")->coeff(0, 0), o++);
+	intf.exportReal(sys.component<Ph1::RXLoad>("LOAD5")->attributeReal("P"), o++);
+	
+	// intf.exportReal(sys.node<Node>("BUS5")->attributeReal("v")->mag(), o++);
+	// intf.exportReal(sys.node<Node>("BUS5")->attributeComplex("v")->phase(), o++);
 
-	intf.exportReal(busAttribute->mag(), test);
-	std::cout << "aaand another one" << std::endl;
+	Logger::setLogDir("logs/"+simName);
+	auto logger = DataLogger::make(simName);
+	logger->addAttribute("DATA", evs->attribute("i_intf"));
+	sim.addLogger(logger);
+
+	//auto busAttribute = bus->attributeComplex("v");
+
+	// intf.exportComplex(sys.node<Node>("BUS5")->attributeComplex("v"), o);
+
 	
 	// Do the export manually
 	
