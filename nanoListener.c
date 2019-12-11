@@ -36,17 +36,18 @@ int listen(const char *url) {
     }
 
     // Continously listen to socket and print all incoming messages
-    fprintf(stderr, "Listener up and running on URL = %s", url);
+    fprintf(stderr, "Listener up and running on URL = %s\n", url);
 
     for(;;) {
+        //fprintf(stderr, "Listener up and running on URL = %s\n", url);
         char *buf = NULL;
+    
         int bytes = nn_recv(sock, &buf, NN_MSG, 0);
         if (bytes < 0) {
             fatal("nn_recv");
-            // fprintf(stderr, "test");
         }
 
-        printf("RECEIVED %s\n",buf);
+        fprintf(stderr, "RECEIVED %s\n", buf);
         nn_freemsg(buf);
     }
 }
