@@ -56,8 +56,8 @@ int main(int argc, char *argv[]) {
 	sys.addComponent(evs);	
 
 	DPsim::UInt o = 0;
-	// intf.exportComplex(evs->attributeMatrixComp("i_intf")->coeff(0, 0), o++);
-	intf.exportReal(sys.component<Ph1::RXLoad>("LOAD5")->attributeReal("P"), o++);
+	intf.exportComplex(evs->attributeMatrixComp("i_intf")->coeff(0, 0), o++);
+	//intf.exportReal(sys.component<Ph1::RXLoad>("LOAD5")->attributeReal("P"), o++);
 	
 	// intf.exportReal(sys.node<Node>("BUS5")->attributeReal("v")->mag(), o++);
 	// intf.exportReal(sys.node<Node>("BUS5")->attributeComplex("v")->phase(), o++);
