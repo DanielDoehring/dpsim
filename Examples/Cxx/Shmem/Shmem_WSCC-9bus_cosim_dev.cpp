@@ -49,32 +49,23 @@ int main(int argc, char *argv[]) {
 	
 	Interface intf("/dpsim-villas", "/villas-dpsim", nullptr, false);
 
-	auto evs = VoltageSource::make("v_t");
-	evs->connect({Node::GND, sys.node<Node>("BUS5")});
-	evs->setParameters(Complex(0,0));
-
-	sys.addComponent(evs);	
+	// auto evs = VoltageSource::make("v_t");
+	// evs->connect({Node::GND, sys.node<Node>("BUS5")});
+	// evs->setParameters(Complex(150,230));
+	// std::cout << evs->attribute("i_intf") << std::endl;
+	// sys.addComponent(evs);	
 
 	DPsim::UInt o = 0;
-	intf.exportComplex(evs->attributeMatrixComp("i_intf")->coeff(0, 0), o++);
-	//intf.exportReal(sys.component<Ph1::RXLoad>("LOAD5")->attributeReal("P"), o++);
+
+	auto compAttr = sys.node<Node>("BUS5")->attributeComplex("v");
+	auto magCompAttr = compAttr->mag();
 	
-	// intf.exportReal(sys.node<Node>("BUS5")->attributeReal("v")->mag(), o++);
-	// intf.exportReal(sys.node<Node>("BUS5")->attributeComplex("v")->phase(), o++);
 
-	Logger::setLogDir("logs/"+simName);
-	auto logger = DataLogger::make(simName);
-	logger->addAttribute("DATA", evs->attribute("i_intf"));
-	sim.addLogger(logger);
-
-	//auto busAttribute = bus->attributeComplex("v");
-
-	// intf.exportComplex(sys.node<Node>("BUS5")->attributeComplex("v"), o);
+	intf.exportReal(magCompAttr, o++);
+	// intf.exportReal(sys.node<Node>("BUS5")->attributeComplex("v")->mag(), o++);
 
 	
 	// Do the export manually
-	
-
 
 	// Register exportable node voltages
 	// UInt o = 0;
