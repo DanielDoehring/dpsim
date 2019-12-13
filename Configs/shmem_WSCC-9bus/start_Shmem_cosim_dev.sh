@@ -26,6 +26,7 @@ trap _stop SIGTSTP
 trap _cont SIGCONT
 trap _term SIGTERM
 trap _kill SIGKILL
+trap _kill SIGINT
 
 CHILDS=""
 
@@ -33,28 +34,21 @@ CHILDS=""
 TIME=$(date -d "+20 seconds" +%Y%m%dT%H%M%S) #-Iseconds
 echo "Start simulation at: $TIME"
 
-# Simulation params
-# OPTS="--timestep 0.001 --duration 3600 --start-in 5 Examples/CIM/WSCC-09_RX/*.xml"
-# OPTS="--timestep 0.001 --duration 3600 --start-in 5 Examples/CIM/WSCC-09_RX/*.xml"
-# echo "Simulation params: $OPTS"
+if [ "$1" = "--pipe" ]; then
+	VILLAS_LOG_PREFIX="[Pipe] " \
+	villas-pipe Configs/Shmem_cosim_dev.conf dpsim
+else
+	VILLAS_LOG_PREFIX="[Node] " \
+	villas-node Configs/Shmem_cosim_dev.conf & VN=$!
+fi
 
-# CPS_LOG_PREFIX="[Sys ] " \
-# build/Examples/Cxx/Shmem_WSCC-9bus_Ctrl $OPTS & P1=$!
-build/Examples/Cxx/Shmem_WSCC-9bus_cosim_dev & P1=$!
-
-CHILDS=$P1
-
+# Wait until node is successfully started
 sleep 2
 
-# if false; then
-# 	VILLAS_LOG_PREFIX="[Pipe] " \
-# 	villas-pipe Configs/shmem_WSCC-9bus/Shmem_WSCC-9bus_Ctrl.conf dpsim1
-# else
-# 	VILLAS_LOG_PREFIX="[Node] " \
-# 	villas-node Configs/shmem_WSCC-9bus/Shmem_WSCC-9bus_Ctrl.conf & VN=$!
-# fi
+CPS_LOG_PREFIX="[Sys ] " \
+build/Examples/Cxx/Shmem_WSCC-9bus_cosim_dev & P1=$!
+CHILDS=$P1
 
-villas-node Configs/Shmem_cosim_dev.conf & VN=$!
 
 # Wait until all child processed finished
 while (( $(ps --no-headers -o pid --ppid=$$ | wc -w) > 1 )); do
