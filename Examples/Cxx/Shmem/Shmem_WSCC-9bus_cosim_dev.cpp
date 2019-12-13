@@ -57,8 +57,8 @@ int main(int argc, char *argv[]) {
 
 	DPsim::UInt o = 0;
 
-	auto compAttr = sys.node<Node>("BUS5")->attributeComplex("v");
-	auto magCompAttr = compAttr->mag();
+	auto compAttr = sys.node<Node>("BUS5")->attributeMatrixComp("v");
+	auto magCompAttr = (compAttr->coeff(0,0)->mag());
 	
 
 	intf.exportReal(magCompAttr, o++);
