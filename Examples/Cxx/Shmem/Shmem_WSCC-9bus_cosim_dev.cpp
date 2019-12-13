@@ -38,47 +38,85 @@ int main(int argc, char *argv[]) {
 		"WSCC-09_RX_TP.xml"
 	}, "Examples/CIM/WSCC-09_RX", "CIMPATH");
 
-	String simName = "Shmem_WSCC-9bus";
+	String simName = "Shmem_WSCC-9bus_cosim";
+
+	Logger::setLogDir("logs/" + simName);
 
 	CIMReader reader(simName, Logger::Level::info, Logger::Level::info);
 	SystemTopology sys = reader.loadCIM(60, filenames);
-
-
-	RealTimeSimulation sim(simName, sys, 0.001, 120,
-		Domain::DP, Solver::Type::MNA, Logger::Level::debug, true);
-	
+		
 	Interface intf("/dpsim-villas", "/villas-dpsim", nullptr, false);
+	
+	/////////////////////
+	// Extend topology //
+	/////////////////////
 
-	// auto evs = VoltageSource::make("v_t");
-	// evs->connect({Node::GND, sys.node<Node>("BUS5")});
-	// evs->setParameters(Complex(150,230));
-	// std::cout << evs->attribute("i_intf") << std::endl;
-	// sys.addComponent(evs);	
+	// Nodes
+
+	auto distNode1 = Node::make("DistNode1");
+	auto distNode2 = Node::make("DistNode2");
+	auto distNode3 = Node::make("DistNode3");
+	
+	// Cables
+
+	auto distLine1 = CPS::DP::Ph1::PiLine::make("distLine1");
+	auto distLine2 = CPS::DP::Ph1::PiLine::make("distLine2");
+	auto distLine3 = CPS::DP::Ph1::PiLine::make("distLine3");
+
+	distLine1->setParameters(5.29, 0.143128, -1.0, 0.000001);
+	distLine2->setParameters(5.29, 0.143128, -1.0, 0.000001);
+	distLine3->setParameters(5.29, 0.143128, -1.0, 0.000001);
+
+	distLine1->connect({sys.node<Node>("BUS5"), distNode1});
+	distLine2->connect({distNode1, distNode2});
+	distLine3->connect({distNode2, distNode3});
+
+	// Loads
+	
+	auto distLoad1 = CPS::DP::Ph1::RXLoad::make("distLoad1", 30000000, 10000000, 222222);
+	auto distLoad2 = CPS::DP::Ph1::RXLoad::make("distLoad2", 30000000, 10000000, 222222);
+	auto distLoad3 = CPS::DP::Ph1::RXLoad::make("distLoad3", 30000000, 10000000, 222222);
+
+	distLoad1->connect({distNode1});
+	distLoad2->connect({distNode2});
+	distLoad3->connect({distNode3});
+
+	// Add new components and nodes
+
+	sys.addNodes({distNode1, distNode2, distNode3});
+	
+	sys.addComponents({distLoad1, distLoad2, distLoad3});
+	sys.addComponents({distLine1, distLine2, distLine3});
+
+	// Plot topology
+
+	std::ofstream of1(simName+"_topology_graph.svg");
+    sys.topologyGraph().render(of1);
+
+	// Export attributes
 
 	DPsim::UInt o = 0;
 
-	auto compAttr = sys.node<Node>("BUS5")->attributeMatrixComp("v");
-	auto magCompAttr = (compAttr->coeff(0,0)->mag());
+	auto compAttr = sys.node<Node>("BUS5")->attributeMatrixComp("v")->coeff(0,0);
+	//auto magCompAttr = (compAttr->coeff(0,0)->mag());
+
+	intf.exportReal(compAttr->mag(), o++);
+	intf.exportReal(compAttr->phase(), o++);
+
+
+	// Add logger for comparison
+	auto logger = DataLogger::make(simName);
+	logger->addAttribute("v", sys.node<Node>("BUS5")->attribute("v"));
 	
 
-	intf.exportReal(magCompAttr, o++);
-	// intf.exportReal(sys.node<Node>("BUS5")->attributeComplex("v")->mag(), o++);
+	RealTimeSimulation sim(simName, sys, 1.0, 10,
+		Domain::DP, Solver::Type::MNA, Logger::Level::debug, true);
 
-	
-	// Do the export manually
+	//sim.doSplitSubnets(false);
+	sim.addLogger(logger);
 
-	// Register exportable node voltages
-	// UInt o = 0;
-	// for (auto n : sys.mNodes) {
-	// 	auto v = n->attributeComplex("v");
-
-	// 	intf.exportReal(v->mag(),   o+0);
-	// 	intf.exportReal(v->phase(), o+1);
-
-	// 	o += 2;
-	// }
-
-	sim.addInterface(&intf);
+	// Set sync to false as there is only one interface using shmem
+	sim.addInterface(&intf, false);
 	sim.run();
 
 	return 0;
