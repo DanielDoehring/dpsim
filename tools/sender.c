@@ -150,7 +150,8 @@ int main(const int argc, const char **argv) {
         char message[] = "thisIsATestMessage";
 
         for(;;) {
-                send(message, sizeof(a_test_message));
+                //send(message, sizeof(a_test_message));
+                send(message, sizeof(message));
                 sleep(5);
         }
 }
