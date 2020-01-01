@@ -51,12 +51,14 @@ int main(int argc, char *argv[]) {
 	// Extend topology //
 	/////////////////////
 
+
 	// Nodes
 
 	auto distNode1 = Node::make("DistNode1");
 	auto distNode2 = Node::make("DistNode2");
 	auto distNode3 = Node::make("DistNode3");
 	
+
 	// Cables
 
 	auto distLine1 = CPS::DP::Ph1::PiLine::make("distLine1");
@@ -80,6 +82,14 @@ int main(int argc, char *argv[]) {
 	distLoad1->connect({distNode1});
 	distLoad2->connect({distNode2});
 	distLoad3->connect({distNode3});
+
+	// Add current source that models the received distaix current
+
+	auto ecs = CurrentSource::make("i_intf", Complex(0,0), Logger::Level::debug);
+	ecs->connect({Node::GND, sys.node<Node>("BUS5")});
+	ecs->setAttributeRef("I_ref", intf.importComplex(0));
+
+	sys.addComponents({ecs});
 
 	// Add new components and nodes
 
@@ -107,6 +117,7 @@ int main(int argc, char *argv[]) {
 	// Add logger for comparison
 	auto logger = DataLogger::make(simName);
 	logger->addAttribute("v", sys.node<Node>("BUS5")->attribute("v"));
+	//logger->addAttribute("i", sys.node<Node>("BUS5")->attribute("i"));
 	
 
 	RealTimeSimulation sim(simName, sys, 1.0, 10,
