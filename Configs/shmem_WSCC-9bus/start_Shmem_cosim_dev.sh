@@ -38,15 +38,17 @@ if [ "$1" = "--pipe" ]; then
 	VILLAS_LOG_PREFIX="[Pipe] " \
 	villas-pipe Configs/Shmem_cosim_dev.conf dpsim
 else
-	VILLAS_LOG_PREFIX="[Node] " \
-	villas-node Configs/Shmem_cosim_dev.conf & VN=$!
+	# VILLAS_LOG_PREFIX="[Node] " \
+	# villas-node Configs/Shmem_cosim_dev.conf & VN=$!
+	:
 fi
 
 # Wait until node is successfully started
 sleep 2
 
 CPS_LOG_PREFIX="[Sys ] " \
-build/Examples/Cxx/Shmem_WSCC-9bus_cosim_dev & P1=$!
+build/Examples/Cxx/Shmem_WSCC-9bus_cosim_dev --cosim & P1=$!
+#build/Examples/Cxx/Shmem_WSCC-9bus_cosim_dev & P1=$!
 CHILDS=$P1
 
 
