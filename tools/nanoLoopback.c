@@ -57,8 +57,7 @@ int main(const int argc, const char **argv) {
             fprintf(stderr, "|||||||||||||||\n");
 
             printf("SENDING: %s\n", buf);
-            bytes = 0;
-            bytes = nn_send(sock_out, buf, sizeof(buf), 0);
+            bytes = nn_send(sock_out, buf, bytes, 0);
             
             if (bytes < 0) {
                     fatal("nn_send");
