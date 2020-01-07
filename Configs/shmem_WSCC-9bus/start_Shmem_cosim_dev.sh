@@ -38,9 +38,9 @@ if [ "$1" = "--pipe" ]; then
 	VILLAS_LOG_PREFIX="[Pipe] " \
 	villas-pipe Configs/Shmem_cosim_dev.conf dpsim
 else
-	# VILLAS_LOG_PREFIX="[Node] " \
-	# villas-node Configs/Shmem_cosim_dev.conf & VN=$!
-	:
+	VILLAS_LOG_PREFIX="[Node] " \
+	villas-node Configs/Shmem_cosim_dev.conf & VN=$!
+	#:
 fi
 
 # Wait until node is successfully started

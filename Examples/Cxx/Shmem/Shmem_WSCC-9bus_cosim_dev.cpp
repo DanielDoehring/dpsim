@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
 			Interface intf("/dpsim-villas", "/villas-dpsim", nullptr, false);
 
 			// Add current source that models the received distaix current
-			auto ecs = CurrentSource::make("i_intf", Complex(0,0), Logger::Level::debug);
+			auto ecs = CurrentSource::make("i_intf", Complex(1000,1000), Logger::Level::debug);
 			ecs->connect({Node::GND, sys.node<Node>("BUS5")});
 			ecs->setAttributeRef("I_ref", intf.importComplex(0));
 
@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
 			intf.exportReal(compAttr->phase(), o++);
 
 			RealTimeSimulation sim(simName, sys, 1.0, 10,
-			Domain::DP, Solver::Type::MNA, Logger::Level::debug, true);
+				Domain::DP, Solver::Type::MNA, Logger::Level::debug, true);
 
 
 			std::ofstream of1(simName+"_topology_graph.svg");
@@ -80,7 +80,8 @@ int main(int argc, char *argv[]) {
 			// Add logger for comparison
 			auto logger = DataLogger::make(simName);
 			logger->addAttribute("v", sys.node<Node>("BUS5")->attribute("v"));
-			
+			logger->addAttribute("I_ecs", ecs->attribute("i_intf"));
+
 			//sim.doSplitSubnets(false);
 			sim.addLogger(logger);
 
