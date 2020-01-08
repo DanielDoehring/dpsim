@@ -53,7 +53,7 @@ int main(const int argc, const char **argv) {
             if (bytes < 0) {
                 fatal("nn_recv");
             }
-            fprintf(stderr, "RECEIVED %s (%i bytes)\n", buf, sizeof(buf));
+            fprintf(stderr, "RECEIVED %s (%i bytes)\n", buf, bytes);
             fprintf(stderr, "|||||||||||||||\n");
 
             printf("SENDING: %s\n", buf);
