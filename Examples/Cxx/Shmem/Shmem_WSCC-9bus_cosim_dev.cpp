@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
 			Interface intf("/dpsim-villas", "/villas-dpsim", nullptr, false);
 
 			// Add current source that models the received distaix current
-			auto ecs = CurrentSource::make("i_intf", Complex(1000,1000), Logger::Level::debug);
+			auto ecs = CurrentSource::make("i_intf", Complex(0,0), Logger::Level::debug);
 			ecs->connect({Node::GND, sys.node<Node>("BUS5")});
 			ecs->setAttributeRef("I_ref", intf.importComplex(0));
 
@@ -67,8 +67,9 @@ int main(int argc, char *argv[]) {
 			auto compAttr = sys.node<Node>("BUS5")->attributeMatrixComp("v")->coeff(0,0);
 			//auto magCompAttr = (compAttr->coeff(0,0)->mag());
 
-			intf.exportReal(compAttr->mag(), o++);
-			intf.exportReal(compAttr->phase(), o++);
+			// intf.exportReal(compAttr->mag(), o++);
+			// intf.exportReal(compAttr->phase(), o++);
+			intf.exportComplex(compAttr, o++);
 
 			RealTimeSimulation sim(simName, sys, 1.0, 10,
 				Domain::DP, Solver::Type::MNA, Logger::Level::debug, true);
