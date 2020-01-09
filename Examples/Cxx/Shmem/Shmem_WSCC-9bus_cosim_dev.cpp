@@ -81,7 +81,7 @@ int main(int argc, char *argv[]) {
 			// Add logger for comparison
 			auto logger = DataLogger::make(simName);
 			logger->addAttribute("v", sys.node<Node>("BUS5")->attribute("v"));
-			logger->addAttribute("I_ecs", ecs->attribute("i_intf"));
+			logger->addAttribute("I_ecs", ecs->attribute("I_ref"));
 
 			//sim.doSplitSubnets(false);
 			sim.addLogger(logger);
@@ -89,72 +89,95 @@ int main(int argc, char *argv[]) {
 			// Set sync to false as there is only one interface using shmem
 			sim.addInterface(&intf, false);
 			sim.run();
+		} else if (String(argv[1]) == "--base"){
+
+			RealTimeSimulation sim(simName, sys, 1.0, 100,
+				Domain::DP, Solver::Type::MNA, Logger::Level::debug, true);
+
+
+			std::ofstream of1(simName+"_topology_graph.svg");
+			sys.topologyGraph().render(of1);
+
+			// Add logger for comparison
+			auto logger = DataLogger::make(simName);
+			logger->addAttribute("v", sys.node<Node>("BUS5")->attribute("v"));
+
+			//sim.doSplitSubnets(false);
+			sim.addLogger(logger);
+
+			// Set sync to false as there is only one interface using shmem
+			sim.run();
+		} else if (String(argv[1]) == "--extended") {
+			std::cout << "BP3" << std::endl;
+			/////////////////////
+			// Extend topology //
+			/////////////////////
+
+			// Nodes
+
+			auto distNode1 = Node::make("DistNode1");
+			auto distNode2 = Node::make("DistNode2");
+			auto distNode3 = Node::make("DistNode3");
+			
+			// Cables
+
+			auto distLine1 = CPS::DP::Ph1::PiLine::make("distLine1");
+			auto distLine2 = CPS::DP::Ph1::PiLine::make("distLine2");
+			auto distLine3 = CPS::DP::Ph1::PiLine::make("distLine3");
+
+			distLine1->setParameters(5.29, 0.143128, -1.0, 0.000001);
+			distLine2->setParameters(5.29, 0.143128, -1.0, 0.000001);
+			distLine3->setParameters(5.29, 0.143128, -1.0, 0.000001);
+
+			distLine1->connect({sys.node<Node>("BUS5"), distNode1});
+			distLine2->connect({distNode1, distNode2});
+			distLine3->connect({distNode2, distNode3});
+
+			// Loads
+			
+			auto distLoad1 = CPS::DP::Ph1::RXLoad::make("distLoad1", 30000000, 10000000, 222222);
+			auto distLoad2 = CPS::DP::Ph1::RXLoad::make("distLoad2", 30000000, 10000000, 222222);
+			auto distLoad3 = CPS::DP::Ph1::RXLoad::make("distLoad3", 30000000, 10000000, 222222);
+
+			distLoad1->connect({distNode1});
+			distLoad2->connect({distNode2});
+			distLoad3->connect({distNode3});
+
+			// Add new components and nodes
+
+			sys.addNodes({distNode1, distNode2, distNode3});
+			
+			sys.addComponents({distLoad1, distLoad2, distLoad3});
+			sys.addComponents({distLine1, distLine2, distLine3});
+
+			RealTimeSimulation sim(simName, sys, 1.0, 10,
+				Domain::DP, Solver::Type::MNA, Logger::Level::debug, true);
+
+			// Plot topology
+
+			std::ofstream of1(simName+"_topology_graph.svg");
+			sys.topologyGraph().render(of1);
+
+			// Add logger for comparison
+			auto logger = DataLogger::make(simName);
+			logger->addAttribute("v", sys.node<Node>("BUS5")->attribute("v"));
+			//logger->addAttribute("i", sys.node<Node>("BUS5")->attribute("i"));
+
+
+
+			//sim.doSplitSubnets(false);
+			sim.addLogger(logger);
+			sim.run();
+
 		}
 		else {
 			std::cout << "ERROR! >" << String(argv[1]) << "< is no valid argument" << std::endl;
+			return -1;
 		}
 	} 
 	else {
-		std::cout << "BP3" << std::endl;
-		/////////////////////
-		// Extend topology //
-		/////////////////////
-
-		// Nodes
-
-		auto distNode1 = Node::make("DistNode1");
-		auto distNode2 = Node::make("DistNode2");
-		auto distNode3 = Node::make("DistNode3");
-		
-		// Cables
-
-		auto distLine1 = CPS::DP::Ph1::PiLine::make("distLine1");
-		auto distLine2 = CPS::DP::Ph1::PiLine::make("distLine2");
-		auto distLine3 = CPS::DP::Ph1::PiLine::make("distLine3");
-
-		distLine1->setParameters(5.29, 0.143128, -1.0, 0.000001);
-		distLine2->setParameters(5.29, 0.143128, -1.0, 0.000001);
-		distLine3->setParameters(5.29, 0.143128, -1.0, 0.000001);
-
-		distLine1->connect({sys.node<Node>("BUS5"), distNode1});
-		distLine2->connect({distNode1, distNode2});
-		distLine3->connect({distNode2, distNode3});
-
-		// Loads
-		
-		auto distLoad1 = CPS::DP::Ph1::RXLoad::make("distLoad1", 30000000, 10000000, 222222);
-		auto distLoad2 = CPS::DP::Ph1::RXLoad::make("distLoad2", 30000000, 10000000, 222222);
-		auto distLoad3 = CPS::DP::Ph1::RXLoad::make("distLoad3", 30000000, 10000000, 222222);
-
-		distLoad1->connect({distNode1});
-		distLoad2->connect({distNode2});
-		distLoad3->connect({distNode3});
-
-		// Add new components and nodes
-
-		sys.addNodes({distNode1, distNode2, distNode3});
-		
-		sys.addComponents({distLoad1, distLoad2, distLoad3});
-		sys.addComponents({distLine1, distLine2, distLine3});
-
-		RealTimeSimulation sim(simName, sys, 1.0, 10,
-			Domain::DP, Solver::Type::MNA, Logger::Level::debug, true);
-
-		// Plot topology
-
-		std::ofstream of1(simName+"_topology_graph.svg");
-		sys.topologyGraph().render(of1);
-
-		// Add logger for comparison
-		auto logger = DataLogger::make(simName);
-		logger->addAttribute("v", sys.node<Node>("BUS5")->attribute("v"));
-		//logger->addAttribute("i", sys.node<Node>("BUS5")->attribute("i"));
-
-
-
-		//sim.doSplitSubnets(false);
-		sim.addLogger(logger);
-		sim.run();
+		std::cout << "ERROR! Not enough arguments given! " << std::endl
+				<< "Usage: Shmem_WSCC-9bus_cosim_dev.cpp [--cosim|--base|--extended]" << std::endl;
 	}
 
 	return 0;
