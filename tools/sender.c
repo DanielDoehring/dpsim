@@ -70,7 +70,7 @@ int send(char* buf, int length) {
         //char *buf = &a_test_message;
 	printf("SENDING: %s\n", buf);
         //FIXME: Remove hardcoded length of message...
-        int bytes = nn_send(out_socket, buf, 144, 0);
+        int bytes = nn_send(out_socket, buf, length, 0);
 
         if (bytes < 0) {
                 fatal("nn_send");
@@ -138,8 +138,9 @@ int setup(const char *url_out) {
 */
 int main(const int argc, const char **argv) {	
         // Option to set a filepath. If filepath is set != "", the message will be read from file.
-        const char* filepath = "test";
-
+        const char* filepath = "";
+        char* message;
+        size_t size;
 
         if ((argc >= 2)) {
                 if (setup(argv[1]) != 1) {
@@ -152,28 +153,34 @@ int main(const int argc, const char **argv) {
                 return -1;
         }
         
-        // char* message = "";
-        // if (filepath == "") {
-        //         message = "thisIsATestMessage";
-        // }
-        // else {
-        //         printf("BP1");
-        //         FILE *pFile;
-        //         //FILE *pFile = fopen(filepath, "rb");
-        //         printf("BP2");
-        //         if (pFile) {
-        //                 fread(message, 144,1,pFile);
-        //                 printf("Successfully read from file...\n");
-        //         }
-        //         else {
-        //                 printf("Couldn't open file %s\n", filepath);
-        //         }
-        //         fclose(pFile);
-        // }
+        if (filepath == "") {
+                message = "thisIsATestMessage";
+                size = sizeof(message);
+        }
+        else {
+                FILE *pFile = fopen(filepath, "rb");
+                
+                // determine message size
+                fseek(pFile, 0, SEEK_END);
+                size = ftell(pFile)-1; // -1 to remove EOF identifier
+                printf("size = %i", size);
+                fseek(pFile, 0, SEEK_SET);
+                
+                if (pFile) {
+                        message = malloc(size);
+                        fread(message, size,1,pFile);
+                        printf("Successfully read from file...\n");
+                }
+                else {
+                        printf("Couldn't open file %s\n", filepath);
+                }
+                fclose(pFile);
+        }
 
         for(;;) {
                 //send(message, sizeof(a_test_message));
-                send(message, 144);
+                send(message, size);
                 sleep(5);
         }
+        free(message);
 }
