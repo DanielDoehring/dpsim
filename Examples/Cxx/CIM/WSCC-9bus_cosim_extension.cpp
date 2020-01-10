@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
     // Voltage Source
 
     auto evs = VoltageSource::make("v_evs", Logger::Level::debug);
-	evs->setParameters(Complex(-15798,21801));
+	evs->setParameters(Complex(15588.457,0.0));
     
     // Nodes
 
@@ -100,7 +100,7 @@ int main(int argc, char *argv[]) {
     distLoad2->connect({distNode3});
     distLoad3->connect({distNode4});    
 
-    auto sys = SystemTopology(60, 
+    auto sys = SystemTopology(60,
         SystemNodeList{distNode1, distNode2, distNode3, distNode4}, 
         SystemComponentList{evs, distLine1, distLine2, distLine3,
             distLoad1, distLoad2, distLoad3});
@@ -113,20 +113,23 @@ int main(int argc, char *argv[]) {
 
     // Add Logging
     auto logger = DataLogger::make(simName);
-    logger->addAttribute("v_evs", evs->attribute("V_ref"));
+    //logger->addAttribute("v_evs", evs->attribute("V_ref"));
     logger->addAttribute("v_node1", distNode1->attribute("v"));
     logger->addAttribute("v_node2", distNode2->attribute("v"));
     logger->addAttribute("v_node3", distNode3->attribute("v"));
     logger->addAttribute("v_node4", distNode4->attribute("v"));
 
-    // logger->addAttribute("I_load", distLoad1->attribute("i_intf"));
-    // std::cout << "Breakpoint" << std::endl;
-    // logger->addAttribute("I_line", distLoad1->attribute("I"));
+    logger->addAttribute("I_Load1", distLoad1->attribute("i_intf"));
+    logger->addAttribute("I_Load2", distLoad2->attribute("i_intf"));
+    logger->addAttribute("I_Load3", distLoad3->attribute("i_intf"));
+
+    logger->addAttribute("I_line1", distLine1->attribute("i_intf"));
+    logger->addAttribute("I_line2", distLine2->attribute("i_intf"));
+    logger->addAttribute("I_line3", distLine3->attribute("i_intf"));
 
     //sim.doSplitSubnets(false);
     sim.addLogger(logger);
 
     sim.run();
-
     return 0;
 }
