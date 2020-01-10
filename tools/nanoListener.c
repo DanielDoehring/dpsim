@@ -14,7 +14,7 @@ void fatal (const char *func) {
 
 
 
-int listen(const char *url) {
+int listen(const char *url, const char *filepath) {
 
     int sock;
 
@@ -50,17 +50,34 @@ int listen(const char *url) {
         }
 
         fprintf(stderr, "RECEIVED %s\n", buf);
+ 
+        if (filepath != ""){
+            FILE* pFile = fopen(filepath, "wb");
+            if(pFile){
+                fwrite(buf, bytes, 1, pFile);
+                fprintf(stderr, "Wrote buffer to file: %s\n", filepath);
+            }
+            else {
+                fprintf(stderr, "Could not open file %s\n", filepath);
+            }
+            fclose(pFile);
+        }
+
         nn_freemsg(buf);
     }
 }
 
 int main(const int argc, const char **argv) {
     
+    // Option to set a filepath. If path is set != "", the buffer will be written to the corresponding file.
+    //const char* filepath="tools/complexValue.buf";
+    const char* filepath = "";
+    
     if (argc <= 1) {
         fprintf(stderr, "Abort: No URL given!...\n Usage: nanoListener <URL> \n");
         return 1;
     } 
     else {
-        return(listen(argv[1]));
+        return(listen(argv[1], filepath));
     }
 }

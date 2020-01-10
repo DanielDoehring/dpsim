@@ -69,8 +69,9 @@ int send(char* buf, int length) {
         //int length_message = strlen(test_message) + 1;
         //char *buf = &a_test_message;
 	printf("SENDING: %s\n", buf);
-        int bytes = nn_send(out_socket, buf, length, 0);
-        
+        //FIXME: Remove hardcoded length of message...
+        int bytes = nn_send(out_socket, buf, 144, 0);
+
         if (bytes < 0) {
                 fatal("nn_send");
                 ret = 0;
@@ -135,8 +136,12 @@ int setup(const char *url_out) {
                 3) Wait 5 seconds
                 4) Goto 2)
 */
-int main(const int argc, const char **argv) {
-	if ((argc >= 2)) {
+int main(const int argc, const char **argv) {	
+        // Option to set a filepath. If filepath is set != "", the message will be read from file.
+        const char* filepath = "test";
+
+
+        if ((argc >= 2)) {
                 if (setup(argv[1]) != 1) {
                         printf("Error: Setup failed!\n");
                 }
@@ -147,11 +152,28 @@ int main(const int argc, const char **argv) {
                 return -1;
         }
         
-        char message[] = "thisIsATestMessage";
+        // char* message = "";
+        // if (filepath == "") {
+        //         message = "thisIsATestMessage";
+        // }
+        // else {
+        //         printf("BP1");
+        //         FILE *pFile;
+        //         //FILE *pFile = fopen(filepath, "rb");
+        //         printf("BP2");
+        //         if (pFile) {
+        //                 fread(message, 144,1,pFile);
+        //                 printf("Successfully read from file...\n");
+        //         }
+        //         else {
+        //                 printf("Couldn't open file %s\n", filepath);
+        //         }
+        //         fclose(pFile);
+        // }
 
         for(;;) {
                 //send(message, sizeof(a_test_message));
-                send(message, sizeof(message));
+                send(message, 144);
                 sleep(5);
         }
 }
