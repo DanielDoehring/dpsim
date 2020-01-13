@@ -100,12 +100,12 @@ int main(int argc, char *argv[]) {
     distLoad2->connect({distNode3});
     distLoad3->connect({distNode4});    
 
-    auto sys = SystemTopology(60,
+    auto sys = SystemTopology(50,
         SystemNodeList{distNode1, distNode2, distNode3, distNode4}, 
         SystemComponentList{evs, distLine1, distLine2, distLine3,
             distLoad1, distLoad2, distLoad3});
 
-    RealTimeSimulation sim (simName, sys, 1.0, 10,
+    RealTimeSimulation sim (simName, sys, 1.0, 100,
         Domain::DP, Solver::Type::MNA, Logger::Level::debug, true);
 
     std::ofstream of1(simName + "_topology_graph.svg");
@@ -122,6 +122,18 @@ int main(int argc, char *argv[]) {
     logger->addAttribute("I_Load1", distLoad1->attribute("i_intf"));
     logger->addAttribute("I_Load2", distLoad2->attribute("i_intf"));
     logger->addAttribute("I_Load3", distLoad3->attribute("i_intf"));
+
+    logger->addAttribute("Vnom_Load1", distLoad1->attribute("V_nom"));
+    logger->addAttribute("Vnom_Load2", distLoad2->attribute("V_nom"));
+    logger->addAttribute("Vnom_Load3", distLoad3->attribute("V_nom"));
+
+    logger->addAttribute("P_Load1", distLoad1->attribute("P"));
+    logger->addAttribute("P_Load2", distLoad2->attribute("P"));
+    logger->addAttribute("P_Load3", distLoad3->attribute("P"));
+
+    logger->addAttribute("Q_Load1", distLoad1->attribute("Q"));
+    logger->addAttribute("Q_Load2", distLoad2->attribute("Q"));
+    logger->addAttribute("Q_Load3", distLoad3->attribute("Q"));
 
     logger->addAttribute("I_line1", distLine1->attribute("i_intf"));
     logger->addAttribute("I_line2", distLine2->attribute("i_intf"));
