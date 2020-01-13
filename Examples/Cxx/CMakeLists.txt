@@ -64,6 +64,7 @@ if(WITH_RT)
 	set(RT_SOURCES
 		RealTime/RT_DP_CS_R1.cpp
 		RealTime/RT_DP_VS_RL2.cpp
+		CIM/WSCC-9bus_cosim_extension.cpp
 	)
 endif()
 
@@ -93,7 +94,6 @@ if(WITH_CIM)
 		CIM/WSCC-9bus_CIM_Dyn.cpp
 		CIM/WSCC-9bus_CIM_Dyn_Switch.cpp
 		CIM/WSCC-9bus_CIM_dev.cpp
-		# CIM/WSCC-9bus_cosim_extension.cpp
 
 		# powerflow example		
 		CIM/Slack_Trafo_Load.cpp

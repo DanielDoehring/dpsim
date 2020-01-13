@@ -54,7 +54,6 @@
 
 using namespace DPsim;
 using namespace CPS::DP;
-using namespace CPS::DP::Ph1;using namespace CPS::DP;
 using namespace CPS::DP::Ph1;
 
 int main(int argc, char *argv[]) {
@@ -67,7 +66,7 @@ int main(int argc, char *argv[]) {
 
     auto evs = VoltageSource::make("v_evs", Logger::Level::debug);
 	evs->setParameters(Complex(15588.457,0.0));
-    
+
     // Nodes
 
     auto distNode1 = Node::make("DistNode1");
