@@ -17,6 +17,7 @@ void fatal (const char *func) {
 int listen(const char *url, const char *filepath) {
 
     int sock;
+    int numberOfMessages = 0;
 
     if ((sock = nn_socket(AF_SP, NN_SUB)) < 0) {
         fatal("nn_socket");
@@ -43,11 +44,15 @@ int listen(const char *url, const char *filepath) {
     for(;;) {
         void *buf = NULL;
     
+        fprintf(stderr, "Before recv: %i\n", numberOfMessages);
+        numberOfMessages = nn_get_statistic(sock, NN_STAT_MESSAGES_RECEIVED);
         int bytes = nn_recv(sock, &buf, NN_MSG, 0);
         if (bytes < 0) {
             fatal("nn_recv");
             // fprintf(stderr, "test");
         }
+        numberOfMessages = nn_get_statistic(sock, NN_STAT_MESSAGES_RECEIVED);
+        fprintf(stderr, "After recv: %i\n", numberOfMessages);
 
         fprintf(stderr, "RECEIVED %s\n", buf);
  

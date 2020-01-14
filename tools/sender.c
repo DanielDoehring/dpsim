@@ -105,27 +105,7 @@ int setup(const char *url_out) {
                 fatal("nn_bind");
                 ret = 0;
         }
-
-        // ///////////////////////////////////////////////
-        // // Configure and connect in_socket
-        // ///////////////////////////////////////////////
         
-        // if ((in_socket = nn_socket(AF_SP, NN_SUB)) < 0) {
-        //         fatal("nn_socket");
-        //         ret = 0;
-        // }
-        
-        // // "" --> subscribe to ALL topics
-        // if (nn_setsockopt(in_socket, NN_SUB, NN_SUB_SUBSCRIBE, "", 0) < 0) {
-        //         fatal("nn_setsockopt");
-        //         ret = 0;
-        // }
-        
-        // if (nn_connect(in_socket, url_in) < 0) {
-        //         fatal("nn_connect");
-        //         ret = 0;
-        // }
-
         return ret;
 
 }
@@ -155,7 +135,8 @@ int main(const int argc, const char **argv) {
         
         if (filepath == "") {
                 message = "thisIsATestMessage";
-                size = sizeof(message);
+                //size = sizeof(message);
+                size = 144;
         }
         else {
                 FILE *pFile = fopen(filepath, "rb");
@@ -169,18 +150,18 @@ int main(const int argc, const char **argv) {
                 if (pFile) {
                         message = malloc(size);
                         fread(message, size,1,pFile);
-                        printf("Successfully read from file...\n");
+                        fprintf(stderr, "Successfully read from file...\n");
                 }
                 else {
-                        printf("Couldn't open file %s\n", filepath);
+                        fprintf(stderr, "Couldn't open file %s\n", filepath);
                 }
                 fclose(pFile);
         }
 
-        for(;;) {
-                //send(message, sizeof(a_test_message));
+        for(int i = 0; i <= 5; ++i) {
                 send(message, size);
-                sleep(5);
-        }
-        free(message);
+                sleep(1);
+        }        
+        if(filepath != "")
+                free(message);
 }
