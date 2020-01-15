@@ -91,9 +91,22 @@ int main(int argc, char *argv[]) {
 
     // Loads
     
-    auto distLoad1 = CPS::DP::Ph1::RXLoad::make("distLoad1", 30000000, 10000000, 222222);
-    auto distLoad2 = CPS::DP::Ph1::RXLoad::make("distLoad2", 30000000, 10000000, 222222);
-    auto distLoad3 = CPS::DP::Ph1::RXLoad::make("distLoad3", 30000000, 10000000, 222222);
+    // auto distLoad1 = CPS::DP::Ph1::RXLoad::make("distLoad1", 30000000, 10000000, 222222);
+    // auto distLoad2 = CPS::DP::Ph1::RXLoad::make("distLoad2", 30000000, 10000000, 222222);
+    // auto distLoad3 = CPS::DP::Ph1::RXLoad::make("distLoad3", 30000000, 10000000, 222222);
+
+    auto distLoad1 = CPS::DP::Ph1::RXLoad::make("distLoad1");
+    auto distLoad2 = CPS::DP::Ph1::RXLoad::make("distLoad2");
+    auto distLoad3 = CPS::DP::Ph1::RXLoad::make("distLoad3");
+
+    // distLoad1->setParameters(30000000, 10000000, 222222);
+    // distLoad2->setParameters(30000000, 10000000, 222222);
+    // distLoad3->setParameters(30000000, 10000000, 222222);
+
+
+    distLoad1->setParameters(3000, 1000, 27000);
+    distLoad2->setParameters(3000, 1000, 27000);
+    distLoad3->setParameters(3000, 1000, 27000);
 
     distLoad1->connect({distNode2});
     distLoad2->connect({distNode3});
