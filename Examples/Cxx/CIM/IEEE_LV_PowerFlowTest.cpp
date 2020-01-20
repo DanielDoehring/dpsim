@@ -20,7 +20,6 @@
 
 #include <cps/CIM/Reader.h>
 #include <DPsim.h>
-#include <cps/LoadProfileReader.h>
 
 using namespace std;
 using namespace DPsim;
@@ -36,12 +35,12 @@ int main(int argc, char** argv){
 	// Find CIM files
 	std::list<fs::path> filenames;
 	if (argc <= 1) {
-		filenames = DPsim::Utils::findFiles({
-			"Rootnet_FULL_NE_13J16h_DI.xml",
-			"Rootnet_FULL_NE_13J16h_EQ.xml",
-			"Rootnet_FULL_NE_13J16h_SV.xml",
-			"Rootnet_FULL_NE_13J16h_TP.xml"
-		}, "Examples/CIM/IEEE_EU_LV_reduced", "CIMPATH");
+		  filenames = DPsim::Utils::findFiles({
+                        "Rootnet_FULL_NE_13J16h_DI.xml",
+                        "Rootnet_FULL_NE_13J16h_EQ.xml",
+                        "Rootnet_FULL_NE_13J16h_SV.xml",
+                        "Rootnet_FULL_NE_13J16h_TP.xml"
+                }, "Examples/CIM/IEEE_EU_LV_reduced", "CIMPATH");
 	}
 	else {
 		filenames = std::list<fs::path>(argv + 1, argv + argc);
@@ -59,7 +58,7 @@ int main(int argc, char** argv){
 		logger->addAttribute(node->name(), node->attribute("v"));
 	}
 
-	Simulation sim(simName, system, 1, 5, Domain::SP, Solver::Type::NRP, Logger::Level::info, true);
+	Simulation sim(simName, system, 1, 1, Domain::SP, Solver::Type::NRP, Logger::Level::debug, true);
 
 	sim.addLogger(logger);
 	sim.run();

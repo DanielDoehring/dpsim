@@ -20,7 +20,6 @@
 
 #include <cps/CIM/Reader.h>
 #include <DPsim.h>
-#include <cps/LoadProfileReader.h>
 
 using namespace std;
 using namespace DPsim;
@@ -59,7 +58,7 @@ int main(int argc, char** argv){
 		logger->addAttribute(node->name() + ".V", node->attribute("v"));
 	}
 
-	Simulation sim(simName, system, 1, 120, Domain::SP, Solver::Type::NRP, Logger::Level::off, true);
+	Simulation sim(simName, system, 1, 1, Domain::SP, Solver::Type::NRP, Logger::Level::off, true);
 
 	sim.addLogger(logger);
 	sim.run();
