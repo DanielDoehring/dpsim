@@ -45,12 +45,12 @@ int main(int argc, char *argv[]) {
 	CIMReader reader(simName, Logger::Level::info, Logger::Level::info);
 	SystemTopology sys = reader.loadCIM(60, filenames);
 	
-	std::cout << "BP1" <<  argc << std::endl;
+	// std::cout << "BP1" <<  argc << std::endl;
 	if (argc > 1){ 
 		if (String(argv[1]) == "--cosim"){
 
 			// COSIM CASE
-			std::cout << "BP2" << std::endl;
+			// std::cout << "BP2" << std::endl;
 			Interface intf("/dpsim-villas", "/villas-dpsim", nullptr, false);
 
 			// Add current source that models the received distaix current
@@ -71,8 +71,11 @@ int main(int argc, char *argv[]) {
 			// intf.exportReal(compAttr->phase(), o++);
 			intf.exportComplex(compAttr, o++);
 
-			RealTimeSimulation sim(simName, sys, 1.0, 10,
+			RealTimeSimulation sim(simName, sys, 1.0, 100,
 				Domain::DP, Solver::Type::MNA, Logger::Level::debug, true);
+
+			// Simulation sim(simName, sys, 1.0, 100,
+			// 	Domain::DP, Solver::Type::MNA, Logger::Level::debug, true);
 
 
 			std::ofstream of1(simName+"_topology_graph.svg");
@@ -91,8 +94,11 @@ int main(int argc, char *argv[]) {
 			sim.run();
 		} else if (String(argv[1]) == "--base"){
 
-			RealTimeSimulation sim(simName, sys, 1.0, 100,
-				Domain::DP, Solver::Type::MNA, Logger::Level::debug, true);
+			// RealTimeSimulation sim(simName, sys, 1.0, 100,
+			// 	Domain::DP, Solver::Type::MNA, Logger::Level::debug, true);
+
+			Simulation sim(simName, sys, 1.0, 100,
+					Domain::DP, Solver::Type::MNA, Logger::Level::debug, true);
 
 
 			std::ofstream of1(simName+"_topology_graph.svg");
@@ -108,7 +114,7 @@ int main(int argc, char *argv[]) {
 			// Set sync to false as there is only one interface using shmem
 			sim.run();
 		} else if (String(argv[1]) == "--extended") {
-			std::cout << "BP3" << std::endl;
+			// std::cout << "BP3" << std::endl;
 			/////////////////////
 			// Extend topology //
 			/////////////////////
@@ -135,9 +141,14 @@ int main(int argc, char *argv[]) {
 
 			// Loads
 			
-			auto distLoad1 = CPS::DP::Ph1::RXLoad::make("distLoad1", 30000000, 10000000, 222222);
-			auto distLoad2 = CPS::DP::Ph1::RXLoad::make("distLoad2", 30000000, 10000000, 222222);
-			auto distLoad3 = CPS::DP::Ph1::RXLoad::make("distLoad3", 30000000, 10000000, 222222);
+			// auto distLoad1 = CPS::DP::Ph1::RXLoad::make("distLoad1", 30000000, 10000000, 222222);
+			// auto distLoad2 = CPS::DP::Ph1::RXLoad::make("distLoad2", 30000000, 10000000, 222222);
+			// auto distLoad3 = CPS::DP::Ph1::RXLoad::make("distLoad3", 30000000, 10000000, 222222);
+
+
+			auto distLoad1 = CPS::DP::Ph1::RXLoad::make("distLoad1", 30000, 10000, 27000);
+			auto distLoad2 = CPS::DP::Ph1::RXLoad::make("distLoad2", 30000, 10000, 27000);
+			auto distLoad3 = CPS::DP::Ph1::RXLoad::make("distLoad3", 30000, 10000, 27000);
 
 			distLoad1->connect({distNode1});
 			distLoad2->connect({distNode2});
@@ -150,7 +161,10 @@ int main(int argc, char *argv[]) {
 			sys.addComponents({distLoad1, distLoad2, distLoad3});
 			sys.addComponents({distLine1, distLine2, distLine3});
 
-			RealTimeSimulation sim(simName, sys, 1.0, 10,
+			// RealTimeSimulation sim(simName, sys, 1.0, 100,
+			// 	Domain::DP, Solver::Type::MNA, Logger::Level::debug, true);
+
+			Simulation sim(simName, sys, 1.0, 100,
 				Domain::DP, Solver::Type::MNA, Logger::Level::debug, true);
 
 			// Plot topology
@@ -161,8 +175,7 @@ int main(int argc, char *argv[]) {
 			// Add logger for comparison
 			auto logger = DataLogger::make(simName);
 			logger->addAttribute("v", sys.node<Node>("BUS5")->attribute("v"));
-			//logger->addAttribute("i", sys.node<Node>("BUS5")->attribute("i"));
-
+			logger->addAttribute("i_ecs", distLine1->attribute("i_intf"));
 
 
 			//sim.doSplitSubnets(false);
