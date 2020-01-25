@@ -128,6 +128,7 @@ if(WITH_CIM AND WITH_SHMEM)
 		Shmem/Shmem_WSCC-9bus_Ctrl.cpp
 		Shmem/Shmem_WSCC-9bus_CtrlDist.cpp
 		Shmem/Shmem_WSCC-9bus_cosim_dev.cpp
+		Shmem/Shmem_WSCC-9bus_cosim_testgrid.cpp
 	)
 endif()
 
