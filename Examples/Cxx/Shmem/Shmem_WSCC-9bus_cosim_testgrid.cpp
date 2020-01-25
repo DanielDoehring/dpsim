@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
 
 			auto evs = VoltageSource::make("EVS");
 			//evs->setParameters(Complex(25000.0,-18000.0));
-			evs->setParameters(Complex(155880.457));
+			evs->setParameters(Complex(15588.457));
 			sys.addComponents({evs});
 
 			// Nodes
@@ -141,7 +141,7 @@ int main(int argc, char *argv[]) {
 		// FIXME: Set realistic voltage...
 		auto evs = VoltageSource::make("EVS");
 		//evs->setParameters(Complex(25000.0,-18000.0));
-		evs->setParameters(Complex(155880.457));
+		evs->setParameters(Complex(15588.457));
 		sys.addComponents({evs});
 
 		// Nodes
