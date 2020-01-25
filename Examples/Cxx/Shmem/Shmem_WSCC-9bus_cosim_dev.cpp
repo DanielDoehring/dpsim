@@ -140,15 +140,13 @@ int main(int argc, char *argv[]) {
 			distLine3->connect({distNode2, distNode3});
 
 			// Loads
-			
-			// auto distLoad1 = CPS::DP::Ph1::RXLoad::make("distLoad1", 30000000, 10000000, 222222);
-			// auto distLoad2 = CPS::DP::Ph1::RXLoad::make("distLoad2", 30000000, 10000000, 222222);
-			// auto distLoad3 = CPS::DP::Ph1::RXLoad::make("distLoad3", 30000000, 10000000, 222222);
+			Real load_p = 30000;
+			Real load_q = 10000;
+			Real load_v = 27000;
 
-
-			auto distLoad1 = CPS::DP::Ph1::RXLoad::make("distLoad1", 30000, 10000, 27000);
-			auto distLoad2 = CPS::DP::Ph1::RXLoad::make("distLoad2", 30000, 10000, 27000);
-			auto distLoad3 = CPS::DP::Ph1::RXLoad::make("distLoad3", 30000, 10000, 27000);
+			auto distLoad1 = CPS::DP::Ph1::RXLoad::make("distLoad1", load_p, load_q, load_v);
+			auto distLoad2 = CPS::DP::Ph1::RXLoad::make("distLoad2", load_p, load_q, load_v);
+			auto distLoad3 = CPS::DP::Ph1::RXLoad::make("distLoad3", load_p, load_q, load_v);
 
 			distLoad1->connect({distNode1});
 			distLoad2->connect({distNode2});
