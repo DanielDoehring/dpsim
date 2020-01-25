@@ -35,6 +35,9 @@ int main(int argc, char *argv[]) {
 
 	Logger::setLogDir("logs/" + simName);
 
+	//Complex voltage = Complex(21801.18, -15798.35);
+	Complex voltage = Complex(0.0, 15588.457);
+
 	if (argc > 1){ 
 		if (String(argv[1]) == "--cosim"){
 
@@ -44,7 +47,7 @@ int main(int argc, char *argv[]) {
 
 			auto evs = VoltageSource::make("EVS");
 			//evs->setParameters(Complex(25000.0,-18000.0));
-			evs->setParameters(Complex(15588.457));
+			evs->setParameters(voltage);
 			sys.addComponents({evs});
 
 			// Nodes
@@ -89,7 +92,9 @@ int main(int argc, char *argv[]) {
 
 			// Add current source that models the received distaix current
 			auto ecs = CurrentSource::make("ecs", Complex(0,0), Logger::Level::debug);
-			ecs->connect({Node::GND, helpNode});
+			// Be careful in which direction ecs is connected as it should DRAW the
+			// current instead of providing it!!
+			ecs->connect({helpNode, Node::GND});
 			ecs->setAttributeRef("I_ref", intf.importComplex(0));
 
 			sys.addComponents({ecs});
@@ -101,7 +106,7 @@ int main(int argc, char *argv[]) {
 			auto compAttr = node3->attributeMatrixComp("v")->coeff(0,0);
 			intf.exportComplex(compAttr, o++);
 			
-			RealTimeSimulation sim(simName, sys, 1.0, 100,
+			RealTimeSimulation sim(simName, sys, 1.0, 20,
 				Domain::DP, Solver::Type::MNA, Logger::Level::debug, true);
 
 			// // Simulation sim(simName, sys, 1.0, 100,
@@ -118,7 +123,7 @@ int main(int argc, char *argv[]) {
 
 			logger->addAttribute("ECS_v", ecs->attribute("v_intf"));
 			logger->addAttribute("ECS_i", ecs->attribute("i_intf"));
-			logger->addAttribute("ECS_I_ref", ecs->attribute("I_ref"));
+			//logger->addAttribute("ECS_I_ref", ecs->attribute("I_ref"));
 
 			logger->addAttribute("Node3_v", node3->attribute("v"));
 
@@ -141,7 +146,7 @@ int main(int argc, char *argv[]) {
 		// FIXME: Set realistic voltage...
 		auto evs = VoltageSource::make("EVS");
 		//evs->setParameters(Complex(25000.0,-18000.0));
-		evs->setParameters(Complex(15588.457));
+		evs->setParameters(voltage);
 		sys.addComponents({evs});
 
 		// Nodes
@@ -233,9 +238,12 @@ int main(int argc, char *argv[]) {
 		logger->addAttribute("EVS_v", evs->attribute("v_intf"));
 		logger->addAttribute("EVS_i", evs->attribute("i_intf"));
 
+		logger->addAttribute("Line3_i", line3->attribute("i_intf"));
+		logger->addAttribute("Line3_v", line3->attribute("v_intf"));
+
 		// logger->addAttribute("Node1_v", node1->attribute("v"));
 		// logger->addAttribute("Node2_v", node2->attribute("v"));
-		// logger->addAttribute("Node3_v", node3->attribute("v"));
+		logger->addAttribute("Node3_v", node3->attribute("v"));
 		// logger->addAttribute("DistNode4_v", distNode4->attribute("v"));
 		// logger->addAttribute("DistNode5_v", distNode5->attribute("v"));
 		// logger->addAttribute("DistNode6_v", distNode6->attribute("v"));
