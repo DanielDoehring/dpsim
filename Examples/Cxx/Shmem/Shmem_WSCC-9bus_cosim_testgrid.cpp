@@ -31,6 +31,10 @@ using namespace CPS::DP::Ph1;
 
 int main(int argc, char *argv[]) {
 	
+	for(int i = 0; i < argc; ++i){
+		std::cout << argv[i] << std::endl;
+	}
+	
 	String simName = "Shmem_WSCC-9bus_cosim_testgrid";
 
 	Logger::setLogDir("logs/" + simName);
@@ -38,8 +42,12 @@ int main(int argc, char *argv[]) {
 	//Complex voltage = Complex(21801.18, -15798.35);
 	Complex voltage = Complex(0.0, 15588.457);
 
-	if (argc > 1){ 
+	if (argc > 1 && String(argv[1]) == "--cosim"){ 
 		if (String(argv[1]) == "--cosim"){
+
+			if(argc >= 4){
+				voltage = Complex(std::stod(argv[2]),std::stod(argv[3]));
+			}
 
 			// TODO:COSIM CASE
 			auto sys = SystemTopology(60);
@@ -140,6 +148,11 @@ int main(int argc, char *argv[]) {
 		/////////////////////
 		// Extend topology //
 		/////////////////////
+		std::cout<<"what is happening?" << std::endl;
+		if(argc >= 3){
+			std::cout << "yes...?" << std::endl;
+			voltage = Complex(std::stod(argv[1]),std::stod(argv[2]));
+		}
 
 		auto sys = SystemTopology(60);
 
