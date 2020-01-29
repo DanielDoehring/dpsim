@@ -132,8 +132,9 @@ void DP::Ph1::PQLoadCS::mnaApplySystemMatrixStamp(Matrix& systemMatrix) {
 void DP::Ph1::PQLoadCS::updateSetPoint() {
 	// Calculate new current set point.
 	Complex power = { mActivePower->get(), mReactivePower->get()};
-	Complex current = power / mNomVoltage->get();
-	//Complex current = power / mIntfVoltage(0,0);
+	//Complex current = power / mNomVoltage->get();
+	Complex current = (power / mIntfVoltage(0,0));
+
 
 	mCurrentSourceRef->set(std::conj(current));
 	mSLog->debug(
