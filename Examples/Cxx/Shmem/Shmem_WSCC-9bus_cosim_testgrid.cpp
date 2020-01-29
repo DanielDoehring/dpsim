@@ -159,15 +159,18 @@ int main(int argc, char *argv[]) {
 			evs->setParameters(voltage);
 			sys.addComponents({evs});
 
-			auto node1 = Node::make("Node1");
-			auto node2 = Node::make("Node2");
+			//Complex(21801.18, -15798.35)
+			std::vector<Complex> initialVoltage = { Complex(15588.5, 0.0), 0, 0 };
+			auto node1 = Node::make("Node1", PhaseType::Single, initialVoltage);
+			auto node2 = Node::make("Node2", PhaseType::Single, initialVoltage);
 			sys.addNodes({node1,node2});
 
 			auto load1 = CPS::DP::Ph1::PQLoadCS::make("Load1");
 			load1->setParameters(30000,10000,27000);
 
 			auto line1 = CPS::DP::Ph1::PiLine::make("Line1");
-			line1->setParameters(5.29, 0.119273, -1.0);
+			//line1->setParameters(5.29, 0.119273, -1.0);
+			line1->setParameters(5.29, 0.143128, -1.0, 0.000001);
 			line1->connect({node1,node2});
 			sys.addComponents({load1, line1});
 
@@ -190,6 +193,12 @@ int main(int argc, char *argv[]) {
 			logger->addAttribute("Load.i", load1->attribute("i_intf"));
 			logger->addAttribute("Load.P", load1->attribute("P"));
 			logger->addAttribute("Load.Q", load1->attribute("Q"));
+
+			logger->addAttribute("Node1.v", node1->attribute("v"));
+			logger->addAttribute("Node2.v", node2->attribute("v"));
+
+			logger->addAttribute("Line.v", line1->attribute("v_intf"));
+			logger->addAttribute("Line.i", line1->attribute("i_intf"));
 
 			sim.addLogger(logger);
 			sim.run();
