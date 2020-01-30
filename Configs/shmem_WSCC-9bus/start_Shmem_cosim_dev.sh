@@ -48,7 +48,8 @@ sleep 2
 
 CPS_LOG_PREFIX="[Sys ] " \
 #build/Examples/Cxx/Shmem_WSCC-9bus_cosim_dev --cosim & P1=$!
-build/Examples/Cxx/Shmem_WSCC-9bus_cosim_testgrid --cosim & P1=$!
+build/Examples/Cxx/Shmem_WSCC-9bus_cosim_benchmark & P1=$!
+#build/Examples/Cxx/Shmem_WSCC-9bus_cosim_testgrid --cosim 21801.18 0.0 & P1=$!
 #build/Examples/Cxx/Shmem_WSCC-9bus_cosim_dev & P1=$!
 CHILDS=$P1
 
