@@ -39,7 +39,7 @@ int main(int argc, char *argv[]) {
 			"WSCC-09_RX_EQ.xml",
 			"WSCC-09_RX_SV.xml",
 			"WSCC-09_RX_TP.xml"
-		}, "Examples/CIM/WSCC-09_RX_Dyn", "CIMPATH");
+		}, "Examples/CIM/WSCC-09_RX", "CIMPATH");
 	}
 	else {
 		filenames = std::list<fs::path>(argv + 1, argv + argc);
@@ -48,24 +48,24 @@ int main(int argc, char *argv[]) {
     String simName = "Shmem_WSCC-9bus_cosim_benchmark";
 	Logger::setLogDir("logs/"+simName);
 
-	CPS::CIM::Reader reader(simName, Logger::Level::debug, Logger::Level::info);
+	CPS::CIM::Reader reader(simName, Logger::Level::debug, Logger::Level::off);
 	SystemTopology sys = reader.loadCIM(60, filenames);
 
 	// Extend topology with switch
-	auto sw = Ph1::Switch::make("StepLoad", Logger::Level::info);
+	auto sw = Ph1::Switch::make("StepLoad", Logger::Level::off);
 	sw->setParameters(1e9, 0.1);
 	sw->connect({ Node::GND, sys.node<Node>("BUS6") });
 	sw->open();
 	sys.addComponent(sw);
 
-	auto swEvent1 = SwitchEvent::make(0.2, sw, true);
-	// auto swEvent2 = SwitchEvent::make(0.07, sw, false);
+	auto swEvent1 = SwitchEvent::make(5.0, sw, true);
+	auto swEvent2 = SwitchEvent::make(15.0, sw, false);
 	
 	// boolean --> busyWaiting
 	Interface intf("/dpsim-villas", "/villas-dpsim", nullptr, true);
 
 	// Add current source that models the received distaix current
-	auto ecs = CurrentSource::make("ecs", Complex(0,0), Logger::Level::debug);
+	auto ecs = CurrentSource::make("ecs", Complex(0,0), Logger::Level::off);
 	// Be careful in which direction ecs is connected as it should DRAW the
 	// current instead of providing it!!
 	ecs->connect({sys.node<Node>("BUS5"), Node::GND});
@@ -111,7 +111,7 @@ int main(int argc, char *argv[]) {
 		Domain::DP, Solver::Type::MNA, Logger::Level::info, true);
 
 	sim.addEvent(swEvent1);
-	// sim.addEvent(swEvent2);
+	sim.addEvent(swEvent2);
 	sim.addLogger(logger);
 	// boolean --> syncStart
 	sim.addInterface(&intf, true);

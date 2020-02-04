@@ -351,8 +351,12 @@ Graph::Graph Simulation::dependencyGraph() {
 #endif
 
 void Simulation::run() {
+	// auto t_start = std::chrono::high_resolution_clock::now();
 	if (!mInitialized)
 		initialize();
+	// auto t1 = std::chrono::high_resolution_clock::now();
+	// mSLog->info("Initialization took: " + 
+	// 	std::to_string(std::chrono::duration_cast<std::chrono::microseconds>(t1 - t_start).count()));
 
 #ifdef WITH_SHMEM
 	mCLog->info("Opening interfaces.");
@@ -360,13 +364,25 @@ void Simulation::run() {
 	for (auto ifm : mInterfaces)
 		ifm.interface->open(mCLog);
 
+	// auto t2 = std::chrono::high_resolution_clock::now();
+	// mSLog->info("Opening interfaces took: " +
+	// 	std::to_string(std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count()));
 	sync();
+	// auto t3 = std::chrono::high_resolution_clock::now();
+	// mSLog->info("Sync() took: " + std::to_string(std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2).count()));
 #endif
 
 	mCLog->info("Start simulation: {}", mName);
 
+	// std::chrono::high_resolution_clock::time_point t_prev;
+	// std::chrono::high_resolution_clock::time_point t_post;
+
 	while (mTime < mFinalTime) {
+		// t_prev = std::chrono::high_resolution_clock::now();	
 		step();
+		// t_post = std::chrono::high_resolution_clock::now();
+		// mSLog->info(std::to_string(mTime) + ": " 
+		// 	+ std::to_string(std::chrono::duration_cast<std::chrono::microseconds>(t_post - t_prev).count()));
 	}
 
 	mScheduler->stop();
@@ -378,7 +394,9 @@ void Simulation::run() {
 
 	for (auto lg : mLoggers)
 		lg->close();
-
+	// auto t_end = std::chrono::high_resolution_clock::now();
+	// mSLog->info("Simulation time: " + 
+	// 	std::to_string(std::chrono::duration_cast<std::chrono::microseconds>(t_end - t_start).count()));
 	mCLog->info("Simulation finished.");
 }
 
