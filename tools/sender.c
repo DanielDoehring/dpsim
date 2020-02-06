@@ -118,7 +118,7 @@ int setup(const char *url_out) {
 */
 int main(const int argc, const char **argv) {	
         // Option to set a filepath. If filepath is set != "", the message will be read from file.
-        const char* filepath = "";
+        const char* filepath = "complexValue.buf";
         char* message;
         size_t size;
 
@@ -144,7 +144,7 @@ int main(const int argc, const char **argv) {
                 // determine message size
                 fseek(pFile, 0, SEEK_END);
                 size = ftell(pFile)-1; // -1 to remove EOF identifier
-                printf("size = %i", size);
+                printf("size = %zu", size);
                 fseek(pFile, 0, SEEK_SET);
                 
                 if (pFile) {
@@ -157,11 +157,19 @@ int main(const int argc, const char **argv) {
                 }
                 fclose(pFile);
         }
+	int numMessage = 15000000;
+	char messBuf[12];
 
-        for(int i = 0; i <= 5; ++i) {
-                send(message, size);
-                sleep(1);
-        }        
+	time_t start = time(NULL);
+	sleep(5);
+        for(int i = 0; i < numMessage; ++i) {
+                snprintf(messBuf, 12, "pre_%d_suff", i);
+		send(message, size);
+		//send(message, size);
+                usleep(1000);
+        	//sleep(1);
+	}        
+	fprintf(stderr, "%i messages took: %f\n", numMessage, (double)(time(NULL)-start));
         if(filepath != "")
                 free(message);
 }
