@@ -41,10 +41,11 @@ int listen(const char *url, const char *filepath) {
     // Continously listen to socket and print all incoming messages
     fprintf(stderr, "Listener up and running on URL = %s\n", url);
 
+    fprintf(stderr, "Starting at %i messages received...\n", nn_get_statistic(sock, NN_STAT_MESSAGES_RECEIVED));
     for(;;) {
         void *buf = NULL;
     
-        fprintf(stderr, "Before recv: %i\n", numberOfMessages);
+        // fprintf(stderr, "Before recv: %i\n", numberOfMessages);
         numberOfMessages = nn_get_statistic(sock, NN_STAT_MESSAGES_RECEIVED);
         int bytes = nn_recv(sock, &buf, NN_MSG, 0);
         if (bytes < 0) {
