@@ -47,11 +47,14 @@ fi
 sleep 2
 
 CPS_LOG_PREFIX="[Sys ] " \
-build/Examples/Cxx/Shmem_WSCC-9bus_cosim_benchmark & P1=$!
+build/Examples/Cxx/Shmem_WSCC-9bus_cosim_benchmark #& P1=$!
 CHILDS=$P1
 
+sleep 2
+
+pkill villas-node
 
 # Wait until all child processed finished
-while (( $(ps --no-headers -o pid --ppid=$$ | wc -w) > 1 )); do
-	wait
-done
+# while (( $(ps --no-headers -o pid --ppid=$$ | wc -w) > 1 )); do
+# 	wait
+# done
