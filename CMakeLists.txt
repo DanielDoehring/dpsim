@@ -14,11 +14,15 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL Intel)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 endif()
 add_definitions(-D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS)
+add_definitions(-D_SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING)
 
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/CMake;${PROJECT_SOURCE_DIR}/Dependencies/libcps/CMake")
 
 set(PROJECT_AUTHOR "Institute for Automation of Complex Power Systems, RWTH Aachen University")
-set(PROJECT_COPYRIGHT "2017, Institute for Automation of Complex Power Systems, RWTH Aachen University")
+set(PROJECT_COPYRIGHT "2017-2020, Institute for Automation of Complex Power Systems, RWTH Aachen University")
+set(PROJECT_DESCRIPTION "C++ Power System Simulation Library")
+set(PROJECT_HOMEPAGE_URL "http://www.fein-aachen.org/projects/dpsim/")
+set(PROJECT_VCS_URL "https://git.rwth-aachen.org/acs/public/simulation/dpsim")
 
 include(CheckCXXCompilerFlag)
 if(MSVC)	
@@ -80,17 +84,19 @@ if("${CMAKE_SYSTEM}" MATCHES "Linux")
 endif()
 
 # Options
+include(CMakeDependentOption)
+
 option(BUILD_SHARED_LIBS "Build shared library" OFF)
 option(BUILD_EXAMPLES "Build C++ examples" ON)
 option(COMPARE_REFERENCE "Download reference results and compare" OFF)
 
-option(WITH_GSL      "Enable GSL"                           ${GSL_FOUND})
-option(WITH_SUNDIALS "Enable sundials solver suite"         ${Sundials_FOUND})
-option(WITH_SHMEM    "Enable shared memory interface"       ${VILLASnode_FOUND})
-option(WITH_RT	     "Enable real-time features"            ${Linux_FOUND})
-option(WITH_PYTHON   "Enable Python support"                ${Python_FOUND})
-option(WITH_CIM      "Enable support for parsing CIM files" ${CIMpp_FOUND})
-option(WITH_OPENMP   "Enable OpenMP-based parallelisation"  ${OPENMP_FOUND})
+cmake_dependent_option(WITH_GSL			"Enable GSL"        					ON "GSL_FOUND"			OFF)
+cmake_dependent_option(WITH_SUNDIALS	"Enable sundials solver suite"			ON "Sundials_FOUND"		OFF)
+cmake_dependent_option(WITH_SHMEM		"Enable shared memory interface"		ON "VILLASnode_FOUND"	OFF)
+cmake_dependent_option(WITH_RT			"Enable real-time features"				ON "Linux_FOUND"		OFF)
+cmake_dependent_option(WITH_PYTHON		"Enable Python support"					ON "Python_FOUND"		OFF)
+cmake_dependent_option(WITH_CIM			"Enable support for parsing CIM files"	ON "CIMpp_FOUND"		OFF)
+cmake_dependent_option(WITH_OPENMP		"Enable OpenMP-based parallelisation"	ON "OPENMP_FOUND"		OFF)
 
 configure_file(
 	${CMAKE_CURRENT_SOURCE_DIR}/Include/dpsim/Config.h.in

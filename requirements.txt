@@ -1,6 +1,7 @@
 sphinx
 nbsphinx
 breathe
+sphinx_rtd_theme
 
 m2r
 pytest-runner
@@ -9,5 +10,5 @@ wheel
 pytest
 pyyaml
 
-villas-dataprocessing>=0.2.3
+villas-dataprocessing>=0.2.5
 progressbar2
