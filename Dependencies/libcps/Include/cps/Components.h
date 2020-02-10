@@ -71,6 +71,7 @@
 #include <cps/DP/DP_Ph3_Inductor.h>
 #include <cps/DP/DP_Ph3_VoltageSource.h>
 #include <cps/DP/DP_Ph3_SeriesResistor.h>
+#include <cps/DP/DP_Ph3_Resistor.h>
 #include <cps/DP/DP_Ph3_SeriesSwitch.h>
 #include <cps/DP/DP_Ph3_SynchronGeneratorDQTrapez.h>
 #ifdef WITH_SUNDIALS

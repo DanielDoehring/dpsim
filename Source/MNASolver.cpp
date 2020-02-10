@@ -81,7 +81,9 @@ void MnaSolver<VarType>::initialize() {
 
 	// This steady state initialization is MNA specific and runs a simulation
 	// before the actual simulation executed by the user.
-	if (mSteadyStateInit && mDomain == CPS::Domain::DP)
+	/*if (mSteadyStateInit && mDomain == CPS::Domain::DP)
+		steadyStateInitialization();*/
+	if (mSteadyStateInit)
 		steadyStateInitialization();
 
 	// Some components feature a different behaviour for simulation and initialization

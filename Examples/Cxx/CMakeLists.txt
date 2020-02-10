@@ -8,23 +8,30 @@ endif()
 
 # targets
 set(CIRCUIT_SOURCES
-	# Dynamic phasor examples
+	# DP(Dynamic phasor) examples
 	Circuits/DP_VS_RL1.cpp
 	Circuits/DP_Circuits.cpp
 	Circuits/DP_Basics_DP_Sims.cpp	
 	Circuits/DP_PiLine.cpp
 	Circuits/DP_DecouplingLine.cpp
 	Circuits/DP_Diakoptics.cpp
-	#Circuits/DP_VS_Trafo_R.cpp
-	#Circuits/DP_ResVS_RL_Switch.cpp
-	
-	# EMT examples	
+	Circuits/DP_Ph3_VS_R2L3.cpp
+	Circuits/DP_Ph3_VS_RC1.cpp
+	Circuits/DP_Ph1_VSI2_4Bus_SampleGrid.cpp
+	#Circuits/DP_Ph3_VSI2_4Bus_SampleGrid.cpp	
+	# EMT(Electromagnetic Transient) examples	
 	Circuits/EMT_CS_RL1.cpp
 	Circuits/EMT_VS_RL1.cpp
 	Circuits/EMT_Circuits.cpp
 	Circuits/DP_Basics_EMT_Sims.cpp	
+	Circuits/EMT_Ph3_VS_R2L3.cpp
+	Circuits/EMT_Ph3_VS_RC1.cpp
+	Circuits/EMT_Ph3_VSI2_4Bus_SampleGrid.cpp
 	#Circuits/EMT_ResVS_RL_Switch.cpp
-
+	# Static Phasor examples
+	Circuits/SP_Ph3_VS_RC1.cpp
+	Circuits/SP_Ph3_VS_R2L3.cpp
+	#Circuits/SP_Ph3_VSI2_4Bus_SampleGrid.cpp	
 	# EMT and DP studies
 	Circuits/DP_EMT_RL_SourceStep.cpp
 )
@@ -80,6 +87,9 @@ if(WITH_SHMEM)
 		Shmem/ShmemControllableFiltSource.cpp
 		Shmem/Shmem_CIGRE_MV_PowerFlowTest.cpp
 		Shmem/Shmem_CIGRE_MV_PowerFlowTest_LoadProfiles.cpp
+		Shmem/Shmem_CIGRE_MV_Feeder1_DP_CoVeeCtrl.cpp
+		Shmem/Shmem_CIGRE_MV_Feeder1_SP_CoVeeCtrl.cpp
+		Shmem/Shmem_CIGRE_MV_Feeder1_PF_CoVeeCtrl.cpp
 	)
 endif()
 
@@ -92,13 +102,22 @@ if(WITH_CIM)
 		CIM/WSCC-9bus_CIM.cpp
 		CIM/WSCC-9bus_CIM_Dyn.cpp
 		CIM/WSCC-9bus_CIM_Dyn_Switch.cpp
-
-		# powerflow example		
+		# EMT example
+		CIM/CIGRE_MV_NoTap_Feeder1_EMT_withSwitchEvent.cpp
+		CIM/CIGRE_MV_NoTap_Feeder1_EMT_withSwitchEvent_withDG.cpp
+		# DP example
+		CIM/CIGRE_MV_NoTap_Feeder1_DP.cpp
+		CIM/CIGRE_MV_NoTap_Feeder1_DP_LoadStep.cpp
+		CIM/CIGRE_MV_NoTap_Feeder1_DP_withDG_LoadStep.cpp
+		# SP(Static Phasor) example
+		CIM/CIGRE_MV_NoTap_Feeder1_SP.cpp
+		CIM/CIGRE_MV_NoTap_Feeder1_SP_LoadStep.cpp
+		CIM/CIGRE_MV_NoTap_Feeder1_SP_withDG_LoadStep.cpp
+		# PF(Power Flow) example		
 		CIM/Slack_Trafo_Load.cpp
 		CIM/Slack_TrafoTapChanger_Load.cpp
 		CIM/CIGRE_MV_PowerFlowTest.cpp
 		CIM/CIGRE_MV_PowerFlowTest_LoadProfiles.cpp
-
 		CIM/IEEE_LV_PowerFlowTest.cpp
 		CIM/IEEE_LV_PowerFlowTest_LoadProfiles.cpp
 		

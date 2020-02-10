@@ -25,10 +25,10 @@ using namespace CPS;
 
 SP::Ph3::Capacitor::Capacitor(String uid, String name, Logger::Level logLevel)
 	: PowerComponent<Complex>(uid, name, logLevel) {
+	mPhaseType = PhaseType::ABC;
+	setTerminalNumber(2);
 	mIntfVoltage = MatrixComp::Zero(3, 1);
 	mIntfCurrent = MatrixComp::Zero(3, 1);
-	setTerminalNumber(2);
-
 	addAttribute<Matrix>("C", &mCapacitance, Flags::read | Flags::write);
 }
 

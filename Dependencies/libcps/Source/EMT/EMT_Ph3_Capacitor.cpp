@@ -28,10 +28,11 @@ using namespace CPS;
 
 EMT::Ph3::Capacitor::Capacitor(String uid, String name, Logger::Level logLevel)
 	: PowerComponent<Real>(uid, name, logLevel) {
+	mPhaseType = PhaseType::ABC;
+	setTerminalNumber(2);
 	mEquivCurrent = Matrix::Zero(3, 1);
 	mIntfVoltage = Matrix::Zero(3, 1);
 	mIntfCurrent = Matrix::Zero(3, 1);
-	setTerminalNumber(2);
 
 	addAttribute<Matrix>("C", &mCapacitance, Flags::read | Flags::write);
 }
