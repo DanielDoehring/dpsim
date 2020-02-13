@@ -374,15 +374,15 @@ void Simulation::run() {
 
 	mCLog->info("Start simulation: {}", mName);
 	auto t_sim = std::chrono::high_resolution_clock::now();
-	std::chrono::high_resolution_clock::time_point t_prev;
-	std::chrono::high_resolution_clock::time_point t_post;
+	//std::chrono::high_resolution_clock::time_point t_prev;
+	//std::chrono::high_resolution_clock::time_point t_post;
 
 	while (mTime < mFinalTime) {
-		t_prev = std::chrono::high_resolution_clock::now();	
+		//t_prev = std::chrono::high_resolution_clock::now();	
 		step();
-		t_post = std::chrono::high_resolution_clock::now();
-		mSLog->info(std::to_string(mTime) + ": " 
-			+ std::to_string(std::chrono::duration_cast<std::chrono::microseconds>(t_post - t_prev).count()));
+		//t_post = std::chrono::high_resolution_clock::now();
+		// mSLog->info(std::to_string(mTime) + ": " 
+		// 	+ std::to_string(std::chrono::duration_cast<std::chrono::microseconds>(t_post - t_prev).count()));
 	}
 
 	mScheduler->stop();

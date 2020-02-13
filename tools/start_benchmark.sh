@@ -4,10 +4,10 @@
 # Configuration parameters
 ###########################################################################################
 
-TYPE="nano"                         # Communication pattern: nano/mqtt
+TYPE="mqtt"                         # Communication pattern: nano/mqtt
 DISTAIX_PATH="distaix"              # Path to distaix main dir
 DPSIM_PATH="dpsim"                  # Path to dpsim main dir
-DOCKER_CONTAINER_NAME="bold_knuth"  # Name of dpsim_dev docker container
+DOCKER_CONTAINER_NAME="bench_cont"  # Name of dpsim_dev docker container
 LOG_FILES_PATH="./benchmarks"       # Directory where results should be stored
 DIST_NUM_OF_PROCESSES=4             # Number of processes invoked by distaix
 NUMBER_OF_LOOPS=0                   # Number of loops that should be executed
@@ -15,6 +15,12 @@ NUMBER_OF_LOOPS=0                   # Number of loops that should be executed
 ###########################################################################################
 ###########################################################################################
 
+# Start docker container
+cd $DPSIM_PATH
+docker run -t --name $DOCKER_CONTAINER_NAME -d --network=host -v $(pwd):/dpsim --privileged rwthacs/dpsim-dev bash
+cd -
+
+sleep 2
 # Set paths to executables...
 DISTAIX_EXEC="$DISTAIX_PATH/bin/run.sh -n$DIST_NUM_OF_PROCESSES"
 DPSIM_EXEC="docker exec -w /dpsim $DOCKER_CONTAINER_NAME ./Configs/shmem_WSCC-9bus/start_Shmem_cosim_benchmark_$TYPE.sh"
@@ -69,3 +75,6 @@ for ((i=1; i<=$NUMBER_OF_LOOPS; i++)); do
     echo -e "$i,$VAL" >> "$LOG_FILES_PATH_SESSION/summary.csv"
     
 done
+
+docker kill $DOCKER_CONTAINER_NAME
+docker rm $DOCKER_CONTAINER_NAME
