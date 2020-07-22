@@ -9,6 +9,8 @@
 
 #include <dpsim/MNASolver.h>
 #include <dpsim/SequentialScheduler.h>
+#include <cps/DP/DP_Ph1_AvVoltageSourceInverterDQ.h>
+#include <cps/DP/DP_Ph1_RXLoad.h>
 
 using namespace DPsim;
 using namespace CPS;
@@ -51,7 +53,7 @@ void MnaSolver<VarType>::initialize() {
 	mSLog->info("-- Create empty MNA system matrices and vectors");
 	// The system topology is prepared and we create the MNA matrices.
 	createEmptyVectors();
-	createEmptySystemMatrix();
+	
 
 	// Register attribute for solution vector
 	if (mFrequencyParallel) {
@@ -68,6 +70,25 @@ void MnaSolver<VarType>::initialize() {
 	// Initialize components from powerflow solution and
 	// calculate MNA specific initialization values.
 	initializeComponents();
+
+	// NEW add also subswitches of elements
+	for (auto comp : mMNAComponents) {
+		// if it is Load
+		// TODO generalize this for all elements with switches
+		/*
+		auto swcomp = std::dynamic_pointer_cast<DP::Ph1::AvVoltageSourceInverterDQ>(comp);
+		if (swcomp) {
+			mSwitches.push_back(swcomp->getProtectionSwitch());
+		}
+		*/
+		auto loadswitch = std::dynamic_pointer_cast<DP::Ph1::RXLoad>(comp);
+		if (loadswitch) {
+			mSwitches.push_back(loadswitch->getProtectionSwitch());
+		}
+	}
+
+	// NEW: create after mSwitches is updated
+	createEmptySystemMatrix();
 
 	if (mSteadyStateInit)
 		steadyStateInitialization();
