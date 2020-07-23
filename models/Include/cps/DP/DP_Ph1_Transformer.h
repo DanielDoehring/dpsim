@@ -35,6 +35,7 @@ namespace Ph1 {
 
 		/// Boolean for considering resistive losses with sub resistor
 		Bool mWithResistiveLosses;
+
 	public:
 		/// Defines UID, name and logging level
 		Transformer(String uid, String name,
@@ -64,6 +65,10 @@ namespace Ph1 {
 		void mnaUpdateCurrent(const Matrix& leftVector);
 		/// Updates internal voltage variable of the component
 		void mnaUpdateVoltage(const Matrix& leftVector);
+
+
+		/// #### OLTC ####
+		void updateTapRatio(Real time, Int timeStepCount);
 
 		class MnaPreStep : public Task {
 		public:

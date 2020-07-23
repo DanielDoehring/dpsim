@@ -9,6 +9,7 @@
 
 #include <dpsim/MNASolver.h>
 #include <dpsim/SequentialScheduler.h>
+#include <cps/DP/DP_Ph1_Transformer.h>
 
 using namespace DPsim;
 using namespace CPS;
@@ -68,6 +69,16 @@ void MnaSolver<VarType>::initialize() {
 	// Initialize components from powerflow solution and
 	// calculate MNA specific initialization values.
 	initializeComponents();
+
+	// NEW add oltc for updating
+	for (auto comp : mMNAComponents) {
+		// if it is Trafo
+		// TODO generalize this for all elements with switches
+		auto oltc = std::dynamic_pointer_cast<DP::Ph1::Transformer>(comp);
+		if (oltc) {
+			mOLTCs.push_back(oltc);
+		}
+	}
 
 	if (mSteadyStateInit)
 		steadyStateInitialization();

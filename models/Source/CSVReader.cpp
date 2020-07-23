@@ -121,9 +121,11 @@ std::vector<PQData> CSVReader::readLoadProfileDP(std::experimental::filesystem::
 	CSVReaderIterator row_(csvfile);
 
 	// ignore the first row if it is a title
+	/*
 	if (!std::isdigit((*row_).get(0)[0])) {
 		row_.next();
 	}
+	*/
 	/*
 	 loop over rows of the csv file to find the entry point to read in.
 	 if start_time and end_time are negative (as default), it reads in all rows.
@@ -352,9 +354,11 @@ PowerProfile CSVReader::readLoadProfile(std::experimental::filesystem::path file
 	CSVReaderIterator loop(csvfile);
 
 	// ignore the first row if it is a title
+	/*
 	if (!std::isdigit((*loop).get(0)[0])) {
 		loop.next();
 	}
+	*/
 	/*
 	 loop over rows of the csv file to find the entry point to read in.
 	 and determine data type prior to read in. (assuming only time,p,q or time,weighting factor)
@@ -423,9 +427,11 @@ std::vector<Real> CSVReader::readPQData(fs::path file,
 	CSVReaderIterator row_(csvfile);
 
 	// ignore the first row if it is a title
+	/*
 	if (!std::isdigit((*row_).get(0)[0])) {
 		row_.next();
 	}
+	*/
 	/*
 	 loop over rows of the csv file to find the entry point to read in.
 	 if start_time and end_time are negative (as default), it reads in all rows.

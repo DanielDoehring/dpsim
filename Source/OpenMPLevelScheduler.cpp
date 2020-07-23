@@ -40,7 +40,7 @@ void OpenMPLevelScheduler::step(Real time, Int timeStepCount) {
 		for (level = 0; level < mLevels.size(); level++) {
 			{
 				#pragma omp for schedule(static)
-				for (i = 0; i < mLevels[level].size(); i++) {
+				for (int i = 0; i < mLevels[level].size(); i++) {
 					start = std::chrono::steady_clock::now();
 					mLevels[level][i]->execute(time, timeStepCount);
 					end = std::chrono::steady_clock::now();
@@ -53,7 +53,7 @@ void OpenMPLevelScheduler::step(Real time, Int timeStepCount) {
 		for (level = 0; level < mLevels.size(); level++) {
 			{
 				#pragma omp for schedule(static)
-				for (i = 0; i < mLevels[level].size(); i++) {
+				for (int i = 0; i < mLevels[level].size(); i++) {
 					mLevels[level][i]->execute(time, timeStepCount);
 				}
 			}

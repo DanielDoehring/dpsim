@@ -22,6 +22,10 @@ namespace Ph1 {
 		/// Inductance [H]
 		Real mInductance;
 
+		/// NEW for OLTC functionality
+		// was ratio updated
+		Bool mRatioChange = false;
+
 	public:
 		///
 		void setParameters(Real ratioAbs, Real ratioPhase, Real resistance, Real inductance) {

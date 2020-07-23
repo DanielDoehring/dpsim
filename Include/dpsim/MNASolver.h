@@ -66,6 +66,10 @@ namespace DPsim {
 		///
 		CPS::SimSignalComp::List mSimSignalComps;
 
+		/// NEW for OLTC - should be updated to MNAOLTCInterface
+		CPS::MNAInterface::List mOLTCs;
+
+
 		// #### MNA specific attributes ####
 		/// System matrix A that is modified by matrix stamps
 		std::bitset<SWITCH_NUM> mCurrentSwitchStatus;
@@ -121,6 +125,11 @@ namespace DPsim {
 		void updateSwitchStatus();
 		/// Logging of system matrices and source vector
 		void logSystemMatrices();
+
+		/// NEW for OLTC
+		void updateSystemMatrixOLTC();
+		Bool mRecalcSysMatrix = false;
+
 	public:
 		/// This constructor should not be called by users.
 		MnaSolver(String name,
