@@ -179,14 +179,14 @@ void DP::Ph1::Transformer::mnaApplyRightSideVectorStamp(Matrix& rightVector) {
 
 void DP::Ph1::Transformer::MnaPreStep::execute(Real time, Int timeStepCount) {
 	mTransformer.mnaApplyRightSideVectorStamp(mTransformer.mRightVector);
+	// NEW for OLTC
+	mTransformer.mRatioChange = false;
 	mTransformer.updateTapRatio(time, timeStepCount);
 }
 
 void DP::Ph1::Transformer::MnaPostStep::execute(Real time, Int timeStepCount) {
 	mTransformer.mnaUpdateVoltage(*mLeftVector);
 	mTransformer.mnaUpdateCurrent(*mLeftVector);
-	// NEW for OLTC
-	mTransformer.mRatioChange = false;
 }
 
 void DP::Ph1::Transformer::mnaUpdateCurrent(const Matrix& leftVector) {
