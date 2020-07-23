@@ -30,5 +30,7 @@ namespace CPS {
 		//virtual void mnaSetClosed(Bool value) { }
 		/// Stamps system matrix considering the defined switch position
 		//virtual void mnaApplySwitchSystemMatrixStamp(Matrix& systemMatrix, Bool closed) { }
+		
+		// test
 	};
 }
