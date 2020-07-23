@@ -276,11 +276,12 @@ void MnaSolver<VarType>::updateSystemMatrix() {
 	// reset system matrix
 	mSwitchedMatrices[std::bitset<SWITCH_NUM>(0)].setZero();
 
+	mSLog->info("Updating System Matrix because of Tap Ratio Change");
 	// Create system matrix if no switches were added
 	for (auto comp : mMNAComponents) {
 		comp->mnaApplySystemMatrixStamp(mSwitchedMatrices[std::bitset<SWITCH_NUM>(0)]);
 		auto idObj = std::dynamic_pointer_cast<IdentifiedObject>(comp);
-		mSLog->info("Updating System Matrix because of Tap Ratio Change");
+		
 	}
 	mLuFactorizations[std::bitset<SWITCH_NUM>(0)] = Eigen::PartialPivLU<Matrix>(mSwitchedMatrices[std::bitset<SWITCH_NUM>(0)]);
 	mUpdateSysMatrix = false;
