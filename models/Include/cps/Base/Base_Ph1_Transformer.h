@@ -27,6 +27,27 @@ namespace Ph1 {
 		// was ratio updated
 		Bool mRatioChange = false;
 
+		/// #### OLTC parameters ####
+		// deadband where no regulation takes place in p. u. (0.05 -> from 95 % to 105 % nothing happens)
+		Real mDeadband = 0.05;
+		// Number of taps
+		Real mNumTaps;
+		// Current TapPos
+		Real mCurrTapPos;
+		// Current ratio
+		Complex mRatioInitial;
+		// max Voltage (abs)
+		Real mMaxVoltage = 0.1;
+		// Time Delay between action [s]
+		Real mTapChangeTimeDelay = 30;
+		// Voltage Change in one Step in p. u.
+		Real mDeltaVTapChange;
+		// reference voltage
+		Real mRefLV;
+		// Counter for durance of voltage violation
+		Real mViolationCounter = 0;
+
+		Real mVLV;
 	public:
 		///
 		void setParameters(Real ratioAbs, Real ratioPhase, Real resistance, Real inductance) {
@@ -34,6 +55,29 @@ namespace Ph1 {
 			mResistance = resistance;
 			mInductance = inductance;
 		}
+
+		void setOLTCParamteres(Real NumTaps, Real VRefLV, Real DeltaVTapChange = 0) {
+			/// input parameters
+			mNumTaps = NumTaps;
+			mRefLV = VRefLV;
+
+			/// set/calculate other parameter
+			// initial tap is 0
+			mCurrTapPos = 0;
+			mRatioInitial = mRatio;
+
+			// voltage diff pf one tap change in p. u.
+			if (DeltaVTapChange)
+				mDeltaVTapChange = DeltaVTapChange;
+			else
+			{
+				mDeltaVTapChange = (mMaxVoltage - mDeadband) / NumTaps;
+			}
+		}
+
+		void setOLTCDeadband(Real deadband) { mDeadband = deadband; };
+		void setOLTCTimeDelay(Real delay) { mTapChangeTimeDelay = delay; };
+
 	};
 }
 }

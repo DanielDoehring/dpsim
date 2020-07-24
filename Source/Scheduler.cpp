@@ -137,10 +137,12 @@ void Scheduler::topologicalSort(const Task::List& tasks, const Edges& inEdges, c
 	}
 	// keep list of tasks without incoming edges;
 	// iteratively remove such tasks from the graph and put them into the schedule
+	Bool debug_test = false;
 	while (!q.empty()) {
 		Task::Ptr t = q.front();
 		q.pop_front();
-		if (!visited.count(t)) {
+		
+		if (!visited.count(t) && debug_test) {
 			// don't put unneeded tasks in the schedule, but process them as usual
 			// so the cycle check still works
 			mSLog->info("Dropping {:s}", t->toString());

@@ -95,9 +95,11 @@ namespace Ph1 {
 			MnaPostStep(Transformer& transformer, Attribute<Matrix>::Ptr leftVector) :
 				Task(transformer.mName + ".MnaPostStep"), mTransformer(transformer), mLeftVector(leftVector) {
 				mAttributeDependencies.push_back(transformer.mSubInductor->attribute("i_intf"));
+				//mAttributeDependencies.push_back(transformer.mSubSnubResistor->attribute("v_intf"));
 				mAttributeDependencies.push_back(leftVector);
 				mModifiedAttributes.push_back(transformer.attribute("i_intf"));
 				mModifiedAttributes.push_back(transformer.attribute("v_intf"));
+				mModifiedAttributes.push_back(transformer.mSubSnubResistor->attribute("v_intf"));
 			}
 
 			void execute(Real time, Int timeStepCount);
@@ -106,6 +108,9 @@ namespace Ph1 {
 			Transformer& mTransformer;
 			Attribute<Matrix>::Ptr mLeftVector;
 		};
+
+		//class 
+
 	};
 }
 }
