@@ -125,7 +125,7 @@ void DP::Ph1::SynchronGeneratorTrStab::initializeFromPowerflow(Real frequency) {
 mIntfCurrent(0, 0) = std::conj(mInitElecPower / mIntfVoltage(0, 0));
 mImpedance = Complex(0, mXpd);
 
-Complex mSGTerminalVoltage = mIntfVoltage(0, 0) + mIntfCurrent(0, 0) * mSwitchRClosed;
+mSGTerminalVoltage = mIntfVoltage(0, 0) + mIntfCurrent(0, 0) * mSwitchRClosed;
 
 // Calculate emf behind reactance
 mEp = mSGTerminalVoltage + mImpedance * mIntfCurrent(0, 0);
@@ -166,14 +166,12 @@ mSubProtectionSwitch->initializeFromPowerflow(frequency);
 
 mSLog->info("\n--- Initialize according to powerflow ---"
 	"\nTerminal 0 voltage: {:e}<{:e}"
-	"\nVoltage behind Switch (internal Terminal): {:e}<{:e}"
 	"\nVoltage behind reactance: {:e}<{:e}"
 	"\ninitial electrical power: {:e}+j{:e}"
 	"\nactive electrical power: {:e}"
 	"\nmechanical power: {:e}"
 	"\n--- End of powerflow initialization ---",
 	Math::abs(mIntfVoltage(0, 0)), Math::phaseDeg(mIntfVoltage(0, 0)),
-	Math::abs(mSGTerminalVoltage.real()), Math::phaseDeg(mSGTerminalVoltage.imag()),
 	Math::abs(mEp), Math::phaseDeg(mEp),
 	mInitElecPower.real(), mInitElecPower.imag(),
 	mElecActivePower, mMechPower);
@@ -182,11 +180,11 @@ mSLog->info("\n--- Initialize according to powerflow ---"
 void DP::Ph1::SynchronGeneratorTrStab::step(Real time) {
 	// #### Calculations on input of time step k #####
 	// calculte voltage drop across switch
-	//mSGTerminalVoltage = mIntfVoltage(0, 0) - mIntfCurrent(0, 0) * mSwitchRClosed;
+	mSGTerminalVoltage = mIntfVoltage(0, 0) - mIntfCurrent(0, 0) * mSwitchRClosed;
 	Complex V1 = mIntfVoltage(0, 0);
 	Complex I1 = mIntfCurrent(0, 0);
 
-	mSGTerminalVoltage = mIntfVoltage(0, 0);
+	//mSGTerminalVoltage = mIntfVoltage(0, 0);
 
 	// Update electrical power
 	mElecActivePower = ((mEp - mSGTerminalVoltage) / mImpedance * mSGTerminalVoltage).real();
@@ -216,6 +214,7 @@ void DP::Ph1::SynchronGeneratorTrStab::mnaInitialize(Real omega, Real timeStep, 
 
 	mSubVoltageSource->mnaInitialize(omega, timeStep, leftVector);
 	mSubInductor->mnaInitialize(omega, timeStep, leftVector);
+	mSubProtectionSwitch->mnaInitialize(omega, timeStep, leftVector);
 	mTimeStep = timeStep;
 	mRightVector = Matrix::Zero(leftVector->get().rows(), 1);
 	for (auto task : mSubVoltageSource->mnaTasks()) {

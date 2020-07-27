@@ -46,7 +46,7 @@ namespace Ph1 {
 		std::shared_ptr<Inductor> mSubInductor;
 
 		/// new for protectopn
-		std::shared_ptr<DP::Ph1::Switch> mSubProtectionSwitch;
+		std::shared_ptr<Switch> mSubProtectionSwitch;
 
 		// Logging
 		Matrix mStates;

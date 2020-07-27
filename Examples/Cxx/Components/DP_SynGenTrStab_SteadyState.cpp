@@ -63,6 +63,11 @@ int main(int argc, char* argv[]) {
 	logger->addAttribute("i_gen", gen->attributeMatrixComp("i_intf"));
 	logger->addAttribute("i_load", res->attributeMatrixComp("i_intf"));
 	logger->addAttribute("wr_gen", gen->attribute("w_r"));
+	logger->addAttribute("Ep_mag", gen->attribute("Ep_mag"));
+	logger->addAttribute("Ep_phase", gen->attribute("Ep_phase"));
+	logger->addAttribute("P_elec", gen->attribute("P_elec"));
+	logger->addAttribute("P_mech", gen->attribute("P_mech"));
+	logger->addAttribute("inertia", gen->attribute("inertia"));
 
 	// System
 	auto sys = SystemTopology(60, SystemNodeList{n1}, SystemComponentList{gen, res});
