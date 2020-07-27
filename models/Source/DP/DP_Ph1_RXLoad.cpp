@@ -246,9 +246,8 @@ void DP::Ph1::RXLoad::updateSwitchState(Real time) {
 		Real VRef = Math::abs(mNomVoltage);
 		Real V = Math::abs(mIntfVoltage(0, 0));
 
-		//Real deltaV = Math::abs((V - VRef) / VRef);
+		Real deltaV = Math::abs((V - VRef) / VRef);
 
-		Real deltaV = 1;
 		if (deltaV > 0.1)
 		{
 			mSwitchStateChange = true;
