@@ -165,6 +165,9 @@ void DP::Ph1::SynchronGeneratorTrStab::initializeFromPowerflow(Real frequency) {
 void DP::Ph1::SynchronGeneratorTrStab::step(Real time) {
 	// #### Calculations on input of time step k ####
 	// Update electrical power
+	Complex V1 = mIntfVoltage(0, 0);
+	Complex I1 = mIntfCurrent(0, 0);
+
 	mElecActivePower = ( (mEp - mIntfVoltage(0,0)) / mImpedance *  mIntfVoltage(0,0) ).real();
 	// For infinite power bus
 	// mElecActivePower = Math::abs(mEp) * Math::abs(mIntfVoltage(0,0)) / mXpd * sin(mDelta_p);
