@@ -115,6 +115,7 @@ namespace Ph1 {
 				// other attributes generally also influence the pre step,
 				// but aren't marked as writable anyway
 				mPrevStepDependencies.push_back(generator.attribute("v_intf"));
+				mPrevStepDependencies.push_back(generator.attribute("i_intf"));
 				mModifiedAttributes.push_back(generator.mSubVoltageSource->attribute("V_ref"));
 			}
 
@@ -130,6 +131,7 @@ namespace Ph1 {
 				Task(generator.mName + ".AddBStep"), mGenerator(generator) {
 				mAttributeDependencies.push_back(generator.mSubVoltageSource->attribute("right_vector"));
 				mAttributeDependencies.push_back(generator.mSubInductor->attribute("right_vector"));
+				mAttributeDependencies.push_back(generator.mSubProtectionSwitch->attribute("right_vector"));
 				mModifiedAttributes.push_back(generator.attribute("right_vector"));
 			}
 
@@ -144,6 +146,7 @@ namespace Ph1 {
 			MnaPostStep(SynchronGeneratorTrStab& generator, Attribute<Matrix>::Ptr leftVector) :
 				Task(generator.mName + ".MnaPostStep"), mGenerator(generator), mLeftVector(leftVector) {
 				mAttributeDependencies.push_back(leftVector);
+				mAttributeDependencies.push_back(generator.mSubProtectionSwitch->attribute("i_intf"));
 				mModifiedAttributes.push_back(generator.attribute("v_intf"));
 				mModifiedAttributes.push_back(generator.attribute("i_intf"));
 			}

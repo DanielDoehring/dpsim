@@ -89,7 +89,7 @@ namespace Ph1 {
 		// #### constructors ####
 		///
 		AvVoltageSourceInverterDQ(String name,
-			Logger::Level logLevel = Logger::Level::off) :AvVoltageSourceInverterDQ(name, name, logLevel) {}
+			Logger::Level logLevel = Logger::Level::off) :AvVoltageSourceInverterDQ(name, name, logLevel, false) {}
 		///
 		AvVoltageSourceInverterDQ(String uid, String name, Logger::Level logLevel = Logger::Level::off, Bool withTrafo = false);
 		///

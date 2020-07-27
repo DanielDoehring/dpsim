@@ -125,7 +125,7 @@ void DP::Ph1::SynchronGeneratorTrStab::initializeFromPowerflow(Real frequency) {
 mIntfCurrent(0, 0) = std::conj(mInitElecPower / mIntfVoltage(0, 0));
 mImpedance = Complex(0, mXpd);
 
-Complex mSGTerminalVoltage = mIntfVoltage(0, 0) - mIntfCurrent(0, 0) * mSwitchRClosed;
+Complex mSGTerminalVoltage = mIntfVoltage(0, 0) + mIntfCurrent(0, 0) * mSwitchRClosed;
 
 // Calculate emf behind reactance
 mEp = mSGTerminalVoltage + mImpedance * mIntfCurrent(0, 0);
@@ -133,7 +133,7 @@ mEp = mSGTerminalVoltage + mImpedance * mIntfCurrent(0, 0);
 mEp_abs = Math::abs(mEp);
 mDelta_p = Math::phase(mEp);
 // Update active electrical power that is compared with the mechanical power
-mElecActivePower = ((mEp - mSGTerminalVoltage) / mImpedance * mIntfVoltage(0, 0)).real();
+mElecActivePower = ((mEp - mSGTerminalVoltage) / mImpedance * mSGTerminalVoltage).real();
 // Start in steady state so that electrical and mech. power are the same
 mMechPower = mElecActivePower;
 
@@ -173,7 +173,7 @@ mSLog->info("\n--- Initialize according to powerflow ---"
 	"\nmechanical power: {:e}"
 	"\n--- End of powerflow initialization ---",
 	Math::abs(mIntfVoltage(0, 0)), Math::phaseDeg(mIntfVoltage(0, 0)),
-	Math::abs(mSGTerminalVoltage), Math::phaseDeg(mSGTerminalVoltage),
+	Math::abs(mSGTerminalVoltage.real()), Math::phaseDeg(mSGTerminalVoltage.imag()),
 	Math::abs(mEp), Math::phaseDeg(mEp),
 	mInitElecPower.real(), mInitElecPower.imag(),
 	mElecActivePower, mMechPower);
@@ -182,7 +182,11 @@ mSLog->info("\n--- Initialize according to powerflow ---"
 void DP::Ph1::SynchronGeneratorTrStab::step(Real time) {
 	// #### Calculations on input of time step k #####
 	// calculte voltage drop across switch
-	mSGTerminalVoltage = mIntfVoltage(0, 0) - mIntfCurrent(0, 0) * mSwitchRClosed;
+	//mSGTerminalVoltage = mIntfVoltage(0, 0) - mIntfCurrent(0, 0) * mSwitchRClosed;
+	Complex V1 = mIntfVoltage(0, 0);
+	Complex I1 = mIntfCurrent(0, 0);
+
+	mSGTerminalVoltage = mIntfVoltage(0, 0);
 
 	// Update electrical power
 	mElecActivePower = ((mEp - mSGTerminalVoltage) / mImpedance * mSGTerminalVoltage).real();
@@ -237,7 +241,7 @@ void DP::Ph1::SynchronGeneratorTrStab::mnaApplySystemMatrixStamp(Matrix& systemM
 void DP::Ph1::SynchronGeneratorTrStab::mnaApplyRightSideVectorStamp(Matrix& rightVector) {
 	mSubVoltageSource->mnaApplyRightSideVectorStamp(rightVector);
 	mSubInductor->mnaApplyRightSideVectorStamp(rightVector);
-	mSubProtectionSwitch->mnaApplyRightSideVectorStamp(rightVector);
+	//mSubProtectionSwitch->mnaApplyRightSideVectorStamp(rightVector);
 
 }
 

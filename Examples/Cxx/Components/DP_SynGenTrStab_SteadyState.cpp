@@ -30,7 +30,7 @@ int main(int argc, char* argv[]) {
 	// Define machine parameters in per unit
 	Real nomPower = 555e6;
 	Real nomPhPhVoltRMS = 24e3;
-	Real nomFreq = 60;
+	Real nomFreq = 50;
 	Real H = 3.7;
 	Real Ll = 0.15;
 	Real Lmd = 1.6599;
@@ -48,7 +48,7 @@ int main(int argc, char* argv[]) {
 	auto n1 = SimNode::make("n1", PhaseType::Single, std::vector<Complex>{ initVoltage });
 
 	// Components
-	auto gen = Ph1::SynchronGeneratorTrStab::make("SynGen", Logger::Level::debug);
+	auto gen = Ph1::SynchronGeneratorTrStab::make("SynGen", "SynGen", Logger::Level::debug, true);
 	gen->setFundamentalParametersPU(nomPower, nomPhPhVoltRMS, nomFreq, Ll, Lmd, Llfd, H);
    	gen->connect({n1});
 	gen->setInitialValues(initElecPower, mechPower);
