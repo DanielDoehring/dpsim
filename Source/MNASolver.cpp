@@ -10,6 +10,8 @@
 #include <dpsim/MNASolver.h>
 #include <dpsim/SequentialScheduler.h>
 
+#include <cps/DP/DP_Ph1_SynchronGeneratorTrStab.h>
+
 using namespace DPsim;
 using namespace CPS;
 
@@ -51,7 +53,7 @@ void MnaSolver<VarType>::initialize() {
 	mSLog->info("-- Create empty MNA system matrices and vectors");
 	// The system topology is prepared and we create the MNA matrices.
 	createEmptyVectors();
-	createEmptySystemMatrix();
+	
 
 	// Register attribute for solution vector
 	if (mFrequencyParallel) {
@@ -65,9 +67,24 @@ void MnaSolver<VarType>::initialize() {
 		addAttribute<Matrix>("left_vector", &mLeftSideVector, Flags::read);
 	}
 
+
+
 	// Initialize components from powerflow solution and
 	// calculate MNA specific initialization values.
 	initializeComponents();
+
+	// NEW add also subswitches of elements
+	for (auto comp : mMNAComponents) {
+		// if it is Load
+		// TODO generalize this for all elements with switches
+		auto sgswitch = std::dynamic_pointer_cast<DP::Ph1::SynchronGeneratorTrStab>(comp);
+		if (sgswitch) {
+			mSwitches.push_back(sgswitch->getProtectionSwitch());
+		}
+	}
+
+	// NEW: create after mSwitches is updated
+	createEmptySystemMatrix();
 
 	if (mSteadyStateInit)
 		steadyStateInitialization();
@@ -271,6 +288,7 @@ void MnaSolver<VarType>::identifyTopologyObjects() {
 		auto sigComp = std::dynamic_pointer_cast<CPS::SimSignalComp>(comp);
 		if (sigComp) mSimSignalComps.push_back(sigComp);
 	}
+
 }
 
 template <typename VarType>

@@ -23,7 +23,7 @@ using namespace CPS::DP::Ph1;
 int main(int argc, char* argv[]) {
 	// Define simulation parameters
 	Real timeStep = 0.0005;
-	Real finalTime = 0.03;
+	Real finalTime = 3;
 	String simName = "DP_SynGen_TrStab_SteadyState";
 	Logger::setLogDir("logs/"+simName);
 

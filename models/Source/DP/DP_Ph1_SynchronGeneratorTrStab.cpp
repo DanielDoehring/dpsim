@@ -9,10 +9,13 @@
 #include <cps/DP/DP_Ph1_SynchronGeneratorTrStab.h>
 using namespace CPS;
 
-DP::Ph1::SynchronGeneratorTrStab::SynchronGeneratorTrStab(String uid, String name, Logger::Level logLevel)
+DP::Ph1::SynchronGeneratorTrStab::SynchronGeneratorTrStab(String uid, String name, Logger::Level logLevel, Bool SwitchActive)
 	: SimPowerComp<Complex>(uid, name, logLevel), TopologicalPowerComp(uid, name, logLevel) {
-	setVirtualNodeNumber(2);
+	setVirtualNodeNumber(3);
 	setTerminalNumber(1);
+
+	mSwitchActive = SwitchActive;
+
 	mIntfVoltage = MatrixComp::Zero(1, 1);
 	mIntfCurrent = MatrixComp::Zero(1, 1);
 
@@ -112,60 +115,77 @@ void DP::Ph1::SynchronGeneratorTrStab::initializeFromPowerflow(Real frequency) {
 
 	// Static calculation based on load flow
 	mIntfVoltage(0,0) = initialSingleVoltage(0);
+
 	mInitElecPower = (mInitElecPower == Complex(0,0))
 		? -terminal(0)->singlePower()
 		: mInitElecPower;
 	mInitMechPower = (mInitElecPower == Complex(0,0))
-		? mInitElecPower.real()
-		: mInitMechPower;
-	mIntfCurrent(0,0) = std::conj( mInitElecPower / mIntfVoltage(0,0) );
-	mImpedance = Complex(0, mXpd);
+? mInitElecPower.real()
+	: mInitMechPower;
+mIntfCurrent(0, 0) = std::conj(mInitElecPower / mIntfVoltage(0, 0));
+mImpedance = Complex(0, mXpd);
 
-	// Calculate emf behind reactance
-	mEp = mIntfVoltage(0,0) + mImpedance * mIntfCurrent(0,0);
-	// The absolute value of Ep is constant, only delta_p changes every step
-	mEp_abs = Math::abs(mEp);
-	mDelta_p = Math::phase(mEp);
-	// Update active electrical power that is compared with the mechanical power
-	mElecActivePower = ( (mEp - mIntfVoltage(0,0)) / mImpedance *  mIntfVoltage(0,0) ).real();
-	// Start in steady state so that electrical and mech. power are the same
-	mMechPower = mElecActivePower;
+Complex mSGTerminalVoltage = mIntfVoltage(0, 0) - mIntfCurrent(0, 0) * mSwitchRClosed;
 
-	// Initialize node between X'd and Ep
-	mVirtualNodes[0]->setInitialVoltage(mEp);
+// Calculate emf behind reactance
+mEp = mSGTerminalVoltage + mImpedance * mIntfCurrent(0, 0);
+// The absolute value of Ep is constant, only delta_p changes every step
+mEp_abs = Math::abs(mEp);
+mDelta_p = Math::phase(mEp);
+// Update active electrical power that is compared with the mechanical power
+mElecActivePower = ((mEp - mSGTerminalVoltage) / mImpedance * mIntfVoltage(0, 0)).real();
+// Start in steady state so that electrical and mech. power are the same
+mMechPower = mElecActivePower;
 
-	// Create sub voltage source for emf
-	mSubVoltageSource = DP::Ph1::VoltageSource::make(mName + "_src", mLogLevel);
-	mSubVoltageSource->setParameters(mEp);
-	mSubVoltageSource->connect({SimNode::GND, mVirtualNodes[0]});
-	mSubVoltageSource->setVirtualNodeAt(mVirtualNodes[1], 0);
-	mSubVoltageSource->initialize(mFrequencies);
-	mSubVoltageSource->initializeFromPowerflow(frequency);
+// Initialize node between X'd and Ep
+mVirtualNodes[0]->setInitialVoltage(mEp);
+mVirtualNodes[1]->setInitialVoltage(mSGTerminalVoltage);
 
-	// Create sub inductor as Xpd
-	mSubInductor = DP::Ph1::Inductor::make(mName + "_ind", mLogLevel);
-	mSubInductor->setParameters(mLpd);
-	mSubInductor->connect({terminal(0)->node(), mVirtualNodes[0]});
-	mSubInductor->initialize(mFrequencies);
-	mSubInductor->initializeFromPowerflow(frequency);
+// Create sub voltage source for emf
+mSubVoltageSource = DP::Ph1::VoltageSource::make(mName + "_src", mLogLevel);
+mSubVoltageSource->setParameters(mEp);
+mSubVoltageSource->connect({ SimNode::GND, mVirtualNodes[0] });
+mSubVoltageSource->setVirtualNodeAt(mVirtualNodes[1], 0);
+mSubVoltageSource->initialize(mFrequencies);
+mSubVoltageSource->initializeFromPowerflow(frequency);
 
-	mSLog->info("\n--- Initialize according to powerflow ---"
-				"\nTerminal 0 voltage: {:e}<{:e}"
-				"\nVoltage behind reactance: {:e}<{:e}"
-				"\ninitial electrical power: {:e}+j{:e}"
-				"\nactive electrical power: {:e}"
-				"\nmechanical power: {:e}"
-				"\n--- End of powerflow initialization ---",
-				Math::abs(mIntfVoltage(0,0)), Math::phaseDeg(mIntfVoltage(0,0)),
-				Math::abs(mEp), Math::phaseDeg(mEp),
-				mInitElecPower.real(), mInitElecPower.imag(),
-				mElecActivePower, mMechPower);
+// Create sub inductor as Xpd
+mSubInductor = DP::Ph1::Inductor::make(mName + "_ind", mLogLevel);
+mSubInductor->setParameters(mLpd);
+mSubInductor->connect({ mVirtualNodes[1], mVirtualNodes[0] });
+mSubInductor->initialize(mFrequencies);
+mSubInductor->initializeFromPowerflow(frequency);
+
+// create switch
+mSubProtectionSwitch = std::make_shared<DP::Ph1::Switch>(mName + "_switch", mLogLevel);
+mSubProtectionSwitch->setParameters(mSwitchROpen, mSwitchRClosed, true);
+mSubProtectionSwitch->connect({ mVirtualNodes[1], mTerminals[0]->node() });
+mSubProtectionSwitch->initialize(mFrequencies);
+mSubProtectionSwitch->initializeFromPowerflow(frequency);
+
+
+mSLog->info("\n--- Initialize according to powerflow ---"
+	"\nTerminal 0 voltage: {:e}<{:e}"
+	"\nVoltage behind Switch (internal Terminal): {:e}<{:e}"
+	"\nVoltage behind reactance: {:e}<{:e}"
+	"\ninitial electrical power: {:e}+j{:e}"
+	"\nactive electrical power: {:e}"
+	"\nmechanical power: {:e}"
+	"\n--- End of powerflow initialization ---",
+	Math::abs(mIntfVoltage(0, 0)), Math::phaseDeg(mIntfVoltage(0, 0)),
+	Math::abs(mSGTerminalVoltage), Math::phaseDeg(mSGTerminalVoltage),
+	Math::abs(mEp), Math::phaseDeg(mEp),
+	mInitElecPower.real(), mInitElecPower.imag(),
+	mElecActivePower, mMechPower);
 }
 
 void DP::Ph1::SynchronGeneratorTrStab::step(Real time) {
-	// #### Calculations on input of time step k ####
+	// #### Calculations on input of time step k #####
+	// calculte voltage drop across switch
+	mSGTerminalVoltage = mIntfVoltage(0, 0) - mIntfCurrent(0, 0) * mSwitchRClosed;
+
 	// Update electrical power
-	mElecActivePower = ( (mEp - mIntfVoltage(0,0)) / mImpedance *  mIntfVoltage(0,0) ).real();
+	mElecActivePower = ((mEp - mSGTerminalVoltage) / mImpedance * mSGTerminalVoltage).real();
 	// For infinite power bus
 	// mElecActivePower = Math::abs(mEp) * Math::abs(mIntfVoltage(0,0)) / mXpd * sin(mDelta_p);
 
@@ -182,7 +202,7 @@ void DP::Ph1::SynchronGeneratorTrStab::step(Real time) {
 		mEp = Complex(mEp_abs * cos(mDelta_p), mEp_abs * sin(mDelta_p));
 
 	mStates << Math::abs(mEp), Math::phaseDeg(mEp), mElecActivePower, mMechPower,
-		mDelta_p, mOmMech, dOmMech, dDelta_p, mIntfVoltage(0,0).real(), mIntfVoltage(0,0).imag();
+		mDelta_p, mOmMech, dOmMech, dDelta_p, mSGTerminalVoltage.real(), mSGTerminalVoltage.imag();
 	SPDLOG_LOGGER_DEBUG(mSLog, "\nStates, time {:f}: \n{:s}", time, Logger::matrixToString(mStates));
 }
 
@@ -200,6 +220,9 @@ void DP::Ph1::SynchronGeneratorTrStab::mnaInitialize(Real omega, Real timeStep, 
 	for (auto task : mSubInductor->mnaTasks()) {
 		mMnaTasks.push_back(task);
 	}
+	for (auto task : mSubProtectionSwitch->mnaTasks()){
+		mMnaTasks.push_back(task);
+	}
 	mMnaTasks.push_back(std::make_shared<MnaPreStep>(*this));
 	mMnaTasks.push_back(std::make_shared<AddBStep>(*this));
 	mMnaTasks.push_back(std::make_shared<MnaPostStep>(*this, leftVector));
@@ -208,16 +231,23 @@ void DP::Ph1::SynchronGeneratorTrStab::mnaInitialize(Real omega, Real timeStep, 
 void DP::Ph1::SynchronGeneratorTrStab::mnaApplySystemMatrixStamp(Matrix& systemMatrix) {
 	mSubVoltageSource->mnaApplySystemMatrixStamp(systemMatrix);
 	mSubInductor->mnaApplySystemMatrixStamp(systemMatrix);
+	//mSubProtectionSwitch->mnaApplySystemMatrixStamp(systemMatrix);
 }
 
 void DP::Ph1::SynchronGeneratorTrStab::mnaApplyRightSideVectorStamp(Matrix& rightVector) {
 	mSubVoltageSource->mnaApplyRightSideVectorStamp(rightVector);
 	mSubInductor->mnaApplyRightSideVectorStamp(rightVector);
+	mSubProtectionSwitch->mnaApplyRightSideVectorStamp(rightVector);
+
 }
 
 void DP::Ph1::SynchronGeneratorTrStab::MnaPreStep::execute(Real time, Int timeStepCount) {
 	mGenerator.step(time);
 	mGenerator.mSubVoltageSource->attribute<Complex>("V_ref")->set(mGenerator.mEp);
+	// NEW for protection switch
+	if (mGenerator.mSwitchActive)
+		mGenerator.updateSwitchState(time);
+
 }
 
 void DP::Ph1::SynchronGeneratorTrStab::AddBStep::execute(Real time, Int timeStepCount) {
@@ -229,9 +259,103 @@ void DP::Ph1::SynchronGeneratorTrStab::AddBStep::execute(Real time, Int timeStep
 void DP::Ph1::SynchronGeneratorTrStab::MnaPostStep::execute(Real time, Int timeStepCount) {
 	// TODO current update?
 	mGenerator.mnaUpdateVoltage(*mLeftVector);
+	mGenerator.mnaUpdateCurrent(*mLeftVector);
 }
 
 void DP::Ph1::SynchronGeneratorTrStab::mnaUpdateVoltage(const Matrix& leftVector) {
 	SPDLOG_LOGGER_DEBUG(mSLog, "Read voltage from {:d}", matrixNodeIndex(0));
 	mIntfVoltage(0,0) = Math::complexFromVectorElement(leftVector, matrixNodeIndex(0));
+}
+
+void DP::Ph1::SynchronGeneratorTrStab::mnaUpdateCurrent(const Matrix& leftVector) {
+	SPDLOG_LOGGER_DEBUG(mSLog, "Read current from {:d}", matrixNodeIndex(0));
+	for (UInt freq = 0; freq < mNumFreqs; freq++) {
+		mIntfCurrent(0, freq) = Math::complexFromVectorElement(leftVector, matrixNodeIndex(0), mNumFreqs, freq);
+	}
+
+}
+
+/// new for protection Switch
+void DP::Ph1::SynchronGeneratorTrStab::updateSwitchState(Real time) {
+	mSLog->info("Switch Status: {}", (float)mSubProtectionSwitch->attribute<Bool>("is_closed")->get());
+
+	// only change switch from close to open once
+	if (!mSwitchStateChange) {
+		Real V = Math::abs(mIntfVoltage(0, 0));
+		Real deltaV = (mNomVolt - V) / mNomVolt;
+
+		// check if frt guidelines are violated
+		if (!mFaultState && Math::abs(deltaV) > 0.1) {
+			mFaultState = true;
+			mFaultCounter = 0;
+			mSLog->info("SG in Fault State at {}", (float)time);
+		}
+
+		if(mFaultState)
+		{
+			// evaluate FRT values (type 1 for HV-grid -> TAR 4120)
+			// TODO add FRT for multiple voltage levels
+			Real Vnormalized = V / mNomVolt;
+			if (deltaV < 0)
+			{
+				// HVRT
+				Real VmaxFRT;
+				if (mFaultCounter <= 0.15) {
+					VmaxFRT = 1.3;
+				}
+				else if (mFaultCounter <= 60)
+				{
+					VmaxFRT = 1.25;
+				}
+				else
+				{
+					VmaxFRT = 1.15;
+				}
+				// check violation
+				if (Vnormalized > VmaxFRT) {
+					mSwitchStateChange = true;
+					mSLog->info("Disconnecting SG because of Overvoltage at {}", (float)time);
+				}
+			}
+			else
+			{
+				// LVRT
+				Real VminFRT;
+				if (mFaultCounter <= 0.15) {
+					VminFRT = 0;
+				}
+				else if (mFaultCounter <= 0.3)
+				{
+					VminFRT = -0.2 + (mFaultCounter * 1000) * 3e-3;
+				}
+				else if (mFaultCounter <= 0.5)
+				{
+					VminFRT = 0.7;
+				}
+				else if (mFaultCounter <= 1.5)
+				{
+					VminFRT = 0.625 + (mFaultCounter * 1000) * 1.5e-4;
+				}
+				else
+				{
+					VminFRT = 0.85;
+				}
+				// check violation
+				if (Vnormalized < VminFRT) {
+					mSwitchStateChange = true;
+					mSLog->info("Disconnecting SG because of Undervoltage at {}", (float)time);
+				}
+			}
+
+			if (mSwitchStateChange) {
+				// disconnect SG
+				mSubProtectionSwitch->open();
+				mSLog->info("Opened Switch at {}", (float)time);
+			}
+
+			// update time current time + timestep
+			mFaultCounter = mFaultCounter + (time - mPrevTime);
+		}
+	}
+	mPrevTime = time;
 }

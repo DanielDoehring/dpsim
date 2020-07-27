@@ -532,6 +532,7 @@ TopologicalPowerComp::Ptr Reader::mapSynchronousMachine(SynchronousMachine* mach
 		Real ratedPower;
 		Real ratedVoltage;
 
+		/*
 		for (auto obj : mModel->Objects) {
 			// Check if object is not TopologicalNode, SvVoltage or SvPowerFlow
 			if (IEC61970::Dynamics::StandardModels::SynchronousMachineDynamics::SynchronousMachineTimeConstantReactance* genDyn =
@@ -543,7 +544,31 @@ TopologicalPowerComp::Ptr Reader::mapSynchronousMachine(SynchronousMachine* mach
 					ratedPower = unitValue(machine->ratedS.value, UnitMultiplier::M);
 
 					ratedVoltage = unitValue(machine->ratedU.value, UnitMultiplier::k);
-					auto gen = DP::Ph1::SynchronGeneratorTrStab::make(machine->mRID, machine->name, mComponentLogLevel);
+					Bool switchActive = true;
+					auto gen = DP::Ph1::SynchronGeneratorTrStab::make(machine->mRID, machine->name, mComponentLogLevel, switchActive);
+					gen->setStandardParametersPU(ratedPower, ratedVoltage, mFrequency,
+						directTransientReactance, inertiaCoefficient);
+					return gen;
+				}
+			}
+		}
+		*/
+		
+		for (auto obj : mModel->Objects) {
+			// Check if object is not TopologicalNode, SvVoltage or SvPowerFlow
+			if (IEC61970::Base::Wires::SynchronousMachine* genDyn =
+				dynamic_cast<IEC61970::Base::Wires::SynchronousMachine*>(obj)) {
+				if (genDyn->mRID == machine->mRID) {
+					//directTransientReactance = genDyn->xDirectTrans.value;
+					directTransientReactance = 0.33;
+					//inertiaCoefficient = genDyn->inertia.value;
+					inertiaCoefficient = 7.11;
+
+					ratedPower = unitValue(machine->ratedS.value, UnitMultiplier::M);
+
+					ratedVoltage = unitValue(machine->ratedU.value, UnitMultiplier::k);
+					Bool switchActive = true;
+					auto gen = DP::Ph1::SynchronGeneratorTrStab::make(machine->mRID, machine->name, mComponentLogLevel, switchActive);
 					gen->setStandardParametersPU(ratedPower, ratedVoltage, mFrequency,
 						directTransientReactance, inertiaCoefficient);
 					return gen;

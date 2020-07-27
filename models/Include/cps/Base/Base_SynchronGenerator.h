@@ -215,6 +215,18 @@ namespace Base {
 		/// Compensation Resistance
 		Real mRcomp;
 
+		/// ##### switching #####
+		Bool mSwitchActive = false;
+		Real mSwitchROpen = 1e6;
+		Real mSwitchRClosed = 1e-6;
+		Real mSwitchStateChange = false;
+		Complex mSGTerminalVoltage;
+		Bool mFaultState = false;
+		// [s]
+		Real mFaultCounter = 0;
+		// [s]
+		Real mPrevTime = 0;
+
 		void setFundamentalPerUnitParameters(
 			Real Rs, Real Ll, Real Lmd, Real Lmq,
 			Real Rfd, Real Llfd, Real Rkd, Real Llkd, Real Rkq1, Real Llkq1,

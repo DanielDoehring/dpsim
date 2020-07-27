@@ -13,6 +13,7 @@
 #include <cps/Base/Base_SynchronGenerator.h>
 #include <cps/DP/DP_Ph1_VoltageSource.h>
 #include <cps/DP/DP_Ph1_Inductor.h>
+#include <cps/DP/DP_Ph1_Switch.h>
 
 namespace CPS {
 namespace DP {
@@ -43,14 +44,18 @@ namespace Ph1 {
 		std::shared_ptr<VoltageSource> mSubVoltageSource;
 		/// Inner inductor that represents the generator impedance
 		std::shared_ptr<Inductor> mSubInductor;
+
+		/// new for protectopn
+		std::shared_ptr<DP::Ph1::Switch> mSubProtectionSwitch;
+
 		// Logging
 		Matrix mStates;
 	public:
 		///
-		SynchronGeneratorTrStab(String uid, String name, Logger::Level logLevel = Logger::Level::off);
+		SynchronGeneratorTrStab(String uid, String name, Logger::Level logLevel = Logger::Level::off, Bool SwitchActive = false);
 		///
 		SynchronGeneratorTrStab(String name, Logger::Level logLevel = Logger::Level::off)
-			: SynchronGeneratorTrStab(name, name, logLevel) { }
+			: SynchronGeneratorTrStab(name, name, logLevel, false) { }
 
 		SimPowerComp<Complex>::Ptr clone(String name);
 
@@ -88,9 +93,20 @@ namespace Ph1 {
 		/// Retrieves calculated voltage from simulation for next step
 		void mnaPostStep(Matrix& rightVector, Matrix& leftVector, Real time);
 		///
-		void mnaUpdateCurrent(const Matrix& leftVector) { }
+		//void mnaUpdateCurrent(const Matrix& leftVector) { }
 		///
 		void mnaUpdateVoltage(const Matrix& leftVector);
+		///
+		void mnaUpdateCurrent(const Matrix& leftVector);
+
+		// #### Internal Switch ####
+		/// new getter for internal switch
+		std::shared_ptr<DP::Ph1::Switch>& getProtectionSwitch() { return mSubProtectionSwitch; };
+
+		/// new update switch state function
+		//void updateSwitchState(const Matrix& leftVector, Real time);
+		void updateSwitchState(Real time);
+
 
 		class MnaPreStep : public Task {
 		public:
@@ -129,6 +145,7 @@ namespace Ph1 {
 				Task(generator.mName + ".MnaPostStep"), mGenerator(generator), mLeftVector(leftVector) {
 				mAttributeDependencies.push_back(leftVector);
 				mModifiedAttributes.push_back(generator.attribute("v_intf"));
+				mModifiedAttributes.push_back(generator.attribute("i_intf"));
 			}
 
 			void execute(Real time, Int timeStepCount);
