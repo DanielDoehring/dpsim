@@ -15,6 +15,7 @@ DP::Ph1::SynchronGeneratorTrStab::SynchronGeneratorTrStab(String uid, String nam
 	setTerminalNumber(1);
 
 	mSwitchActive = SwitchActive;
+	mHasSubSwitch = true;
 
 	mIntfVoltage = MatrixComp::Zero(1, 1);
 	mIntfCurrent = MatrixComp::Zero(1, 1);

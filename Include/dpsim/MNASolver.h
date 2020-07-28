@@ -117,10 +117,13 @@ namespace DPsim {
 		void createEmptyVectors();
 		/// Create system matrix
 		void createEmptySystemMatrix();
-		///
+		/// 
 		void updateSwitchStatus();
 		/// Logging of system matrices and source vector
 		void logSystemMatrices();
+
+		/// NEW identfier for switches
+		void identifySwitches();
 	public:
 		/// This constructor should not be called by users.
 		MnaSolver(String name,

@@ -51,6 +51,7 @@ namespace CPS {
 		const Task::List& mnaTasks() {
 			return mMnaTasks;
 		}
+
 	protected:
 		/// Every MNA component modifies its source vector attribute.
 		MNAInterface() {

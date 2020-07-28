@@ -73,6 +73,7 @@ void MnaSolver<VarType>::initialize() {
 	// calculate MNA specific initialization values.
 	initializeComponents();
 
+	///*
 	// NEW add also subswitches of elements
 	for (auto comp : mMNAComponents) {
 		// if it is Load
@@ -82,6 +83,11 @@ void MnaSolver<VarType>::initialize() {
 			mSwitches.push_back(sgswitch->getProtectionSwitch());
 		}
 	}
+	//*/
+
+	// new class for subswitch identification
+	//identifySwitches();
+
 
 	// NEW: create after mSwitches is updated
 	createEmptySystemMatrix();

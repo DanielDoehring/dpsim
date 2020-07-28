@@ -226,6 +226,7 @@ namespace Base {
 		Real mFaultCounter = 0;
 		// [s]
 		Real mPrevTime = 0;
+		Bool mHasSubSwitch = 0;
 
 		void setFundamentalPerUnitParameters(
 			Real Rs, Real Ll, Real Lmd, Real Lmq,
@@ -286,6 +287,10 @@ namespace Base {
 
 		/// Switch to determine the integration method for the machine model.
 		void setNumericalMethod(NumericalMethod method) { mNumericalMethod = method; }
+
+		/// NEw for protection switch
+		Bool hasSubSwitch() { return mHasSubSwitch; };
+
 	};
 }
 }
