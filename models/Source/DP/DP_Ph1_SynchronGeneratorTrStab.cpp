@@ -145,7 +145,7 @@ mVirtualNodes[1]->setInitialVoltage(mSGTerminalVoltage);
 mSubVoltageSource = DP::Ph1::VoltageSource::make(mName + "_src", mLogLevel);
 mSubVoltageSource->setParameters(mEp);
 mSubVoltageSource->connect({ SimNode::GND, mVirtualNodes[0] });
-mSubVoltageSource->setVirtualNodeAt(mVirtualNodes[1], 0);
+mSubVoltageSource->setVirtualNodeAt(mVirtualNodes[2], 0);
 mSubVoltageSource->initialize(mFrequencies);
 mSubVoltageSource->initializeFromPowerflow(frequency);
 
@@ -180,7 +180,7 @@ mSLog->info("\n--- Initialize according to powerflow ---"
 void DP::Ph1::SynchronGeneratorTrStab::step(Real time) {
 	// #### Calculations on input of time step k #####
 	// calculte voltage drop across switch
-	mSGTerminalVoltage = mIntfVoltage(0, 0) - mIntfCurrent(0, 0) * mSwitchRClosed;
+	mSGTerminalVoltage = mIntfVoltage(0, 0) + mIntfCurrent(0, 0) * mSwitchRClosed;
 	Complex V1 = mIntfVoltage(0, 0);
 	Complex I1 = mIntfCurrent(0, 0);
 
@@ -280,7 +280,7 @@ void DP::Ph1::SynchronGeneratorTrStab::mnaUpdateCurrent(const Matrix& leftVector
 
 /// new for protection Switch
 void DP::Ph1::SynchronGeneratorTrStab::updateSwitchState(Real time) {
-	mSLog->info("Switch Status: {}", (float)mSubProtectionSwitch->attribute<Bool>("is_closed")->get());
+	//mSLog->info("Switch Status: {}", (float)mSubProtectionSwitch->attribute<Bool>("is_closed")->get());
 
 	// only change switch from close to open once
 	if (!mSwitchStateChange) {
@@ -308,7 +308,8 @@ void DP::Ph1::SynchronGeneratorTrStab::updateSwitchState(Real time) {
 				}
 				else if (mFaultCounter <= 60)
 				{
-					VmaxFRT = 1.25;
+					//VmaxFRT = 1.25;
+					VmaxFRT = 1.1;
 				}
 				else
 				{

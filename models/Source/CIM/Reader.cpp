@@ -562,15 +562,17 @@ TopologicalPowerComp::Ptr Reader::mapSynchronousMachine(SynchronousMachine* mach
 					//directTransientReactance = genDyn->xDirectTrans.value;
 					directTransientReactance = 0.33;
 					//inertiaCoefficient = genDyn->inertia.value;
-					inertiaCoefficient = 7.11;
+					inertiaCoefficient = 3.7;
 
 					ratedPower = unitValue(machine->ratedS.value, UnitMultiplier::M);
 
 					ratedVoltage = unitValue(machine->ratedU.value, UnitMultiplier::k);
 					Bool switchActive = true;
 					auto gen = DP::Ph1::SynchronGeneratorTrStab::make(machine->mRID, machine->name, mComponentLogLevel, switchActive);
-					gen->setStandardParametersPU(ratedPower, ratedVoltage, mFrequency,
-						directTransientReactance, inertiaCoefficient);
+					//gen->setStandardParametersPU(ratedPower, ratedVoltage, mFrequency,
+						//directTransientReactance, inertiaCoefficient);
+					gen->setFundamentalParametersPU(ratedPower, ratedVoltage, mFrequency,
+						0.15, 1.6599, 0.1648, 3.7);
 					return gen;
 				}
 			}
