@@ -618,29 +618,99 @@ TopologicalPowerComp::Ptr Reader::mapExternalNetworkInjection(ExternalNetworkInj
 			throw SystemError("Mapping of ExternalNetworkInjection for EMT::Ph1 not existent!");
 			return nullptr;
 		}
-	} else if(mDomain == Domain::SP) {
-		if (mPhase == PhaseType::Single) {
-			auto cpsextnet = std::make_shared<SP::Ph1::externalGridInjection>(extnet->mRID, extnet->name, mComponentLogLevel);
-			cpsextnet->modifyPowerFlowBusType(PowerflowBusType::VD); // for powerflow solver set as VD component as default
-			if(extnet->RegulatingControl){
-				mSLog->info("       Voltage set-point={}", (float) extnet->RegulatingControl->targetValue);
-				cpsextnet->setParameters(extnet->RegulatingControl->targetValue); // assumes that value is specified in CIM data in per unit
-			} else
-				mSLog->info("       No voltage set-point defined.");
-			return cpsextnet;
-		}
-		else {
-			throw SystemError("Mapping of ExternalNetworkInjection for SP::Ph3 not existent!");
-			return nullptr;
-		}
-	} else {
-		if (mPhase == PhaseType::Single) {
-			return std::make_shared<DP::Ph1::NetworkInjection>(extnet->mRID, extnet->name, mComponentLogLevel);
-		} else {
-			throw SystemError("Mapping of ExternalNetworkInjection for DP::Ph3 not existent!");
-			return nullptr;
-		}
 	}
+	else if (mDomain == Domain::SP) {
+		auto cpsextnet = std::make_shared<SP::Ph1::externalGridInjection>(extnet->mRID, extnet->name, mComponentLogLevel);
+		cpsextnet->modifyPowerFlowBusType(PowerflowBusType::VD); // for powerflow solver set as VD component as default
+		if (extnet->RegulatingControl) {
+			mSLog->info("       Voltage set-point={}", (float)extnet->RegulatingControl->targetValue);
+			cpsextnet->setParameters(extnet->RegulatingControl->targetValue); // assumes that value is specified in CIM data in per unit
+		}
+		else
+			mSLog->info("       No voltage set-point defined.");
+		return cpsextnet;
+	}
+	else if (mDomain == Domain::DP) {
+		if (mPhase == PhaseType::Single) {
+			//return std::make_shared<DP::Ph1::NetworkInjection>(extnet->mRID, extnet->name, mComponentLogLevel);
+
+			Real baseVoltage = 0;
+			// first look for baseVolt object to set baseVoltage
+			for (auto obj : mModel->Objects) {
+				if (IEC61970::Base::Core::BaseVoltage* baseVolt = dynamic_cast<IEC61970::Base::Core::BaseVoltage*>(obj)) {
+					for (auto comp : baseVolt->ConductingEquipment) {
+						if (comp->name == extnet->name) {
+							baseVoltage = unitValue(baseVolt->nominalVoltage.value, UnitMultiplier::k);
+						}
+					}
+				}
+			}
+			// as second option take baseVoltage of topologicalNode where ExternalNetworkInjection is connected to
+			if (baseVoltage == 0) {
+				for (auto obj : mModel->Objects) {
+					if (IEC61970::Base::Topology::TopologicalNode* topNode = dynamic_cast<IEC61970::Base::Topology::TopologicalNode*>(obj)) {
+						for (auto term : topNode->Terminal) {
+							if (term->ConductingEquipment->name == extnet->name) {
+								baseVoltage = unitValue(topNode->BaseVoltage->nominalVoltage.value, UnitMultiplier::k);
+							}
+						}
+					}
+				}
+			}
+
+			// check if name contains "Slack" or "HSNetz", if so model as ideal voltage source
+			if (extnet->name.find("Slack") != std::string::npos) {
+				mSLog->info("NetworkInjection for DP single-phase modeled ideal Voltage Source (Slack-Node)");
+				auto cpsext = std::make_shared<DP::Ph1::NetworkInjection>(extnet->mRID, extnet->name, mComponentLogLevel);
+				return cpsext;
+			}
+			else if (extnet->name.find("HSNetz") != std::string::npos) {
+				mSLog->info("NetworkInjection for DP single-phase modeled ideal Voltage Source (Slack-Node)");
+				auto cpsext = std::make_shared<DP::Ph1::NetworkInjection>(extnet->mRID, extnet->name, mComponentLogLevel);
+				return cpsext;
+			}
+			else
+			{
+				//return nullptr;
+				mSLog->info("NetworkInjection for DP single-phase modeled as VSI in DQ-Frame");
+				bool has_trafo = true;
+				auto ext_vsi = std::make_shared<DP::Ph1::AvVoltageSourceInverterDQ>(extnet->mRID, extnet->name, mComponentLogLevel);
+
+				// parameters for vsi
+				Real omegeN = 2 * M_PI * mFrequency;
+				Real Pref = unitValue(extnet->p.value, UnitMultiplier::M);
+				Real Qref = unitValue(extnet->q.value, UnitMultiplier::M);
+				Real kp_pll = 0.25;
+				Real ki_pll = 2;
+				Real Kp_powerCtrl = 0.001;
+				Real Ki_powerCtrl = 0.08;
+				Real Kp_currCtrl = 3.77;
+				Real Ki_currCtrl = 1400;
+				Real Lf = 9.28e-04;
+				Real Cf = 7.89e-04;
+				Real Rf = 0.01;
+				Real Rc = 0.5;
+
+				// parameters for connection transformer
+				Real tr_nomVoltEnd1 = baseVoltage;
+				Real tr_nomVoltEnd2 = 400;
+				Real tr_ratedPower = 10e6;
+				Real tr_ratioAbs = 25;
+				Real tr_ratioPhase = 30;
+				Real tr_resistance = 0.5;
+				Real tr_inductance = 1.5;
+
+				// set parameters for NetworkInjection that is modeled as VSI
+				ext_vsi->setParameters(omegeN, baseVoltage, Pref, Qref, kp_pll, ki_pll, Kp_powerCtrl, Ki_powerCtrl, Kp_currCtrl, Ki_currCtrl, Lf, Cf, Rf, Rc);
+				//ext_vsi->setControllerParameters(kp_pll, ki_pll, Kp_powerCtrl, Ki_powerCtrl, Kp_currCtrl, Ki_currCtrl);
+				//ext_vsi->setFilterParameters(Lf, Cf, Rf, Rc);
+				//ext_vsi->setTransformerParameters(tr_nomVoltEnd1, tr_nomVoltEnd2, tr_ratedPower, tr_ratioAbs, tr_ratioPhase, tr_resistance, tr_inductance, omegeN);
+
+				return ext_vsi;
+			}
+		}
+	} else
+		return nullptr; // DP network injection not considered yet
 }
 
 TopologicalPowerComp::Ptr Reader::mapEquivalentShunt(EquivalentShunt* shunt){

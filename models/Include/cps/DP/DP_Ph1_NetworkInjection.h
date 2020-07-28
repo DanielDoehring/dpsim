@@ -11,6 +11,7 @@
 #include <cps/SimPowerComp.h>
 #include <cps/Solver/MNAInterface.h>
 #include <cps/Solver/DAEInterface.h>
+#include <cps/PowerProfile.h>
 
 namespace CPS {
 namespace DP {
@@ -30,12 +31,16 @@ namespace Ph1 {
 		public SharedFactory<NetworkInjection> {
 	private:
 		///
-		void updateVoltage(Real time);
+		void updateVoltage(Real time, Int timeStepCount);
 		///
 		Attribute<Complex>::Ptr mVoltageRef;
 		///
 		Attribute<Real>::Ptr mSrcFreq;
 	public:
+		/// Load profile data
+		VoltageProfile mSourceProfile;
+		/// Use the assigned load profile
+		bool use_profile = false;
 		/// Defines UID, name, component parameters and logging level
 		NetworkInjection(String uid, String name, Logger::Level loglevel = Logger::Level::off);
 		/// Defines UID, name, component parameters and logging level

@@ -116,24 +116,35 @@ void DP::Ph1::NetworkInjection::mnaApplyRightSideVectorStampHarm(Matrix& rightVe
 	}
 }
 
-void DP::Ph1::NetworkInjection::updateVoltage(Real time) {
+void DP::Ph1::NetworkInjection::updateVoltage(Real time, Int timeStepCount) {
 	if (mSrcFreq->get() < 0) {
-		mIntfVoltage(0,0) = mVoltageRef->get();
+		mIntfVoltage(0, 0) = mVoltageRef->get();
+	}
+	else if (mSourceProfile.vData.size() > 0) {
+		std::cout << time << "_" << std::endl;
+		std::map<Real, VData>::iterator it;
+		it = mSourceProfile.vData.find(time);
+		if (it != mSourceProfile.vData.end()) {
+			mVoltageRef->set(it->second.v);
+		}
+		mIntfVoltage(0, 0) = Complex(
+			Math::abs(mVoltageRef->get()) * cos(time * 2.*PI*mSrcFreq->get() + Math::phase(mVoltageRef->get())),
+			Math::abs(mVoltageRef->get()) * sin(time * 2.*PI*mSrcFreq->get() + Math::phase(mVoltageRef->get())));
 	}
 	else {
-		mIntfVoltage(0,0) = Complex(
+		mIntfVoltage(0, 0) = Complex(
 			Math::abs(mVoltageRef->get()) * cos(time * 2.*PI*mSrcFreq->get() + Math::phase(mVoltageRef->get())),
 			Math::abs(mVoltageRef->get()) * sin(time * 2.*PI*mSrcFreq->get() + Math::phase(mVoltageRef->get())));
 	}
 }
 
 void DP::Ph1::NetworkInjection::MnaPreStep::execute(Real time, Int timeStepCount) {
-	mNetworkInjection.updateVoltage(time);
+	mNetworkInjection.updateVoltage(time, timeStepCount);
 	mNetworkInjection.mnaApplyRightSideVectorStamp(mNetworkInjection.mRightVector);
 }
 
 void DP::Ph1::NetworkInjection::MnaPreStepHarm::execute(Real time, Int timeStepCount) {
-	mNetworkInjection.updateVoltage(time);
+	mNetworkInjection.updateVoltage(time, timeStepCount);
 	mNetworkInjection.mnaApplyRightSideVectorStampHarm(mNetworkInjection.mRightVector);
 }
 

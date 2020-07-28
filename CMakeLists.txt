@@ -92,7 +92,7 @@ endif()
 
 find_package(Sundials)
 find_package(OpenMP)
-find_package(CUDA)
+#find_package(CUDA)
 find_package(GSL)
 find_package(Graphviz)
 
@@ -124,39 +124,39 @@ cmake_dependent_option(WITH_RT				"Enable real-time features"							ON  "Linux_F
 cmake_dependent_option(WITH_PYTHON		"Enable Python support"									ON "Python_FOUND"				OFF)
 cmake_dependent_option(WITH_CIM				"Enable support for parsing CIM"				ON  "CIMpp_FOUND"				OFF)
 cmake_dependent_option(WITH_OPENMP		"Enable OpenMP-based parallelisation"		ON  "OPENMP_FOUND"			OFF)
-cmake_dependent_option(WITH_CUDA			"Enable CUDA-based parallelisation"			ON  "CUDA_FOUND"				OFF)
+#cmake_dependent_option(WITH_CUDA			"Enable CUDA-based parallelisation"			ON  "CUDA_FOUND"				OFF)
 cmake_dependent_option(WITH_GRAPHVIZ	"Enable Graphviz Graphs"								ON	"GRAPHVIZ_FOUND"		OFF)
 
-if(WITH_CUDA)
-    # BEGIN OF WORKAROUND - enable cuda dynamic linking.
-    # Starting with Cmake 3.17 we can use
-    # set(CMAKE_CUDA_RUNTIME_LIBRARY_DEFAULT "SHARED") instead
-    set( CMAKE_CUDA_FLAGS "" CACHE STRING "" )
-    if ( CMAKE_CUDA_FLAGS )
-            list(REMOVE_ITEM CMAKE_CUDA_FLAGS "-cudart static")
-    endif()
-    string(APPEND CMAKE_CUDA_FLAGS "-cudart shared")
-    # END OF WORKAROUND
-
-	enable_language(CUDA)
-
-    # BEGIN OF WORKAROUND - enable cuda dynamic linking.
-    if ( CMAKE_CUDA_HOST_IMPLICIT_LINK_LIBRARIES )
-        list( REMOVE_ITEM CMAKE_CUDA_HOST_IMPLICIT_LINK_LIBRARIES "cudart_static" )
-        list( REMOVE_ITEM CMAKE_CUDA_HOST_IMPLICIT_LINK_LIBRARIES "cudadevrt" )
-        list( APPEND CMAKE_CUDA_HOST_IMPLICIT_LINK_LIBRARIES "cudart" )
-    endif()
-    if ( CMAKE_CUDA_IMPLICIT_LINK_LIBRARIES )
-        list( REMOVE_ITEM CMAKE_CUDA_IMPLICIT_LINK_LIBRARIES "cudart_static" )
-        list( REMOVE_ITEM CMAKE_CUDA_IMPLICIT_LINK_LIBRARIES "cudadevrt" )
-        list( APPEND CMAKE_CUDA_IMPLICIT_LINK_LIBRARIES "cudart" )
-    endif()
-    if ( CUDA_LIBRARIES )
-        list ( REMOVE_ITEM CUDA_LIBRARIES "${CUDA_cudart_static_LIBRARY}")
-        list ( APPEND CUDA_LIBRARIES "${CUDA_CUDART_LIBRARY}")
-    endif()
-    # END OF WORKAROUND
-endif()
+#if(WITH_CUDA)
+#    # BEGIN OF WORKAROUND - enable cuda dynamic linking.
+#    # Starting with Cmake 3.17 we can use
+#    # set(CMAKE_CUDA_RUNTIME_LIBRARY_DEFAULT "SHARED") instead
+#    set( CMAKE_CUDA_FLAGS "" CACHE STRING "" )
+#    if ( CMAKE_CUDA_FLAGS )
+#            list(REMOVE_ITEM CMAKE_CUDA_FLAGS "-cudart static")
+#    endif()
+#    string(APPEND CMAKE_CUDA_FLAGS "-cudart shared")
+#    # END OF WORKAROUND
+#
+#	enable_language(CUDA)
+#
+#    # BEGIN OF WORKAROUND - enable cuda dynamic linking.
+#    if ( CMAKE_CUDA_HOST_IMPLICIT_LINK_LIBRARIES )
+#        list( REMOVE_ITEM CMAKE_CUDA_HOST_IMPLICIT_LINK_LIBRARIES "cudart_static" )
+#        list( REMOVE_ITEM CMAKE_CUDA_HOST_IMPLICIT_LINK_LIBRARIES "cudadevrt" )
+#        list( APPEND CMAKE_CUDA_HOST_IMPLICIT_LINK_LIBRARIES "cudart" )
+#    endif()
+#    if ( CMAKE_CUDA_IMPLICIT_LINK_LIBRARIES )
+#        list( REMOVE_ITEM CMAKE_CUDA_IMPLICIT_LINK_LIBRARIES "cudart_static" )
+#        list( REMOVE_ITEM CMAKE_CUDA_IMPLICIT_LINK_LIBRARIES "cudadevrt" )
+#        list( APPEND CMAKE_CUDA_IMPLICIT_LINK_LIBRARIES "cudart" )
+#    endif()
+#    if ( CUDA_LIBRARIES )
+#        list ( REMOVE_ITEM CUDA_LIBRARIES "${CUDA_cudart_static_LIBRARY}")
+#        list ( APPEND CUDA_LIBRARIES "${CUDA_CUDART_LIBRARY}")
+#    endif()
+#    # END OF WORKAROUND
+#endif()
 
 configure_file(
 	${CMAKE_CURRENT_SOURCE_DIR}/Include/dpsim/Config.h.in
