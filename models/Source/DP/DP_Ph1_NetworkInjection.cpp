@@ -128,6 +128,10 @@ void DP::Ph1::NetworkInjection::updateVoltage(Real time) {
 }
 
 void DP::Ph1::NetworkInjection::MnaPreStep::execute(Real time, Int timeStepCount) {
+	if (time > 1 && time <= 3)
+		mNetworkInjection.mVoltageRef->set(Complex(440e3, 0));
+	if (time > 3)
+		mNetworkInjection.mVoltageRef->set(Complex(320e3, 0));
 	mNetworkInjection.updateVoltage(time);
 	mNetworkInjection.mnaApplyRightSideVectorStamp(mNetworkInjection.mRightVector);
 }
