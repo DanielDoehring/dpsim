@@ -13,6 +13,7 @@
 #include <cps/DP/DP_Ph1_RxLine.h>
 #include <cps/DP/DP_Ph1_Inductor.h>
 #include <cps/Base/Base_Ph1_Transformer.h>
+#include <cps/DP/DP_Ph1_CurrentSource.h>
 
 namespace CPS {
 namespace DP {
@@ -36,10 +37,15 @@ namespace Ph1 {
 		/// Boolean for considering resistive losses with sub resistor
 		Bool mWithResistiveLosses;
 
+
+		/// NEW for saturation
+		Bool mWithSaturation = false;
+		std::shared_ptr<DP::Ph1::CurrentSource> mSatCurrentSrc;
+
 	public:
 		/// Defines UID, name and logging level
 		Transformer(String uid, String name,
-			Logger::Level logLevel = Logger::Level::off, Bool withResistiveLosses = false);
+			Logger::Level logLevel = Logger::Level::off, Bool withResistiveLosses = false, Bool WithSaturation = false);
 		/// Defines name and logging level
 		Transformer(String name, Logger::Level logLevel = Logger::Level::off)
 			: Transformer(name, name, logLevel) { }
@@ -72,6 +78,11 @@ namespace Ph1 {
 
 		Bool mnaRatioChanged() { return mRatioChange; };
 
+
+		/// New for saturation modelling
+		void updateFlux(Real time);
+		void updateSatCurrentSrc(Real time);
+
 		class MnaPreStep : public Task {
 		public:
 			MnaPreStep(Transformer& transformer) :
@@ -80,8 +91,13 @@ namespace Ph1 {
 				mAttributeDependencies.push_back(transformer.mSubInductor->attribute("right_vector"));
 				if (transformer.mSubResistor)
 					mAttributeDependencies.push_back(transformer.mSubResistor->attribute("right_vector"));
+				if (transformer.mWithSaturation)
+				{
+					mAttributeDependencies.push_back(transformer.mSatCurrentSrc->attribute("right_vector"));
+				}
 				mModifiedAttributes.push_back(transformer.attribute("right_vector"));
 				mPrevStepDependencies.push_back(transformer.mSubSnubResistor->attribute("v_intf"));
+				mPrevStepDependencies.push_back(transformer.attribute("v_intf"));
 			}
 
 			void execute(Real time, Int timeStepCount);

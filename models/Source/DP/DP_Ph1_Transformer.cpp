@@ -11,7 +11,7 @@
 using namespace CPS;
 
 DP::Ph1::Transformer::Transformer(String uid, String name,
-	Logger::Level logLevel, Bool withResistiveLosses)
+	Logger::Level logLevel, Bool withResistiveLosses, Bool WithSaturation)
 	: SimPowerComp<Complex>(uid, name, logLevel), TopologicalPowerComp(uid, name, logLevel) {
 	if (withResistiveLosses) 
 		setVirtualNodeNumber(3);
@@ -19,6 +19,8 @@ DP::Ph1::Transformer::Transformer(String uid, String name,
 		setVirtualNodeNumber(2);
 	
 	setTerminalNumber(2);
+
+	mWithSaturation = WithSaturation;
 
 	mSLog->info("Create {} {}", this->type(), name);
 	mIntfVoltage = MatrixComp::Zero(1,1);
@@ -101,6 +103,18 @@ void DP::Ph1::Transformer::initializeFromPowerflow(Real frequency) {
 	mSubSnubResistor->initializeFromPowerflow(frequency);
 	mSLog->info("Snubber Resistance={} [Ohm] (connected to LV side)", mSnubberResistance);
 
+	/// Create parallel current source for modelling of saturation effects
+	if (mWithResistiveLosses) {
+		mSatCurrentSrc = std::make_shared<DP::Ph1::CurrentSource>(mName + "_sat_current_src", mLogLevel);
+		// init with zero value. Could be improved
+		mSatCurrentSrc->setParameters(Complex(0, 0));
+		mSatCurrentSrc->connect({node(0), SimNode::GND});
+		mSatCurrentSrc->initialize(mFrequencies);
+		mSatCurrentSrc->initializeFromPowerflow(frequency);
+		mSLog->info("Current Source for saturation (connected to HV side)");
+	}
+
+
 	mSLog->info(
 		"\n--- Initialization from powerflow ---"
 		"\nVoltage across: {:s}"
@@ -124,6 +138,8 @@ void DP::Ph1::Transformer::mnaInitialize(Real omega, Real timeStep, Attribute<Ma
 	auto subComponents = MNAInterface::List({mSubInductor, mSubSnubResistor});
 	if (mSubResistor)
 		subComponents.push_back(mSubResistor);
+	if (mWithSaturation)
+		subComponents.push_back(mSatCurrentSrc);
 	for (auto comp : subComponents) {
 		comp->mnaInitialize(omega, timeStep, leftVector);
 		for (auto task : comp->mnaTasks()) {
@@ -154,6 +170,8 @@ void DP::Ph1::Transformer::mnaApplySystemMatrixStamp(Matrix& systemMatrix) {
 	// Add inductive part to system matrix
 	mSubInductor->mnaApplySystemMatrixStamp(systemMatrix);
 	mSubSnubResistor->mnaApplySystemMatrixStamp(systemMatrix);
+	if (mWithSaturation)
+		mSatCurrentSrc->mnaApplySystemMatrixStamp(systemMatrix);
 
 	if (mNumVirtualNodes == 3) {
 		mSubResistor->mnaApplySystemMatrixStamp(systemMatrix);
@@ -182,6 +200,7 @@ void DP::Ph1::Transformer::MnaPreStep::execute(Real time, Int timeStepCount) {
 	// NEW for OLTC
 	mTransformer.mRatioChange = false;
 	mTransformer.updateTapRatio(time, timeStepCount);
+	mTransformer.updateSatCurrentSrc(time);
 }
 
 void DP::Ph1::Transformer::MnaPostStep::execute(Real time, Int timeStepCount) {
@@ -268,4 +287,19 @@ void DP::Ph1::Transformer::updateTapRatio(Real time, Int timeStepCount) {
 	}
 	*/
 		
+}
+void DP::Ph1::Transformer::updateSatCurrentSrc(Real time) {
+	// first update flux
+	updateFlux(time);
+
+
+}
+
+void DP::Ph1::Transformer::updateFlux(Real time) {
+	// update flux value throufh integration of voltage
+	Real deltaT = time - mPrevStepTime;
+	// generate flux
+	Complex fluxDerivative = mCurrentFlux * Complex(0, -1);
+
+	mCurrentFlux = mCurrentFlux + (mIntfVoltage(0, 0) - 2 * M_PI * 50 * fluxDerivative) * deltaT ;
 }

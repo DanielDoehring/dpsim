@@ -48,6 +48,17 @@ namespace Ph1 {
 		Real mViolationCounter = 0;
 
 		Real mVLV;
+		/// New attributes for saturation effects
+		Real mLambdaM;
+		Real mLambdaK;
+
+		Complex mInitialFlux = Complex(0, 0);
+		Complex mCurrentFlux;
+
+		Real mLA;
+
+		Real mPrevStepTime;
+
 	public:
 		///
 		void setParameters(Real ratioAbs, Real ratioPhase, Real resistance, Real inductance) {
