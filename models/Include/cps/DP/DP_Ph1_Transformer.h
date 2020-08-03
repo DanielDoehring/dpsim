@@ -81,6 +81,7 @@ namespace Ph1 {
 				if (transformer.mSubResistor)
 					mAttributeDependencies.push_back(transformer.mSubResistor->attribute("right_vector"));
 				mModifiedAttributes.push_back(transformer.attribute("right_vector"));
+				mPrevStepDependencies.push_back(transformer.mSubSnubResistor->attribute("v_intf"));
 			}
 
 			void execute(Real time, Int timeStepCount);

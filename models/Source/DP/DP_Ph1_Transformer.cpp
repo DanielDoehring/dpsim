@@ -208,8 +208,6 @@ void DP::Ph1::Transformer::updateTapRatio(Real time, Int timeStepCount) {
 
 	// calculate voltage diff
 	Real deltaV = (mRefLV - lvVoltage) / mRefLV;
-	mSLog->info("Voltage difference Vref - V: {}", deltaV * 100);
-	mSLog->info(" V: {}", lvVoltage);
 
 	if (timeStepCount)
 	{
@@ -227,6 +225,10 @@ void DP::Ph1::Transformer::updateTapRatio(Real time, Int timeStepCount) {
 					if (Math::abs(mCurrTapPos) < mNumTaps)
 					{
 						mCurrTapPos = mCurrTapPos + 1;
+
+						mSLog->info("\nIncreasing tap Position (Overvoltage) to: {}", mCurrTapPos);
+						mSLog->info("Voltage difference Vref - V: {} [%]", deltaV * -100);
+						mSLog->info("V: {}", lvVoltage);
 					}
 					
 				}
@@ -236,6 +238,10 @@ void DP::Ph1::Transformer::updateTapRatio(Real time, Int timeStepCount) {
 					if (Math::abs(mCurrTapPos) < mNumTaps)
 					{
 						mCurrTapPos = mCurrTapPos - 1;
+
+						mSLog->info("\nDecreasing tap Position (Undervoltage) to: {}", mCurrTapPos);
+						mSLog->info("Voltage difference Vref - V: {} [%]", deltaV * -100);
+						mSLog->info("V: {}", lvVoltage);
 					}
 				}
 				// calculate new tap position
