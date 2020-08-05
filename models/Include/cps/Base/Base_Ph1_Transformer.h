@@ -49,15 +49,25 @@ namespace Ph1 {
 
 		Real mVLV;
 		/// New attributes for saturation effects
-		Real mLambdaM;
-		Real mLambdaK;
+		// parameters of flux(current)-curve
+		Real mLambdaM = 0;
+		Real mLambdaK = 0;
+		Real mLA = 0;
+		Real mIM = 0;
+		Real mLm = 0;
 
-		Complex mInitialFlux = Complex(0, 0);
-		Complex mCurrentFlux;
+		Real mInitialFlux = 0;
+		Real mCurrentFlux;
 
-		Real mLA;
+		Real mVm = 0;
 
-		Real mPrevStepTime;
+		Real mPrevStepTime = 0;
+		Bool mSatConstantsSet = false;
+		Real mSatConstA;
+		Real mSatConstB;
+		Real mSatConstC;
+		Real mSatConstD;
+		
 
 	public:
 		///
@@ -89,6 +99,27 @@ namespace Ph1 {
 		void setOLTCDeadband(Real deadband) { mDeadband = deadband; };
 		void setOLTCTimeDelay(Real delay) { mTapChangeTimeDelay = delay; };
 
+
+		void setParametersSaturation(Real lambdaM, Real lambdaK, Real LA, Real LM, Real IM) {
+			mLambdaM = lambdaM;
+			mLambdaK = lambdaK;
+			mLA = LA;
+			mLm = LM;
+			mIM = IM;
+		}
+
+		void setSaturationConstants() {
+			// some constants for better calc of saturation
+			mSatConstA = mLA / (mLambdaK * mLambdaK);
+
+			mSatConstB = (mLA * mIM - mLambdaM) / mLambdaK;
+
+			mSatConstC = mIM * (mLA * mIM - mLambdaM + mLambdaK);
+
+			mSatConstD = (-mSatConstB - sqrt( (mSatConstB*mSatConstB) - 4*mSatConstA*mSatConstC )) / (2 * mSatConstA);
+
+			mSatConstantsSet = true;
+		}
 	};
 }
 }

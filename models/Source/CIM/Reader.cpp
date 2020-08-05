@@ -516,8 +516,9 @@ TopologicalPowerComp::Ptr Reader::mapPowerTransformer(PowerTransformer* trans) {
 		return transformer;
 	}
 	else {
-		Bool withResistiveLosses = resistance > 0;
-		auto transformer = std::make_shared<DP::Ph1::Transformer>(trans->mRID, trans->name, mComponentLogLevel, withResistiveLosses);
+		Bool withResistiveLosses = true;
+		Bool withSat = true;
+		auto transformer = std::make_shared<DP::Ph1::Transformer>(trans->mRID, trans->name, mComponentLogLevel, withSat);
 		transformer->setParameters(ratioAbs, ratioPhase, resistance, inductance);
 		Real NumTaps = 10;
 		transformer->setOLTCParamteres(NumTaps, voltageNode2, 0.05);
