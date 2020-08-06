@@ -57,9 +57,11 @@ namespace Ph1 {
 		Real mLm = 0;
 
 		Real mInitialFlux = 0;
-		Real mCurrentFlux;
+		Real mCurrentFlux = 0;
+		Real mDeltaFlux = 0;
 
 		Real mVm = 0;
+		Real mIMag = 0;
 
 		Real mPrevStepTime = 0;
 		Bool mSatConstantsSet = false;

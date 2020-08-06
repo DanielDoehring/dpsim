@@ -47,6 +47,8 @@ namespace Ph1 {
 		std::shared_ptr<DP::Ph1::CurrentSource> mSubSatCurrentSrc;
 		std::shared_ptr<DP::Ph1::Inductor> mSubMagnetizingInductor;
 
+		Complex mISrcRef;
+
 	public:
 		/// Defines UID, name and logging level
 		Transformer(String uid, String name,

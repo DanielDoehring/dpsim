@@ -518,12 +518,16 @@ TopologicalPowerComp::Ptr Reader::mapPowerTransformer(PowerTransformer* trans) {
 	else {
 		Bool withResistiveLosses = true;
 		Bool withSat = true;
-		auto transformer = std::make_shared<DP::Ph1::Transformer>(trans->mRID, trans->name, mComponentLogLevel, withSat);
+		resistance = (resistance > 0) ? resistance : 1e-3;
+		auto transformer = std::make_shared<DP::Ph1::Transformer>(trans->mRID, trans->name, mComponentLogLevel, withResistiveLosses, withSat);
 		transformer->setParameters(ratioAbs, ratioPhase, resistance, inductance);
 		Real NumTaps = 10;
 		transformer->setOLTCParamteres(NumTaps, voltageNode2, 0.05);
 		transformer->setOLTCTimeDelay(0.5);
 		transformer->setOLTCDeadband(0.01);
+		//transformer->setParameters(ratioAbs, ratioPhase, 0.34, 0.1);
+		transformer->setParametersSaturation(920, 980, 38, 612.5, 2);
+		//transformer->setParametersSaturation(900, 1100, 38, 1700, 2.5);
 		return transformer;
 	}
 }
