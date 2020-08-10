@@ -101,7 +101,6 @@ namespace Ph1 {
 				mAttributeDependencies.push_back(transformer.mSubLossResistorHV ->attribute("right_vector"));
 				mAttributeDependencies.push_back(transformer.mSubLossResistorLV->attribute("right_vector"));
 				mAttributeDependencies.push_back(transformer.mSubMagnetizingInductor->attribute("right_vector"));
-				//mAttributeDependencies.push_back(transformer.mSubSatCurrentSrc->attribute("right_vector"));
 
 				/*
 				mAttributeDependencies.push_back(transformer.mSubInductor->attribute("right_vector"));

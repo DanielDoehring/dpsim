@@ -59,6 +59,7 @@ namespace Ph1 {
 		Real mInitialFlux = 0;
 		Real mCurrentFlux = 0;
 		Real mDeltaFlux = 0;
+		Real mVmAngle = 0;
 
 		Real mVm = 0;
 		Real mIMag = 0;
@@ -108,6 +109,25 @@ namespace Ph1 {
 			mLA = LA;
 			mLm = LM;
 			mIM = IM;
+		}
+
+		void setParametersSaturationDefault(Real HV, Real LV) {
+			// set Saturation Parameters for standard Transformer depending on low and high voltage level
+			if (HV == 220000 && LV == 110000) {
+				mLambdaM = 900;
+				mLambdaK = 1100;
+				mLA = 38;
+				mLm = 1700;
+				mIM = 2.5;
+			}
+			else if (HV == 20000 && LV == 660)
+			{
+				mLambdaM = 90.32;
+				mLambdaK = 96.54;
+				mLA = 2.51;
+				mLm = 545.65;
+				mIM = 0.165;
+			}
 		}
 
 		void setSaturationConstants() {

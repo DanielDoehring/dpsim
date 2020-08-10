@@ -36,6 +36,7 @@ DP::Ph1::Transformer::Transformer(String uid, String name,
 	addAttribute<Real>("Vm", &mVm, Flags::write | Flags::read);
 	addAttribute<Complex>("ISrcRef", &mISrcRef, Flags::write | Flags::read);
 	addAttribute<Real>("IMag", &mIMag, Flags::write | Flags::read);
+	addAttribute<Real>("VmAngle", &mVmAngle, Flags::write | Flags::read);
 
 }
 
@@ -152,11 +153,11 @@ void DP::Ph1::Transformer::initializeFromPowerflow(Real frequency) {
 	mSubLeakageInductorHV->connect({ mVirtualNodes[2], mVirtualNodes[3] });
 	mSubLeakageInductorHV->initialize(mFrequencies);
 	mSubLeakageInductorHV->initializeFromPowerflow(frequency);
-	mSLog->info("Connected Series Leakage Inducatance (HV) = {} [H]", mInductance / 2);
+	mSLog->info("Connected Series Leakage Inductance (HV) = {} [H]", mInductance / 2);
 	mSubLeakageInductorLV->connect({ mVirtualNodes[3], mVirtualNodes[4] });
 	mSubLeakageInductorLV->initialize(mFrequencies);
 	mSubLeakageInductorLV->initializeFromPowerflow(frequency);
-	mSLog->info("Connected Series Leakage Inducatance (LV) = {} [H]", mInductance / 2);
+	mSLog->info("Connected Series Leakage Inductance (LV) = {} [H]", mInductance / 2);
 
 	mSubLossResistorHV->connect({mVirtualNodes[2], node(0)});
 	mSubLossResistorHV->initialize(mFrequencies);
@@ -167,10 +168,12 @@ void DP::Ph1::Transformer::initializeFromPowerflow(Real frequency) {
 	mSubLossResistorLV->initializeFromPowerflow(frequency);
 	mSLog->info("Connected Series Resistance (LV) = {} [Ohm]", mResistance / 2);
 
+	
 	mSubMagnetizingInductor->connect({mVirtualNodes[3], SimNode::GND});
 	mSubMagnetizingInductor->initialize(mFrequencies);
 	mSubMagnetizingInductor->initializeFromPowerflow(frequency);
 	mSLog->info("Connected parallel magnetizing Inductance (HV) = {} [H]", mLm);
+	
 
 	// Create parallel sub components at LV side
 	// A snubber conductance is added on the low voltage side (resistance approximately scaled with LV side voltage)
@@ -327,7 +330,7 @@ void DP::Ph1::Transformer::MnaPostStep::execute(Real time, Int timeStepCount) {
 	{
 		mTransformer.updateSatCurrentSrc(time);
 	}
-	//mTransformer.updateTapRatio(time, timeStepCount);
+
 }
 
 void DP::Ph1::Transformer::mnaUpdateCurrent(const Matrix& leftVector) {
@@ -412,18 +415,20 @@ void DP::Ph1::Transformer::updateTapRatio(Real time, Int timeStepCount) {
 }
 void DP::Ph1::Transformer::updateSatCurrentSrc(Real time) {
 	// first update flux
-	Real omega = 2. * PI * mFrequencies(0, 0);
 	updateFlux(time);
+
+	Real omega = 2. * PI * mFrequencies(0, 0);
 
 	// now calculate correct magnetizing current
 	Real iMag_sqrt = sqrt((mCurrentFlux - mLambdaK) * (mCurrentFlux - mLambdaK) + 4. * mSatConstD * mLA);
-	mIMag = ((iMag_sqrt + mCurrentFlux - mLambdaK) / (2 * mLA)) - (mSatConstD / mLambdaK);
+	mIMag = -(((iMag_sqrt + mCurrentFlux - mLambdaK) / (2 * mLA)) - (mSatConstD / mLambdaK));
 
 	// calc new ref value for current source
 	Real iSrc = mIMag - mCurrentFlux / mLm;
 
 	// Now this needs to be again transformed into DP-Domain
-	mISrcRef = Complex(iSrc*cos(omega*time)/sqrt(2), iSrc*sin(omega*time)/sqrt(2));
+	// multiply with e^-jw_s*t
+	mISrcRef = Complex(iSrc*cos(omega*time), -iSrc*sin(omega*time));
 
 	// set ref value for internal current source
 	mSubSatCurrentSrc->setRefCurrent(mISrcRef);
@@ -436,31 +441,27 @@ void DP::Ph1::Transformer::updateFlux(Real time) {
 
 		// transform values from dp to emt
 		Real omega = 2. * PI * mFrequencies(0, 0);
-		Complex shiftingFactor = Complex(cos(omega * time), sin(omega * time));
 
-		Complex termCurrent = mIntfCurrent(0, 0) * Complex(cos(omega * time), sin(omega * time));
-		Complex termVoltage = mIntfVoltage(0, 0) * Complex(cos(omega * time), sin(omega * time));
+		// transform DP to EMT
+		// Real part of voltage drom DP domain
+		Complex currentVoltage = mSubMagnetizingInductor->intfVoltage()(0, 0);
+		//Complex currentVoltage = mSubSatCurrentSrc->intfVoltage()(0, 0);
+		//Complex currentVoltage = mIntfVoltage(0, 0) - mSubLeakageInductorHV->intfCurrent()(0, 0) * Complex(mResistance / 2, omega * mInductance / 2);
+		Real currVolAbs = Math::abs(currentVoltage);
+		Real currVolAngl = Math::phase(currentVoltage);
+		mVmAngle = currVolAngl;
 
-		// calc flux through integration of voltage accross current source
-		// easier way could be through mIntfVoltage of parallel magentizing inductance? (no explicit calculation needed)
-		//Real currentFlux = (termVoltage.real() - (mResistance / 2) * termCurrent.real()) * deltaT - termCurrent.real() * mInductance / 2;
-		//Real currentVoltage = (0.5 * termVoltage.real() - (mResistance / 2) * termCurrent.real());
-
-		//mDeltaFlux = (deltaT * (currentVoltage + mVm) / 2) - termCurrent.real() * mInductance / 2;
-
-		Complex currentVoltage = mSubMagnetizingInductor->intfVoltage()(0, 0) * shiftingFactor * Complex(sqrt(2), 0);
+		// Re{|Voltage| * e^(j*angle) * e^(jw_s*t)}
+		Real currentVoltageReal = Math::abs(currentVoltage) * cos(omega*time + Math::phase(currentVoltage));
 
 		// using trapez rule of integration
-		mDeltaFlux = (deltaT / 2) * (mVm + currentVoltage.real());
+		mDeltaFlux = (deltaT / 2) * (mVm + currentVoltageReal);
 
 		// update magnetizing voltage
-		mVm = currentVoltage.real();
+		mVm = currentVoltageReal;
 
 		// update flux
 		mCurrentFlux = mCurrentFlux + mDeltaFlux;
-
-		//Complex fluxDerivative = mCurrentFlux * Complex(0, -1);
-		//mCurrentFlux = mCurrentFlux + (mIntfVoltage(0, 0) - 2 * M_PI * 50 * fluxDerivative) * deltaT ;
 	}
 	mPrevStepTime = time;
 }
