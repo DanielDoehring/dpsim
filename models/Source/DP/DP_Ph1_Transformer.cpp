@@ -424,7 +424,9 @@ void DP::Ph1::Transformer::updateSatCurrentSrc(Real time) {
 	mIMag = -(((iMag_sqrt + mCurrentFlux - mLambdaK) / (2 * mLA)) - (mSatConstD / mLambdaK));
 
 	// calc new ref value for current source
-	Real iSrc = mIMag - mCurrentFlux / mLm;
+	//Real iSrc = mIMag - mCurrentFlux / mLm;
+	Complex lMagCurrent = mSubMagnetizingInductor->intfCurrent()(0, 0);
+	Real iSrc = mIMag - (Math::abs(lMagCurrent) * cos(omega*time + Math::phase(lMagCurrent)));
 
 	// Now this needs to be again transformed into DP-Domain
 	// multiply with e^-jw_s*t
@@ -445,7 +447,7 @@ void DP::Ph1::Transformer::updateFlux(Real time) {
 		// transform DP to EMT
 		// Real part of voltage drom DP domain
 		Complex currentVoltage = mSubMagnetizingInductor->intfVoltage()(0, 0);
-		//Complex currentVoltage = mSubSatCurrentSrc->intfVoltage()(0, 0);
+	    //Complex currentVoltage = mSubSatCurrentSrc->intfVoltage()(0, 0);
 		//Complex currentVoltage = mIntfVoltage(0, 0) - mSubLeakageInductorHV->intfCurrent()(0, 0) * Complex(mResistance / 2, omega * mInductance / 2);
 		Real currVolAbs = Math::abs(currentVoltage);
 		Real currVolAngl = Math::phase(currentVoltage);
@@ -455,7 +457,7 @@ void DP::Ph1::Transformer::updateFlux(Real time) {
 		Real currentVoltageReal = Math::abs(currentVoltage) * cos(omega*time + Math::phase(currentVoltage));
 
 		// using trapez rule of integration
-		mDeltaFlux = (deltaT / 2) * (mVm + currentVoltageReal);
+		mDeltaFlux = (deltaT / 2) * sqrt(2) * (mVm + currentVoltageReal);
 
 		// update magnetizing voltage
 		mVm = currentVoltageReal;

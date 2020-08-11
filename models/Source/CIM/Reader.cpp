@@ -527,6 +527,7 @@ TopologicalPowerComp::Ptr Reader::mapPowerTransformer(PowerTransformer* trans) {
 		transformer->setOLTCDeadband(0.01);
 		//transformer->setParameters(ratioAbs, ratioPhase, 0.34, 0.1);
 		transformer->setParametersSaturation(90.032, 96.954, 2.51, 545.65, 0.165);
+		//transformer->setParametersSaturation(90.032, 96.954, 2.51, 230.05, 0.165);
 		//transformer->setParametersSaturation(900, 1100, 38, 1700, 2.5);
 		return transformer;
 	}
