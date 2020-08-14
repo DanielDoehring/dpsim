@@ -60,6 +60,7 @@ namespace Ph1 {
 		Real mCurrentFlux = 0;
 		Real mDeltaFlux = 0;
 		Real mVmAngle = 0;
+		Real mLMagCurrentReal = 0;
 
 		Real mVm = 0;
 		Real mIMag = 0;
@@ -122,11 +123,19 @@ namespace Ph1 {
 			}
 			else if (HV == 20000 && LV == 660)
 			{
-				mLambdaM = 90.32;
-				mLambdaK = 96.54;
+				mLambdaM = 90.032;
+				mLambdaK = 96.954;
 				mLA = 2.51;
-				mLm = 545.65;
+				mLm = 545.83;
 				mIM = 0.165;
+			}
+			else if (HV == 115000 && LV == 21000)
+			{
+				mLambdaM = 517.682;
+				mLambdaK = 498.93;
+				mLA = 17.86;
+				mLm = 221.71;
+				mIM = 2.335;
 			}
 		}
 
@@ -134,11 +143,11 @@ namespace Ph1 {
 			// some constants for better calc of saturation
 			mSatConstA = mLA / (mLambdaK * mLambdaK);
 
-			mSatConstB = (mLA * mIM - mLambdaM) / mLambdaK;
+			mSatConstB = (mLA * mLm - mLambdaM) / mLambdaK;
 
 			mSatConstC = mIM * (mLA * mIM - mLambdaM + mLambdaK);
 
-			mSatConstD = (-mSatConstB - sqrt( (mSatConstB*mSatConstB) - 4*mSatConstA*mSatConstC )) / (2 * mSatConstA);
+			mSatConstD = (mSatConstB - sqrt( (mSatConstB*mSatConstB) - 4*mSatConstA*mSatConstC )) / (2 * mSatConstA);
 
 			mSatConstantsSet = true;
 		}

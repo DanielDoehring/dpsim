@@ -93,4 +93,6 @@ void DP::Ph1::CurrentSource::mnaUpdateVoltage(const Matrix& leftVector) {
 
 void DP::Ph1::CurrentSource::setRefCurrent(Complex current) {
 	mCurrentRef->set(current);
+	//Complex curr = mCurrentRef->get();
+	mSLog->info("Reference Current: {}", Logger::phasorToString(mCurrentRef->get()) );
 }

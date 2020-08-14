@@ -87,8 +87,8 @@ namespace Ph1 {
 
 
 		/// New for saturation modelling
-		void updateFlux(Real time);
-		void updateSatCurrentSrc(Real time);
+		void updateFlux(Real time, const Matrix& leftVector);
+		void updateSatCurrentSrc(Real time, const Matrix& leftVector);
 
 		class MnaPreStep : public Task {
 		public:
@@ -100,8 +100,6 @@ namespace Ph1 {
 				mAttributeDependencies.push_back(transformer.mSubLeakageInductorLV->attribute("right_vector"));
 				mAttributeDependencies.push_back(transformer.mSubLossResistorHV ->attribute("right_vector"));
 				mAttributeDependencies.push_back(transformer.mSubLossResistorLV->attribute("right_vector"));
-				mAttributeDependencies.push_back(transformer.mSubMagnetizingInductor->attribute("right_vector"));
-
 				/*
 				mAttributeDependencies.push_back(transformer.mSubInductor->attribute("right_vector"));
 				if (transformer.mSubResistor)
@@ -110,6 +108,7 @@ namespace Ph1 {
 				if (transformer.mWithSaturation)
 				{
 					mAttributeDependencies.push_back(transformer.mSubSatCurrentSrc->attribute("right_vector"));
+					mAttributeDependencies.push_back(transformer.mSubMagnetizingInductor->attribute("right_vector"));
 				}
 				mModifiedAttributes.push_back(transformer.attribute("right_vector"));
 				mPrevStepDependencies.push_back(transformer.mSubSnubResistor->attribute("v_intf"));
@@ -131,10 +130,10 @@ namespace Ph1 {
 				//mAttributeDependencies.push_back(transformer.mSubInductor->attribute("i_intf"));
 				mAttributeDependencies.push_back(transformer.mSubLeakageInductorHV->attribute("right_vector"));
 				mAttributeDependencies.push_back(transformer.mSubLeakageInductorLV->attribute("right_vector"));
-				mAttributeDependencies.push_back(transformer.mSubMagnetizingInductor->attribute("right_vector"));
 				if (transformer.mWithSaturation)
 				{
 					mAttributeDependencies.push_back(transformer.mSubSatCurrentSrc->attribute("right_vector"));
+					mAttributeDependencies.push_back(transformer.mSubMagnetizingInductor->attribute("right_vector"));
 				}
 
 				//mAttributeDependencies.push_back(transformer.mSubSnubResistor->attribute("v_intf"));
