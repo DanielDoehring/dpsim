@@ -126,7 +126,8 @@ namespace Ph1 {
 				mLambdaM = 90.032;
 				mLambdaK = 96.954;
 				mLA = 2.51;
-				mLm = 545.83;
+				//mLm = 545.83;
+				mLm = 225.11;
 				mIM = 0.165;
 			}
 			else if (HV == 115000 && LV == 21000)
