@@ -49,6 +49,8 @@ namespace Ph1 {
 
 		Real mVLV;
 		/// New attributes for saturation effects
+		// use emt values for calculation
+		Bool mCalcSatDP = true;
 		// parameters of flux(current)-curve
 		Real mLambdaM = 0;
 		Real mLambdaK = 0;
@@ -56,6 +58,15 @@ namespace Ph1 {
 		Real mIM = 0;
 		Real mLm = 0;
 
+		Real mPrevStepTime = 0;
+		Bool mSatConstantsSet = false;
+		Bool mSatConstantsSetDP = false;
+		Real mSatConstA;
+		Real mSatConstB;
+		Real mSatConstC;
+		Real mSatConstD;
+
+		// EMT trafo specific parameters
 		Real mInitialFlux = 0;
 		Real mCurrentFlux = 0;
 		Real mDeltaFlux = 0;
@@ -65,12 +76,13 @@ namespace Ph1 {
 		Real mVm = 0;
 		Real mIMag = 0;
 
-		Real mPrevStepTime = 0;
-		Bool mSatConstantsSet = false;
-		Real mSatConstA;
-		Real mSatConstB;
-		Real mSatConstC;
-		Real mSatConstD;
+		// DP-calc specific parameters
+		Complex mCurrentFluxDP = Complex(0, 0);
+		Complex mHphi = Complex(0, 0);
+		Complex mBphi = Complex(0, 0);
+		Complex mAphi = Complex(0, 0);
+		Complex mVmDP = Complex(0, 0);
+		Complex mTD = Complex(0.5, 0);
 		
 
 	public:
@@ -105,6 +117,7 @@ namespace Ph1 {
 
 
 		void setParametersSaturation(Real lambdaM, Real lambdaK, Real LA, Real LM, Real IM) {
+			// set paramteres of saturation curve
 			mLambdaM = lambdaM;
 			mLambdaK = lambdaK;
 			mLA = LA;
@@ -126,7 +139,6 @@ namespace Ph1 {
 				mLambdaM = 90.032;
 				mLambdaK = 96.954;
 				mLA = 2.51;
-				//mLm = 545.83;
 				mLm = 225.11;
 				mIM = 0.165;
 			}
@@ -141,7 +153,7 @@ namespace Ph1 {
 		}
 
 		void setSaturationConstants() {
-			// some constants for better calc of saturation
+			// some static constants defined here for simpler calc of saturation
 			mSatConstA = mLA / (mLambdaK * mLambdaK);
 
 			mSatConstB = (mLA * mLm - mLambdaM) / mLambdaK;
@@ -151,6 +163,10 @@ namespace Ph1 {
 			mSatConstD = (mSatConstB - sqrt( (mSatConstB*mSatConstB) - 4*mSatConstA*mSatConstC )) / (2 * mSatConstA);
 
 			mSatConstantsSet = true;
+		}
+
+		void setSaturationCalculationMethod(Bool satMeth) {
+			mCalcSatDP = satMeth;
 		}
 	};
 }

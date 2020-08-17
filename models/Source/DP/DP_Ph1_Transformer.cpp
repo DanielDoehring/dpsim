@@ -36,9 +36,6 @@ DP::Ph1::Transformer::Transformer(String uid, String name,
 	addAttribute<Real>("Vm", &mVm, Flags::write | Flags::read);
 	addAttribute<Complex>("ISrcRef", &mISrcRef, Flags::write | Flags::read);
 	addAttribute<Real>("IMag", &mIMag, Flags::write | Flags::read);
-	addAttribute<Real>("ILMag", &mLMagCurrentReal, Flags::write | Flags::read);
-	addAttribute<Real>("VmAngle", &mVmAngle, Flags::write | Flags::read);
-
 }
 
 SimPowerComp<Complex>::Ptr DP::Ph1::Transformer::clone(String name) {
@@ -328,7 +325,13 @@ void DP::Ph1::Transformer::MnaPostStep::execute(Real time, Int timeStepCount) {
 	mTransformer.mnaUpdateCurrent(*mLeftVector);
 	if (mTransformer.mWithSaturation)
 	{
-		mTransformer.updateSatCurrentSrc(time, *mLeftVector);
+		if (mTransformer.mCalcSatDP)
+		{
+			mTransformer.updateSatCurrentSrcDP(time, *mLeftVector);
+		}
+		else {
+			mTransformer.updateSatCurrentSrcEMT(time, *mLeftVector);
+		}
 	}
 }
 
@@ -343,13 +346,6 @@ void DP::Ph1::Transformer::mnaUpdateVoltage(const Matrix& leftVector) {
 	mIntfVoltage(0, 0) = Math::complexFromVectorElement(leftVector, matrixNodeIndex(1));
 	mIntfVoltage(0, 0) = mIntfVoltage(0, 0) - Math::complexFromVectorElement(leftVector, mVirtualNodes[0]->matrixNodeIndex());
 	SPDLOG_LOGGER_DEBUG(mSLog, "Voltage {:s}", Logger::phasorToString(mIntfVoltage(0, 0)));
-
-	/*
-	// log virtual node voltages
-	mSLog->info("Voltage at VNode[0]: {}", Math::complexFromVectorElement(leftVector, mVirtualNodes[0]->matrixNodeIndex()));
-	mSLog->info("Voltage at VNode[1]: {}", Math::complexFromVectorElement(leftVector, mVirtualNodes[1]->matrixNodeIndex()));
-	mSLog->info("Voltage at Node 1 (LV): {}", Math::complexFromVectorElement(leftVector, matrixNodeIndex(1)));
-	*/
 }
 
 void DP::Ph1::Transformer::updateTapRatio(Real time, Int timeStepCount) {
@@ -421,8 +417,7 @@ void DP::Ph1::Transformer::updateTapRatio(Real time, Int timeStepCount) {
 }
 void DP::Ph1::Transformer::updateSatCurrentSrc(Real time) {
 	// first update flux
-	updateFlux(time, leftVector);
-
+	updateFluxEMT(time, leftVector);
 	Real omega = 2. * PI * mFrequencies(0, 0);
 
 	// now calculate correct magnetizing current
@@ -432,20 +427,15 @@ void DP::Ph1::Transformer::updateSatCurrentSrc(Real time) {
 	Real iMag_sqrt = sqrt((Math::abs(mCurrentFlux) - mLambdaK) * (Math::abs(mCurrentFlux) - mLambdaK) + 4. * mSatConstD * mLA);
 	mIMag = negativeFlux * ( ((iMag_sqrt + Math::abs(mCurrentFlux) - mLambdaK) / (2 * mLA)) - (mSatConstD / mLambdaK) );
 	*/
-
 	Real iMag_sqrt = sqrt( (mCurrentFlux - mLambdaK) * (mCurrentFlux - mLambdaK) + 4 * mSatConstD * mLA );
 	mIMag = ( (iMag_sqrt + mCurrentFlux - mLambdaK) / (2 * mLA) ) - (mSatConstD / mLambdaK);
 	mSLog->info("\nCurrent Flux of {} leads to magnetizing current of {}", mCurrentFlux, mIMag);
 
 	// calc new ref value for current source
 	// I_currSrc = Imagnetizing - I_Lm
-	// -> get real value of current through magnetizing inductance
-	//Real iSrc = mIMag - mCurrentFlux / mLm;
-	//Complex lMagCurrent = mSubMagnetizingInductor->intfCurrent()(0, 0);
-	//mLMagCurrentReal = Math::abs(lMagCurrent) * cos(omega*time + Math::phase(lMagCurrent));
 	mLMagCurrentReal = mCurrentFlux / mLm;
 	Real iSrc = mIMag - mLMagCurrentReal;
-	mSLog->info("Current Source Real part = Im - Ilm |\n {} = {} - {} at {}", iSrc, mIMag, mLMagCurrentReal, time);
+	//mSLog->info("Current Source Real part = Im - Ilm |\n {} = {} - {} at {}", iSrc, mIMag, mLMagCurrentReal, time);
 
 	// Now this needs to be again transformed into DP-Domain
 	// multiply with e^-jw_s*t
@@ -455,7 +445,7 @@ void DP::Ph1::Transformer::updateSatCurrentSrc(Real time) {
 	mSubSatCurrentSrc->setRefCurrent(mISrcRef);
 }
 
-void DP::Ph1::Transformer::updateFlux(Real time, const Matrix& leftVector) {
+void DP::Ph1::Transformer::updateFluxEMT(Real time, const Matrix& leftVector) {
 	if (time > 0) {
 		// update flux value through integration of voltage
 		Real deltaT = time - mPrevStepTime;
@@ -464,17 +454,9 @@ void DP::Ph1::Transformer::updateFlux(Real time, const Matrix& leftVector) {
 		Real omega = 2. * PI * mFrequencies(0, 0);
 
 		// transform DP to EMT
-		// Real part of voltage drom DP domain
-		//Complex currentVoltage = mSubMagnetizingInductor->intfVoltage()(0, 0);
-	    //Complex currentVoltage = mSubSatCurrentSrc->intfVoltage()(0, 0);
-		//Complex currentVoltage = mIntfVoltage(0, 0) - mSubLeakageInductorHV->intfCurrent()(0, 0) * Complex(mResistance / 2, omega * mInductance / 2);
-
 		Complex currentVoltage = Math::complexFromVectorElement(leftVector, mVirtualNodes[3]->matrixNodeIndex());
 
-		Real currVolAbs = Math::abs(currentVoltage);
-		Real currVolAngl = Math::phase(currentVoltage);
-		mVmAngle = currVolAngl;
-
+		// Real part of voltage from DP domain
 		// Re{|Voltage| * e^(j*angle) * e^(jw_s*t)}
 		Real currentVoltageReal = Math::abs(currentVoltage) * cos(omega*time + Math::phase(currentVoltage));
 
@@ -488,6 +470,66 @@ void DP::Ph1::Transformer::updateFlux(Real time, const Matrix& leftVector) {
 
 		// update flux
 		mCurrentFlux = mCurrentFlux + mDeltaFlux;
+	}
+	mPrevStepTime = time;
+}
+
+/// fucntions for calculation of saturation current in DP domain
+void DP::Ph1::Transformer::updateSatCurrentSrcDP(Real time, const Matrix& leftVector) {
+	// update Flux
+	updateFluxDP(time, leftVector);
+	Real omega = 2. * PI * mFrequencies(0, 0);
+
+	// transform flux to time domain
+	// aus Paper
+	//mCurrentFlux = Math::abs(mCurrentFluxDP) * sin(Math::phase(mCurrentFluxDP) + omega * time);
+	// mMn
+	// Re{|Voltage| * e^(j*angle) * e^(jw_s*t)}
+	mCurrentFlux = Math::abs(mCurrentFluxDP) * cos(Math::phase(mCurrentFluxDP) + omega * time);
+
+
+	// calc magnetizing current
+	Real iMag_sqrt = sqrt((mCurrentFlux - mLambdaK) * (mCurrentFlux - mLambdaK) + 4 * mSatConstD * mLA);
+	mIMag = ((iMag_sqrt + mCurrentFlux - mLambdaK) / (2 * mLA)) - (mSatConstD / mLambdaK);
+	mSLog->info("\nCurrent Flux of {} leads to magnetizing current of {}", mCurrentFlux, mIMag);
+
+	// transform mag current to DP domain
+	// aus Paper
+	//Complex magCurrent = Complex(mIMag * sin(Math::phase(mCurrentFluxDP)), mIMag * cos(Math::phase(mCurrentFluxDP)));
+	// mMn
+	// multiply with e^-jw_s*t
+	Complex magCurrent = Complex( mIMag * cos(omega  *time), -mIMag * sin(omega * time) );
+
+	// calc Ref current for current source
+	mISrcRef = magCurrent - mSubMagnetizingInductor->intfCurrent()(0, 0);
+
+	// set ref value for internal current source
+	mSubSatCurrentSrc->setRefCurrent(mISrcRef);
+}
+
+void DP::Ph1::Transformer::updateFluxDP(Real time, const Matrix& leftVector) {
+	Real omega = 2. * PI * mFrequencies(0, 0);
+	Real deltaT = time - mPrevStepTime;
+	if (time > 0)
+	{
+		// current voltage through magnetizing branch
+		Complex currentVoltage = Math::complexFromVectorElement(leftVector, mVirtualNodes[3]->matrixNodeIndex());
+
+		// calculate paramters A and B
+		mAphi = ( Complex(2 * Math::abs(mTD) * deltaT, 0) ) /
+				( Complex(4, 0) * mTD + Complex(0, 2 * omega * Math::abs(mTD) * deltaT) + Complex(deltaT, 0));
+
+		mBphi = ( Complex(4, 0) * mTD - Complex(0, 2 * omega * Math::abs(mTD) * deltaT) - Complex(deltaT,0)) / 
+				( Complex(4, 0) * mTD + Complex(0, 2 * omega * Math::abs(mTD) * deltaT) + Complex(deltaT, 0));
+
+		// calculate history term
+		mHphi = mAphi * (Complex(1, 0) + mBphi) * mVmDP + mBphi * mHphi;
+
+		// update voltage
+		mVmDP = currentVoltage;
+
+		// calculate flux
+		mCurrentFluxDP = mAphi * mVmDP + mHphi;
 	}
 	mPrevStepTime = time;
 }

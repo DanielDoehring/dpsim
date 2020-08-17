@@ -87,8 +87,13 @@ namespace Ph1 {
 
 
 		/// New for saturation modelling
-		void updateFlux(Real time, const Matrix& leftVector);
-		void updateSatCurrentSrc(Real time, const Matrix& leftVector);
+		// EMT trafo for calculation of saturation current
+		void updateFluxEMT(Real time, const Matrix& leftVector);
+		void updateSatCurrentSrcEMT(Real time, const Matrix& leftVector);
+
+		/// calculation in DP
+		void updateFluxDP(Real time, const Matrix& leftVector);
+		void updateSatCurrentSrcDP(Real time, const Matrix& leftVector);
 
 		class MnaPreStep : public Task {
 		public:
