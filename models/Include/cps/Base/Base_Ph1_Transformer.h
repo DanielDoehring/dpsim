@@ -51,12 +51,15 @@ namespace Ph1 {
 		/// New attributes for saturation effects
 		// use emt values for calculation
 		Bool mCalcSatDP = true;
+
 		// parameters of flux(current)-curve
 		Real mLambdaM = 0;
 		Real mLambdaK = 0;
 		Real mLA = 0;
 		Real mIM = 0;
 		Real mLm = 0;
+		// use this if mLm is only a mathemtical parameter and not for the real element 
+		Real mLmElement = 0;
 
 		Real mPrevStepTime = 0;
 		Bool mSatConstantsSet = false;
@@ -127,12 +130,12 @@ namespace Ph1 {
 
 		void setParametersSaturationDefault(Real HV, Real LV) {
 			// set Saturation Parameters for standard Transformer depending on low and high voltage level
-			if (HV == 220000 && LV == 110000) {
-				mLambdaM = 900;
-				mLambdaK = 1100;
-				mLA = 38;
-				mLm = 1700;
-				mIM = 2.5;
+			if (HV == 220000 && LV == 66000) {
+				mLambdaM = 686.611426;
+				mLambdaK = 1311.63923;
+				mLA = 2.85312113;
+				mLm = 266.412156;
+				mIM = 0.10031921;
 			}
 			else if (HV == 20000 && LV == 660)
 			{
@@ -165,8 +168,12 @@ namespace Ph1 {
 			mSatConstantsSet = true;
 		}
 
-		void setSaturationCalculationMethod(Bool satMeth) {
-			mCalcSatDP = satMeth;
+		void setSaturationCalculationMethod(Bool satMethod) {
+			mCalcSatDP = satMethod;
+		}
+
+		void setMagnetizingInductance(Real Lm) {
+			mLmElement = Lm;
 		}
 	};
 }

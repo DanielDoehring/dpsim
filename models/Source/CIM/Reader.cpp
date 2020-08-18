@@ -531,6 +531,8 @@ TopologicalPowerComp::Ptr Reader::mapPowerTransformer(PowerTransformer* trans) {
 		//transformer->setParametersSaturation(366.05, 439.26, 17.86, 156.77, 2.335);
 		transformer->setParametersSaturationDefault(20000, 660);
 		//transformer->setParametersSaturation(900, 1100, 38, 1700, 2.5);
+		transformer->setParametersSaturationDefault(voltageNode1, voltageNode2);
+		//transformer->setMagnetizingInductance(1700);
 		return transformer;
 	}
 }

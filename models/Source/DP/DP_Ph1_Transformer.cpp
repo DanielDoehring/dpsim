@@ -185,7 +185,8 @@ void DP::Ph1::Transformer::initializeFromPowerflow(Real frequency) {
 
 		// magnetizing inductance
 		mSubMagnetizingInductor = std::make_shared<DP::Ph1::Inductor>(mName + "_indMagnetizing", mLogLevel);
-		mSubMagnetizingInductor->setParameters(mLm);
+		Real mag_inductance = (mLmElement > 0) ? mLmElement : mLm;
+		mSubMagnetizingInductor->setParameters(mag_inductance);
 
 		mSubMagnetizingInductor->connect({ mVirtualNodes[3], SimNode::GND });
 		mSubMagnetizingInductor->initialize(mFrequencies);
@@ -485,7 +486,7 @@ void DP::Ph1::Transformer::updateSatCurrentSrcDP(Real time, const Matrix& leftVe
 	//mCurrentFlux = Math::abs(mCurrentFluxDP) * sin(Math::phase(mCurrentFluxDP) + omega * time);
 	// mMn
 	// Re{|Voltage| * e^(j*angle) * e^(jw_s*t)}
-	mCurrentFlux = Math::abs(mCurrentFluxDP) * cos(Math::phase(mCurrentFluxDP) + omega * time);
+	mCurrentFlux = sqrt(2) * ( Math::abs(mCurrentFluxDP) * cos(Math::phase(mCurrentFluxDP) + omega * time) );
 
 
 	// calc magnetizing current
@@ -519,7 +520,7 @@ void DP::Ph1::Transformer::updateFluxDP(Real time, const Matrix& leftVector) {
 		mAphi = ( Complex(2 * Math::abs(mTD) * deltaT, 0) ) /
 				( Complex(4, 0) * mTD + Complex(0, 2 * omega * Math::abs(mTD) * deltaT) + Complex(deltaT, 0));
 
-		mBphi = ( Complex(4, 0) * mTD - Complex(0, 2 * omega * Math::abs(mTD) * deltaT) - Complex(deltaT,0)) / 
+		mBphi = ( Complex(4, 0) * mTD - Complex(0, 2 * omega * Math::abs(mTD) * deltaT) - Complex(deltaT, 0)) / 
 				( Complex(4, 0) * mTD + Complex(0, 2 * omega * Math::abs(mTD) * deltaT) + Complex(deltaT, 0));
 
 		// calculate history term
