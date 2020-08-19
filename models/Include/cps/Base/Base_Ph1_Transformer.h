@@ -58,26 +58,30 @@ namespace Ph1 {
 		Real mLA = 0;
 		Real mIM = 0;
 		Real mLm = 0;
+
 		// use this if mLm is only a mathemtical parameter and not for the real element 
 		Real mLmElement = 0;
 
+		Real mVm = 0;
+		Real mIMag = 0;
+
 		Real mPrevStepTime = 0;
+
 		Bool mSatConstantsSet = false;
 		Bool mSatConstantsSetDP = false;
+
+		// constants for calculation of magnetizing current from flux
 		Real mSatConstA;
 		Real mSatConstB;
 		Real mSatConstC;
 		Real mSatConstD;
 
-		// EMT trafo specific parameters
+		// EMT-calc specific parameters
 		Real mInitialFlux = 0;
 		Real mCurrentFlux = 0;
 		Real mDeltaFlux = 0;
 		Real mVmAngle = 0;
 		Real mLMagCurrentReal = 0;
-
-		Real mVm = 0;
-		Real mIMag = 0;
 
 		// DP-calc specific parameters
 		Complex mCurrentFluxDP = Complex(0, 0);
@@ -85,8 +89,7 @@ namespace Ph1 {
 		Complex mBphi = Complex(0, 0);
 		Complex mAphi = Complex(0, 0);
 		Complex mVmDP = Complex(0, 0);
-		Complex mTD = Complex(0.5, 0);
-		
+		Complex mTD   = Complex(0.5, 0);
 
 	public:
 		///
@@ -152,6 +155,14 @@ namespace Ph1 {
 				mLA = 17.86;
 				mLm = 221.71;
 				mIM = 2.335;
+			}
+			else if (HV == 11000 && LV == 660)
+			{
+				mLambdaM = 49.517;
+				mLambdaK = 59.42;
+				mLA = 0.45;
+				mLm = 278.19;
+				mIM = 0.178;
 			}
 		}
 

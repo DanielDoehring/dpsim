@@ -33,7 +33,6 @@ DP::Ph1::Transformer::Transformer(String uid, String name,
 
 	addAttribute<Real>("flux", &mCurrentFlux, Flags::write | Flags::read);
 	addAttribute<Real>("deltaFlux", &mDeltaFlux, Flags::write | Flags::read);
-	addAttribute<Real>("Vm", &mVm, Flags::write | Flags::read);
 	addAttribute<Complex>("ISrcRef", &mISrcRef, Flags::write | Flags::read);
 	addAttribute<Real>("IMag", &mIMag, Flags::write | Flags::read);
 }
@@ -422,12 +421,6 @@ void DP::Ph1::Transformer::updateSatCurrentSrc(Real time) {
 	Real omega = 2. * PI * mFrequencies(0, 0);
 
 	// now calculate correct magnetizing current
-	/*
-	// correct for negative values
-	Real negativeFlux = (mCurrentFlux < 0) ? -1 : 1;
-	Real iMag_sqrt = sqrt((Math::abs(mCurrentFlux) - mLambdaK) * (Math::abs(mCurrentFlux) - mLambdaK) + 4. * mSatConstD * mLA);
-	mIMag = negativeFlux * ( ((iMag_sqrt + Math::abs(mCurrentFlux) - mLambdaK) / (2 * mLA)) - (mSatConstD / mLambdaK) );
-	*/
 	Real iMag_sqrt = sqrt( (mCurrentFlux - mLambdaK) * (mCurrentFlux - mLambdaK) + 4 * mSatConstD * mLA );
 	mIMag = ( (iMag_sqrt + mCurrentFlux - mLambdaK) / (2 * mLA) ) - (mSatConstD / mLambdaK);
 	mSLog->info("\nCurrent Flux of {} leads to magnetizing current of {}", mCurrentFlux, mIMag);
@@ -436,7 +429,6 @@ void DP::Ph1::Transformer::updateSatCurrentSrc(Real time) {
 	// I_currSrc = Imagnetizing - I_Lm
 	mLMagCurrentReal = mCurrentFlux / mLm;
 	Real iSrc = mIMag - mLMagCurrentReal;
-	//mSLog->info("Current Source Real part = Im - Ilm |\n {} = {} - {} at {}", iSrc, mIMag, mLMagCurrentReal, time);
 
 	// Now this needs to be again transformed into DP-Domain
 	// multiply with e^-jw_s*t
@@ -463,7 +455,7 @@ void DP::Ph1::Transformer::updateFluxEMT(Real time, const Matrix& leftVector) {
 
 		// using trapez rule of integration
 		// Use actual value so multiply rms value with sqrt(2)
-		mDeltaFlux = (deltaT / 2) * (mVm + currentVoltageReal);
+		mDeltaFlux = (deltaT / 2) * sqrt(2) * (mVm + currentVoltageReal);
 
 		// update magnetizing voltage
 		mVm = currentVoltageReal;
@@ -482,12 +474,8 @@ void DP::Ph1::Transformer::updateSatCurrentSrcDP(Real time, const Matrix& leftVe
 	Real omega = 2. * PI * mFrequencies(0, 0);
 
 	// transform flux to time domain
-	// aus Paper
-	//mCurrentFlux = Math::abs(mCurrentFluxDP) * sin(Math::phase(mCurrentFluxDP) + omega * time);
-	// mMn
 	// Re{|Voltage| * e^(j*angle) * e^(jw_s*t)}
 	mCurrentFlux = sqrt(2) * ( Math::abs(mCurrentFluxDP) * cos(Math::phase(mCurrentFluxDP) + omega * time) );
-
 
 	// calc magnetizing current
 	Real iMag_sqrt = sqrt((mCurrentFlux - mLambdaK) * (mCurrentFlux - mLambdaK) + 4 * mSatConstD * mLA);
@@ -495,9 +483,6 @@ void DP::Ph1::Transformer::updateSatCurrentSrcDP(Real time, const Matrix& leftVe
 	mSLog->info("\nCurrent Flux of {} leads to magnetizing current of {}", mCurrentFlux, mIMag);
 
 	// transform mag current to DP domain
-	// aus Paper
-	//Complex magCurrent = Complex(mIMag * sin(Math::phase(mCurrentFluxDP)), mIMag * cos(Math::phase(mCurrentFluxDP)));
-	// mMn
 	// multiply with e^-jw_s*t
 	Complex magCurrent = Complex( mIMag * cos(omega  *time), -mIMag * sin(omega * time) );
 
