@@ -117,8 +117,8 @@ namespace Ph1 {
 				}
 				mModifiedAttributes.push_back(transformer.attribute("right_vector"));
 				mPrevStepDependencies.push_back(transformer.mSubSnubResistor->attribute("v_intf"));
-				mPrevStepDependencies.push_back(transformer.attribute("v_intf"));
-				mPrevStepDependencies.push_back(transformer.attribute("i_intf"));
+				//mPrevStepDependencies.push_back(transformer.attribute("v_intf"));
+				//mPrevStepDependencies.push_back(transformer.attribute("i_intf"));
 			}
 
 			void execute(Real time, Int timeStepCount);

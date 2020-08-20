@@ -312,12 +312,6 @@ void DP::Ph1::Transformer::MnaPreStep::execute(Real time, Int timeStepCount) {
 	// NEW for OLTC
 	mTransformer.mRatioChange = false;
 	mTransformer.updateTapRatio(time, timeStepCount);
-	mTransformer.updateSatCurrentSrc(time);
-	if (mTransformer.mWithSaturation)
-	{
-		mTransformer.updateSatCurrentSrc(time);
-	}
-	
 }
 
 void DP::Ph1::Transformer::MnaPostStep::execute(Real time, Int timeStepCount) {
@@ -333,6 +327,8 @@ void DP::Ph1::Transformer::MnaPostStep::execute(Real time, Int timeStepCount) {
 			mTransformer.updateSatCurrentSrcEMT(time, *mLeftVector);
 		}
 	}
+	mTransformer.mDeltaT = time - mTransformer.mPrevStepTime;
+	mTransformer.mPrevStepTime = time;
 }
 
 void DP::Ph1::Transformer::mnaUpdateCurrent(const Matrix& leftVector) {
@@ -360,8 +356,6 @@ void DP::Ph1::Transformer::updateTapRatio(Real time, Int timeStepCount) {
 		// check if this diff is greater than deadband
 		if (Math::abs(deltaV) > mDeadband)
 		{
-			// TODO better calculation of deltat. Could be variable in Simulation
-			Real deltaT = time / timeStepCount;
 			if (mViolationCounter > mTapChangeTimeDelay)
 			{
 				// over or under voltage
@@ -398,7 +392,7 @@ void DP::Ph1::Transformer::updateTapRatio(Real time, Int timeStepCount) {
 			else
 			{
 				// increase counter
-				mViolationCounter = mViolationCounter + deltaT;
+				mViolationCounter = mViolationCounter + mDeltaT;
 			}
 		}
 		else
@@ -407,15 +401,8 @@ void DP::Ph1::Transformer::updateTapRatio(Real time, Int timeStepCount) {
 			mViolationCounter = 0;
 		}
 	}
-	/*
-	if (timeStep == 10000) {
-		mRatio = mRatio * 1.1;
-		mRatioChange = true;
-	}
-	*/
-		
 }
-void DP::Ph1::Transformer::updateSatCurrentSrc(Real time) {
+void DP::Ph1::Transformer::updateSatCurrentSrcEMT(Real time, const Matrix& leftVector) {
 	// first update flux
 	updateFluxEMT(time, leftVector);
 	Real omega = 2. * PI * mFrequencies(0, 0);
@@ -441,8 +428,6 @@ void DP::Ph1::Transformer::updateSatCurrentSrc(Real time) {
 void DP::Ph1::Transformer::updateFluxEMT(Real time, const Matrix& leftVector) {
 	if (time > 0) {
 		// update flux value through integration of voltage
-		Real deltaT = time - mPrevStepTime;
-
 		// transform values from dp to emt
 		Real omega = 2. * PI * mFrequencies(0, 0);
 
@@ -455,7 +440,7 @@ void DP::Ph1::Transformer::updateFluxEMT(Real time, const Matrix& leftVector) {
 
 		// using trapez rule of integration
 		// Use actual value so multiply rms value with sqrt(2)
-		mDeltaFlux = (deltaT / 2) * sqrt(2) * (mVm + currentVoltageReal);
+		mDeltaFlux = (mDeltaT / 2) * sqrt(2) * (mVm + currentVoltageReal);
 
 		// update magnetizing voltage
 		mVm = currentVoltageReal;
@@ -464,7 +449,6 @@ void DP::Ph1::Transformer::updateFluxEMT(Real time, const Matrix& leftVector) {
 		// update flux
 		mCurrentFlux = mCurrentFlux + mDeltaFlux;
 	}
-	mPrevStepTime = time;
 }
 
 /// fucntions for calculation of saturation current in DP domain
@@ -495,18 +479,17 @@ void DP::Ph1::Transformer::updateSatCurrentSrcDP(Real time, const Matrix& leftVe
 
 void DP::Ph1::Transformer::updateFluxDP(Real time, const Matrix& leftVector) {
 	Real omega = 2. * PI * mFrequencies(0, 0);
-	Real deltaT = time - mPrevStepTime;
 	if (time > 0)
 	{
 		// current voltage through magnetizing branch
 		Complex currentVoltage = Math::complexFromVectorElement(leftVector, mVirtualNodes[3]->matrixNodeIndex());
 
 		// calculate paramters A and B
-		mAphi = ( Complex(2 * Math::abs(mTD) * deltaT, 0) ) /
-				( Complex(4, 0) * mTD + Complex(0, 2 * omega * Math::abs(mTD) * deltaT) + Complex(deltaT, 0));
+		mAphi = ( Complex(2 * Math::abs(mTD) * mDeltaT, 0) ) /
+				( Complex(4, 0) * mTD + Complex(0, 2 * omega * Math::abs(mTD) * mDeltaT) + Complex(mDeltaT, 0));
 
-		mBphi = ( Complex(4, 0) * mTD - Complex(0, 2 * omega * Math::abs(mTD) * deltaT) - Complex(deltaT, 0)) / 
-				( Complex(4, 0) * mTD + Complex(0, 2 * omega * Math::abs(mTD) * deltaT) + Complex(deltaT, 0));
+		mBphi = ( Complex(4, 0) * mTD - Complex(0, 2 * omega * Math::abs(mTD) * mDeltaT) - Complex(mDeltaT, 0)) /
+				( Complex(4, 0) * mTD + Complex(0, 2 * omega * Math::abs(mTD) * mDeltaT) + Complex(mDeltaT, 0));
 
 		// calculate history term
 		mHphi = mAphi * (Complex(1, 0) + mBphi) * mVmDP + mBphi * mHphi;
@@ -517,5 +500,4 @@ void DP::Ph1::Transformer::updateFluxDP(Real time, const Matrix& leftVector) {
 		// calculate flux
 		mCurrentFluxDP = mAphi * mVmDP + mHphi;
 	}
-	mPrevStepTime = time;
 }

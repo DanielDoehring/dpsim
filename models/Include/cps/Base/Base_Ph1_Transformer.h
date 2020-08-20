@@ -65,6 +65,7 @@ namespace Ph1 {
 		Real mVm = 0;
 		Real mIMag = 0;
 
+		Real mDeltaT;
 		Real mPrevStepTime = 0;
 
 		Bool mSatConstantsSet = false;
