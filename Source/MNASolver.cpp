@@ -9,6 +9,7 @@
 
 #include <dpsim/MNASolver.h>
 #include <dpsim/SequentialScheduler.h>
+#include <cps/DP/DP_Ph1_Transformer.h>
 
 using namespace DPsim;
 using namespace CPS;
@@ -68,6 +69,18 @@ void MnaSolver<VarType>::initialize() {
 	// Initialize components from powerflow solution and
 	// calculate MNA specific initialization values.
 	initializeComponents();
+
+	/*
+	// NEW add oltc for updating
+	for (auto comp : mMNAComponents) {
+		// if it is Trafo
+		// TODO generalize this for all elements with switches
+		auto oltc = std::dynamic_pointer_cast<DP::Ph1::Transformer>(comp);
+		if (oltc) {
+			mOLTCs.push_back(oltc);
+		}
+	}
+	*/
 
 	if (mSteadyStateInit)
 		steadyStateInitialization();
@@ -245,6 +258,35 @@ void MnaSolver<VarType>::updateSwitchStatus() {
 	}
 }
 
+/// new for recalculation of system matrix
+template <typename VarType>
+void MnaSolver<VarType>::updateOLTCStatus() {
+	for (auto oltc : mOLTCs) {
+		if (oltc->mnaRatioChanged())
+		{
+			mUpdateSysMatrix = true;
+			break;
+		}
+	}
+}
+
+
+template <typename VarType>
+void MnaSolver<VarType>::updateSystemMatrix() {
+	// reset system matrix
+	mSwitchedMatrices[std::bitset<SWITCH_NUM>(0)].setZero();
+
+	mSLog->info("Updating System Matrix because of Tap Ratio Change");
+	// Create system matrix if no switches were added
+	for (auto comp : mMNAComponents) {
+		comp->mnaApplySystemMatrixStamp(mSwitchedMatrices[std::bitset<SWITCH_NUM>(0)]);
+		auto idObj = std::dynamic_pointer_cast<IdentifiedObject>(comp);
+		
+	}
+	mLuFactorizations[std::bitset<SWITCH_NUM>(0)] = Eigen::PartialPivLU<Matrix>(mSwitchedMatrices[std::bitset<SWITCH_NUM>(0)]);
+	mUpdateSysMatrix = false;
+}
+
 template <typename VarType>
 void MnaSolver<VarType>::identifyTopologyObjects() {
 	for (auto baseNode : mSystem.mNodes) {
@@ -263,6 +305,14 @@ void MnaSolver<VarType>::identifyTopologyObjects() {
 		if (swComp) {
 			mSwitches.push_back(swComp);
 			continue;
+		}
+
+		// which transformers als oltc?
+		auto oltcComp = std::dynamic_pointer_cast<CPS::MNAOLTCInterface>(comp);
+		if (oltcComp)
+		{
+			mOLTCs.push_back(oltcComp);
+			//continue;
 		}
 
 		auto mnaComp = std::dynamic_pointer_cast<CPS::MNAInterface>(comp);
@@ -549,7 +599,16 @@ void MnaSolver<VarType>::SolveTask::execute(Real time, Int timeStepCount) {
 	if (!mSteadyStateInit)
 		mSolver.updateSwitchStatus();
 
+	if (mSolver.mOLTCs.size() > 0)
+	{
+		mSolver.updateOLTCStatus();
+		if (mSolver.mUpdateSysMatrix) {
+			mSolver.updateSystemMatrix();
+		}
+	}
+
 	// Components' states will be updated by the post-step tasks
+
 }
 
 template <typename VarType>

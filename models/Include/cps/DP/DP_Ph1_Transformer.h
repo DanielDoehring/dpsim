@@ -9,7 +9,7 @@
 #pragma once
 
 #include <cps/SimPowerComp.h>
-#include <cps/Solver/MNAInterface.h>
+#include <cps/Solver/MNAOLTCInterface.h>
 #include <cps/DP/DP_Ph1_RxLine.h>
 #include <cps/DP/DP_Ph1_Inductor.h>
 #include <cps/Base/Base_Ph1_Transformer.h>
@@ -20,7 +20,7 @@ namespace Ph1 {
 	/// Transformer that includes an inductance and resistance
 	class Transformer :
 		public SimPowerComp<Complex>,
-		public MNAInterface,
+		public MNAOLTCInterface,
 		public SharedFactory<Transformer>,
 		public Base::Ph1::Transformer {
 	private:
@@ -35,6 +35,7 @@ namespace Ph1 {
 
 		/// Boolean for considering resistive losses with sub resistor
 		Bool mWithResistiveLosses;
+
 	public:
 		/// Defines UID, name and logging level
 		Transformer(String uid, String name,
@@ -65,6 +66,12 @@ namespace Ph1 {
 		/// Updates internal voltage variable of the component
 		void mnaUpdateVoltage(const Matrix& leftVector);
 
+
+		/// #### OLTC ####
+		void updateTapRatio(Real time, Int timeStepCount);
+
+		Bool mnaRatioChanged() { return mRatioChange; };
+
 		class MnaPreStep : public Task {
 		public:
 			MnaPreStep(Transformer& transformer) :
@@ -74,6 +81,7 @@ namespace Ph1 {
 				if (transformer.mSubResistor)
 					mAttributeDependencies.push_back(transformer.mSubResistor->attribute("right_vector"));
 				mModifiedAttributes.push_back(transformer.attribute("right_vector"));
+				mPrevStepDependencies.push_back(transformer.mSubSnubResistor->attribute("v_intf"));
 			}
 
 			void execute(Real time, Int timeStepCount);
@@ -88,9 +96,11 @@ namespace Ph1 {
 			MnaPostStep(Transformer& transformer, Attribute<Matrix>::Ptr leftVector) :
 				Task(transformer.mName + ".MnaPostStep"), mTransformer(transformer), mLeftVector(leftVector) {
 				mAttributeDependencies.push_back(transformer.mSubInductor->attribute("i_intf"));
+				//mAttributeDependencies.push_back(transformer.mSubSnubResistor->attribute("v_intf"));
 				mAttributeDependencies.push_back(leftVector);
 				mModifiedAttributes.push_back(transformer.attribute("i_intf"));
 				mModifiedAttributes.push_back(transformer.attribute("v_intf"));
+				mModifiedAttributes.push_back(transformer.mSubSnubResistor->attribute("v_intf"));
 			}
 
 			void execute(Real time, Int timeStepCount);
@@ -99,6 +109,9 @@ namespace Ph1 {
 			Transformer& mTransformer;
 			Attribute<Matrix>::Ptr mLeftVector;
 		};
+
+		//class 
+
 	};
 }
 }

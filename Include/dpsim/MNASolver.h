@@ -18,6 +18,7 @@
 #include <dpsim/DataLogger.h>
 #include <cps/AttributeList.h>
 #include <cps/Solver/MNASwitchInterface.h>
+#include <cps/Solver/MNAOLTCInterface.h>
 #include <cps/SimSignalComp.h>
 #include <cps/SimPowerComp.h>
 
@@ -65,6 +66,10 @@ namespace DPsim {
 		CPS::MNASwitchInterface::List mSwitches;
 		///
 		CPS::SimSignalComp::List mSimSignalComps;
+
+		/// NEW for OLTC - should be updated to MNAOLTCInterface
+		CPS::MNAOLTCInterface::List mOLTCs;
+
 
 		// #### MNA specific attributes ####
 		/// System matrix A that is modified by matrix stamps
@@ -121,6 +126,13 @@ namespace DPsim {
 		void updateSwitchStatus();
 		/// Logging of system matrices and source vector
 		void logSystemMatrices();
+
+		/// NEW for OLTC
+		void updateOLTCStatus();
+		Bool mUpdateSysMatrix = false;
+
+		void updateSystemMatrix();
+
 	public:
 		/// This constructor should not be called by users.
 		MnaSolver(String name,

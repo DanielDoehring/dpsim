@@ -179,11 +179,15 @@ void DP::Ph1::Transformer::mnaApplyRightSideVectorStamp(Matrix& rightVector) {
 
 void DP::Ph1::Transformer::MnaPreStep::execute(Real time, Int timeStepCount) {
 	mTransformer.mnaApplyRightSideVectorStamp(mTransformer.mRightVector);
+	// NEW for OLTC
+	mTransformer.mRatioChange = false;
+	mTransformer.updateTapRatio(time, timeStepCount);
 }
 
 void DP::Ph1::Transformer::MnaPostStep::execute(Real time, Int timeStepCount) {
 	mTransformer.mnaUpdateVoltage(*mLeftVector);
 	mTransformer.mnaUpdateCurrent(*mLeftVector);
+	//mTransformer.updateTapRatio(time, timeStepCount);
 }
 
 void DP::Ph1::Transformer::mnaUpdateCurrent(const Matrix& leftVector) {
@@ -198,3 +202,70 @@ void DP::Ph1::Transformer::mnaUpdateVoltage(const Matrix& leftVector) {
 	SPDLOG_LOGGER_DEBUG(mSLog, "Voltage {:s}", Logger::phasorToString(mIntfVoltage(0, 0)));
 }
 
+void DP::Ph1::Transformer::updateTapRatio(Real time, Int timeStepCount) {
+	// current lv voltage
+	Real lvVoltage = Math::abs(mSubSnubResistor->intfVoltage()(0, 0));
+
+	// calculate voltage diff
+	Real deltaV = (mRefLV - lvVoltage) / mRefLV;
+
+	if (timeStepCount)
+	{
+		// check if this diff is greater than deadband
+		if (Math::abs(deltaV) > mDeadband)
+		{
+			// TODO better calculation of deltat. Could be variable in Simulation
+			Real deltaT = time / timeStepCount;
+			if (mViolationCounter > mTapChangeTimeDelay)
+			{
+				// over or under voltage
+				if (deltaV < 0)
+				{
+					// Overvoltage
+					if (Math::abs(mCurrTapPos) < mNumTaps)
+					{
+						mCurrTapPos = mCurrTapPos + 1;
+
+						mSLog->info("\nIncreasing tap Position (Overvoltage) to: {}", mCurrTapPos);
+						mSLog->info("Voltage difference Vref - V: {} [%]", deltaV * -100);
+						mSLog->info("V: {}", lvVoltage);
+					}
+					
+				}
+				else
+				{
+					// undervoltage
+					if (Math::abs(mCurrTapPos) < mNumTaps)
+					{
+						mCurrTapPos = mCurrTapPos - 1;
+
+						mSLog->info("\nDecreasing tap Position (Undervoltage) to: {}", mCurrTapPos);
+						mSLog->info("Voltage difference Vref - V: {} [%]", deltaV * -100);
+						mSLog->info("V: {}", lvVoltage);
+					}
+				}
+				// calculate new tap position
+				mRatio.real(Math::abs(mRatioInitial) * (1 + mCurrTapPos * mDeltaVTapChange));
+				mRatioChange = true;
+				mViolationCounter = 0;
+			}
+			else
+			{
+				// increase counter
+				mViolationCounter = mViolationCounter + deltaT;
+			}
+		}
+		else
+		{
+			// reset counter
+			mViolationCounter = 0;
+		}
+	}
+	/*
+	if (timeStep == 10000) {
+		mRatio = mRatio * 1.1;
+		mRatioChange = true;
+	}
+	*/
+		
+}
