@@ -119,8 +119,9 @@ void DP::Ph1::NetworkInjection::mnaApplyRightSideVectorStampHarm(Matrix& rightVe
 void DP::Ph1::NetworkInjection::updateVoltage(Real time) {
 	if (mSrcFreq->get() < 0) {
 		mIntfVoltage(0,0) = mVoltageRef->get();
-		//if(time > 1)
-			//attribute<Complex>("V_ref")->set(Complex(440e3,0));
+		if (time > 1) {
+			attribute<Complex>("V_ref")->set(Complex(30e3, 0));
+		}
 	}
 	else {
 		mIntfVoltage(0,0) = Complex(
@@ -130,10 +131,6 @@ void DP::Ph1::NetworkInjection::updateVoltage(Real time) {
 }
 
 void DP::Ph1::NetworkInjection::MnaPreStep::execute(Real time, Int timeStepCount) {
-	if (time > 1 && time <= 3)
-		mNetworkInjection.mVoltageRef->set(Complex(440e3, 0));
-	if (time > 3)
-		mNetworkInjection.mVoltageRef->set(Complex(320e3, 0));
 	mNetworkInjection.updateVoltage(time);
 	mNetworkInjection.mnaApplyRightSideVectorStamp(mNetworkInjection.mRightVector);
 }
