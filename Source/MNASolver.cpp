@@ -10,6 +10,7 @@
 #include <dpsim/MNASolver.h>
 #include <dpsim/SequentialScheduler.h>
 #include <cps/DP/DP_Ph1_Transformer.h>
+#include <cps/DP/DP_Ph1_RXLoad.h>
 
 using namespace DPsim;
 using namespace CPS;
@@ -52,7 +53,7 @@ void MnaSolver<VarType>::initialize() {
 	mSLog->info("-- Create empty MNA system matrices and vectors");
 	// The system topology is prepared and we create the MNA matrices.
 	createEmptyVectors();
-	createEmptySystemMatrix();
+	
 
 	// Register attribute for solution vector
 	if (mFrequencyParallel) {
@@ -70,17 +71,24 @@ void MnaSolver<VarType>::initialize() {
 	// calculate MNA specific initialization values.
 	initializeComponents();
 
-	/*
-	// NEW add oltc for updating
+	// NEW add also subswitches of elements
 	for (auto comp : mMNAComponents) {
-		// if it is Trafo
+		// if it is Load
 		// TODO generalize this for all elements with switches
-		auto oltc = std::dynamic_pointer_cast<DP::Ph1::Transformer>(comp);
-		if (oltc) {
-			mOLTCs.push_back(oltc);
+		/*
+		auto swcomp = std::dynamic_pointer_cast<DP::Ph1::AvVoltageSourceInverterDQ>(comp);
+		if (swcomp) {
+			mSwitches.push_back(swcomp->getProtectionSwitch());
+		}
+		*/
+		auto loadswitch = std::dynamic_pointer_cast<DP::Ph1::RXLoad>(comp);
+		if (loadswitch) {
+			mSwitches.push_back(loadswitch->getProtectionSwitch());
 		}
 	}
-	*/
+
+	// NEW: create after mSwitches is updated
+	createEmptySystemMatrix();
 
 	if (mSteadyStateInit)
 		steadyStateInitialization();
@@ -253,9 +261,26 @@ void MnaSolver<VarType>::initializeSystem() {
 
 template <typename VarType>
 void MnaSolver<VarType>::updateSwitchStatus() {
+
+	std::bitset<SWITCH_NUM> PrevSwitchStatus = mCurrentSwitchStatus;
 	for (UInt i = 0; i < mSwitches.size(); i++) {
 		mCurrentSwitchStatus.set(i, mSwitches[i]->mnaIsClosed());
+		
 	}
+
+	if (mCurrentSwitchStatus != PrevSwitchStatus){
+		mUpdateSysMatrix = true;
+	}
+
+	/*
+	for (auto sw : mSwitches) {
+		if (sw->mnaStateChanged())
+		{
+			mUpdateSysMatrix = true;
+			break;
+		}
+	}
+	*/
 }
 
 /// new for recalculation of system matrix
@@ -601,7 +626,12 @@ void MnaSolver<VarType>::SolveTask::execute(Real time, Int timeStepCount) {
 
 	if (mSolver.mOLTCs.size() > 0)
 	{
+		// update OLTCs
 		mSolver.updateOLTCStatus();
+
+		// update switches
+		mSolver.updateSwitchStatus();
+
 		if (mSolver.mUpdateSysMatrix) {
 			mSolver.updateSystemMatrix();
 		}

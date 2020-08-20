@@ -121,7 +121,7 @@ void DP::Ph1::NetworkInjection::updateVoltage(Real time) {
 		mIntfVoltage(0,0) = mVoltageRef->get();
 		if (time > 2) {
 			//Real rampVal = 20e3 + 10e3 * (time - 2);
-			Real rampVal = 35e3;
+			Real rampVal = 350e3;
 			mVoltageRef->set(Complex(rampVal, 0));
 		}
 	}

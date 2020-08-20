@@ -320,7 +320,8 @@ TopologicalPowerComp::Ptr Reader::mapEnergyConsumer(EnergyConsumer* consumer) {
 		return load;
 	}
 	else {
-		return std::make_shared<DP::Ph1::RXLoad>(consumer->mRID, consumer->name, mComponentLogLevel);
+		Bool switchActive = true;
+		return std::make_shared<DP::Ph1::RXLoad>(consumer->mRID, consumer->name, mComponentLogLevel, switchActive);
 	}
 }
 
@@ -517,14 +518,14 @@ TopologicalPowerComp::Ptr Reader::mapPowerTransformer(PowerTransformer* trans) {
 	}
 	else {
 		Bool withResistiveLosses = true;
-		Bool withSat = true;
+		Bool withSat = false;
 		resistance = (resistance > 0) ? resistance : 1e-3;
 		auto transformer = std::make_shared<DP::Ph1::Transformer>(trans->mRID, trans->name, mComponentLogLevel, withResistiveLosses, withSat);
 		transformer->setParameters(ratioAbs, ratioPhase, resistance, inductance);
 
 		Real NumTaps = 10;
 		transformer->setOLTCParamteres(NumTaps, voltageNode2, 0.1);
-		transformer->setOLTCTimeDelay(1);
+		transformer->setOLTCTimeDelay(10);
 		transformer->setOLTCDeadband(0.03);
 
 		transformer->setParametersSaturationDefault(voltageNode1, voltageNode2);
