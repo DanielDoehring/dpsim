@@ -24,6 +24,7 @@ namespace Ph1 {
 		Real mInductance;
 
 		/// NEW for OLTC functionality
+		Bool mOLTCActive = false;
 		// was ratio updated
 		Bool mRatioChange = false;
 
@@ -98,17 +99,19 @@ namespace Ph1 {
 			mRatio = std::polar<Real>(ratioAbs, ratioPhase);
 			mResistance = resistance;
 			mInductance = inductance;
+
+			// initial tap is 0
+			mRatioInitial = mRatio;
 		}
 
-		void setOLTCParamteres(Real NumTaps, Real VRefLV, Real DeltaVTapChange = 0) {
+		void setOLTCParamters(Real NumTaps, Real VRefLV, Real DeltaVTapChange = 0) {
+			mOLTCActive = true;
 			/// input parameters
 			mNumTaps = NumTaps;
 			mRefLV = VRefLV;
 
 			/// set/calculate other parameter
-			// initial tap is 0
 			mCurrTapPos = 0;
-			mRatioInitial = mRatio;
 
 			// voltage diff pf one tap change in p. u.
 			if (DeltaVTapChange)

@@ -10,6 +10,7 @@
 #include <dpsim/MNASolver.h>
 #include <dpsim/SequentialScheduler.h>
 #include <cps/DP/DP_Ph1_Transformer.h>
+#include <cps/DP/DP_Ph1_AvVoltageSourceInverterDQ.h>
 #include <cps/DP/DP_Ph1_RXLoad.h>
 
 using namespace DPsim;
@@ -73,14 +74,13 @@ void MnaSolver<VarType>::initialize() {
 
 	// NEW add also subswitches of elements
 	for (auto comp : mMNAComponents) {
-		// if it is Load
+		// if it is VSI
 		// TODO generalize this for all elements with switches
-		/*
 		auto swcomp = std::dynamic_pointer_cast<DP::Ph1::AvVoltageSourceInverterDQ>(comp);
 		if (swcomp) {
 			mSwitches.push_back(swcomp->getProtectionSwitch());
 		}
-		*/
+		//*/
 		auto loadswitch = std::dynamic_pointer_cast<DP::Ph1::RXLoad>(comp);
 		if (loadswitch) {
 			mSwitches.push_back(loadswitch->getProtectionSwitch());
@@ -269,6 +269,7 @@ void MnaSolver<VarType>::updateSwitchStatus() {
 	}
 
 	if (mCurrentSwitchStatus != PrevSwitchStatus){
+		mSLog->info("Switch status changed");
 		mUpdateSysMatrix = true;
 	}
 
@@ -289,6 +290,7 @@ void MnaSolver<VarType>::updateOLTCStatus() {
 	for (auto oltc : mOLTCs) {
 		if (oltc->mnaRatioChanged())
 		{
+			mSLog->info("Tap ratio changed");
 			mUpdateSysMatrix = true;
 			break;
 		}
@@ -297,18 +299,42 @@ void MnaSolver<VarType>::updateOLTCStatus() {
 
 
 template <typename VarType>
-void MnaSolver<VarType>::updateSystemMatrix() {
+void MnaSolver<VarType>::updateSystemMatrix(Real time) {
 	// reset system matrix
-	mSwitchedMatrices[std::bitset<SWITCH_NUM>(0)].setZero();
+	mSLog->info("Updating System Matrix at {}\n", time);
 
-	mSLog->info("Updating System Matrix because of Tap Ratio Change");
+	///*
+	for (std::size_t i = 0; i < (1ULL << mSwitches.size()); i++) {
+		mSwitchedMatrices[std::bitset<SWITCH_NUM>(i)].setZero();
+	}
+
+	// Generate switching state dependent system matrices
+	for (auto& sys : mSwitchedMatrices) {
+		for (auto comp : mMNAComponents)
+			comp->mnaApplySystemMatrixStamp(sys.second);
+		for (UInt i = 0; i < mSwitches.size(); i++)
+			mSwitches[i]->mnaApplySwitchSystemMatrixStamp(sys.second, sys.first[i]);
+		// Compute LU-factorization for system matrix
+		mLuFactorizations[sys.first] = Eigen::PartialPivLU<Matrix>(sys.second);
+	}
+	updateSwitchStatus();
+	//*/
+
+	//mSwitchedMatrices[std::bitset<SWITCH_NUM>(0)].setZero();
+
+	/*
 	// Create system matrix if no switches were added
 	for (auto comp : mMNAComponents) {
+		// components
 		comp->mnaApplySystemMatrixStamp(mSwitchedMatrices[std::bitset<SWITCH_NUM>(0)]);
 		auto idObj = std::dynamic_pointer_cast<IdentifiedObject>(comp);
-		
+
+		// switches
+		for (UInt i = 0; i < mSwitches.size(); i++)
+			mSwitches[i]->mnaApplySwitchSystemMatrixStamp(mSwitchedMatrices[std::bitset<SWITCH_NUM>(0)], mSwitches[i]->mnaIsClosed());
 	}
 	mLuFactorizations[std::bitset<SWITCH_NUM>(0)] = Eigen::PartialPivLU<Matrix>(mSwitchedMatrices[std::bitset<SWITCH_NUM>(0)]);
+	*/
 	mUpdateSysMatrix = false;
 }
 
@@ -608,6 +634,7 @@ template <typename VarType>
 void MnaSolver<VarType>::SolveTask::execute(Real time, Int timeStepCount) {
 	// Reset source vector
 	mSolver.mRightSideVector.setZero();
+	mSolver.mUpdateSysMatrix = false;
 
 	// Add together the right side vector (computed by the components'
 	// pre-step tasks)
@@ -633,7 +660,7 @@ void MnaSolver<VarType>::SolveTask::execute(Real time, Int timeStepCount) {
 		mSolver.updateSwitchStatus();
 
 		if (mSolver.mUpdateSysMatrix) {
-			mSolver.updateSystemMatrix();
+			mSolver.updateSystemMatrix(time);
 		}
 	}
 

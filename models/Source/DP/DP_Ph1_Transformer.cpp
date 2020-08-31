@@ -13,16 +13,26 @@ using namespace CPS;
 DP::Ph1::Transformer::Transformer(String uid, String name,
 	Logger::Level logLevel, Bool withResistiveLosses, Bool WithSaturation)
 	: SimPowerComp<Complex>(uid, name, logLevel), TopologicalPowerComp(uid, name, logLevel) {
-	if (withResistiveLosses) 
+	if (WithSaturation)
 		setVirtualNodeNumber(5);
 	else
+		// To Do: Fit model for simulation without resistance
 		setVirtualNodeNumber(3);
 	
 	setTerminalNumber(2);
 
 	mWithSaturation = WithSaturation;
+	
 
 	mSLog->info("Create {} {}", this->type(), name);
+	if (mWithSaturation)
+	{
+		mSLog->info("Transformer Saturation Effects are modeled");
+	}
+	if (withResistiveLosses)
+	{
+		mSLog->info("Transformer Resistive Losses are modeled");
+	}
 	mIntfVoltage = MatrixComp::Zero(1,1);
 	mIntfCurrent = MatrixComp::Zero(1,1);
 
@@ -74,102 +84,90 @@ void DP::Ph1::Transformer::initializeFromPowerflow(Real frequency) {
 	/// ?
 	mVirtualNodes[0]->setInitialVoltage(initialSingleVoltage(1) * mRatio);
 
-	// Static calculations from load flow data
-	// use t-config
-	// [0]     
-	// [0] -- R/2 --[V2]-- L/2 -- [V3] -- L/2 --[V4]-- R/2 -- ooo -- [1]
-	//							   |
-	//                             Lm
-	//					           |
-	//--------------------------------------------------------GND
+	if (mWithSaturation)
+	{
+		// Static calculations from load flow data
+		// use t-config
+		// [0]     
+		// [0] -- R/2 --[V2]-- L/2 -- [V3] -- L/2 --[V4]-- R/2 -- ooo -- [1]
+		//							   |
+		//                             Lm
+		//					           |
+		//--------------------------------------------------------GND
 
-	Real omega = 2.*PI* frequency;
-	//Complex impedance = { mResistance, omega * mInductance };
-	mSLog->info("Leakage Reactance={} [Ohm]", omega * mInductance);
-	mSLog->info("Magnetizing Reactance = {} [Ohm]", omega * mLm);
+		Real omega = 2.*PI* frequency;
+		//Complex impedance = { mResistance, omega * mInductance };
+		mSLog->info("Leakage Reactance={} [Ohm]", omega * mInductance);
+		mSLog->info("Magnetizing Reactance = {} [Ohm]", omega * mLm);
 
-	mIntfVoltage(0, 0) = mVirtualNodes[0]->initialSingleVoltage() - initialSingleVoltage(0);
-	// series impedance made of half of the whole Rloss und Lleakage
-	Complex seriesImpedance = Complex(mResistance / 2, omega * mInductance / 2);
+		mIntfVoltage(0, 0) = mVirtualNodes[0]->initialSingleVoltage() - initialSingleVoltage(0);
+		// series impedance made of half of the whole Rloss und Lleakage
 
-	// since elements are symmetric voltage drop will be exactly half at the middle
-	Complex VmInit = mVirtualNodes[0]->initialSingleVoltage() - mIntfVoltage(0, 0) / Complex(2, 0);
-	mVm = VmInit.real();
+		mResistance = mResistance > 0 ? mResistance : 1e-4;
+		Complex seriesImpedance = Complex(mResistance / 2, omega * mInductance / 2);
 
-	// Current flowing into HV side
-	Complex IHVInit = (initialSingleVoltage(0) - VmInit) / seriesImpedance;
-	// Current flowing into Lv side
-	Complex ILVInit = (mVirtualNodes[0]->initialSingleVoltage() - VmInit) / seriesImpedance;
-	// initial magnetizing current
-	Complex ImInit = VmInit / Complex(0., omega * mLm);
+		// since elements are symmetric voltage drop will be exactly half at the middle
+		Complex VmInit = mVirtualNodes[0]->initialSingleVoltage() - mIntfVoltage(0, 0) / Complex(2, 0);
+		mVm = VmInit.real();
 
-	// init of virtual voltages
-	Complex VRHVInit = initialSingleVoltage(0) - IHVInit * Complex(mResistance / 2, .0);
-	Complex VRLVInit = mVirtualNodes[0]->initialSingleVoltage() - ILVInit * Complex(mResistance / 2, .0);
+		// Current flowing into HV side
+		Complex IHVInit = (initialSingleVoltage(0) - VmInit) / seriesImpedance;
+		// Current flowing into Lv side
+		Complex ILVInit = (mVirtualNodes[0]->initialSingleVoltage() - VmInit) / seriesImpedance;
+		// initial magnetizing current
+		Complex ImInit = VmInit / Complex(0., omega * mLm);
 
-	mVirtualNodes[2]->setInitialVoltage(VRHVInit);
-	mVirtualNodes[3]->setInitialVoltage(VmInit);
-	mVirtualNodes[4]->setInitialVoltage(VRLVInit);
+		// init of virtual voltages
+		Complex VRHVInit = initialSingleVoltage(0) - IHVInit * Complex(mResistance / 2, .0);
+		Complex VRLVInit = mVirtualNodes[0]->initialSingleVoltage() - ILVInit * Complex(mResistance / 2, .0);
 
-	// Create series sub components
-	// leakage inductances
-	mSubLeakageInductorHV = std::make_shared<DP::Ph1::Inductor>(mName + "_indHV", mLogLevel);
-	mSubLeakageInductorHV->setParameters(mInductance / 2);
-	mSubLeakageInductorLV = std::make_shared<DP::Ph1::Inductor>(mName + "_indLV", mLogLevel);
-	mSubLeakageInductorLV->setParameters(mInductance / 2);
-	// loss resistances
-	mSubLossResistorHV = std::make_shared<DP::Ph1::Resistor>(mName + "_resLossHV", mLogLevel);
-	mSubLossResistorHV->setParameters(mResistance / 2);
-	mSubLossResistorLV = std::make_shared<DP::Ph1::Resistor>(mName + "_resLossLV", mLogLevel);
-	mSubLossResistorLV->setParameters(mResistance / 2);
+		mVirtualNodes[2]->setInitialVoltage(VRHVInit);
+		mVirtualNodes[3]->setInitialVoltage(VmInit);
+		mVirtualNodes[4]->setInitialVoltage(VRLVInit);
 
-	/*
-	if (mNumVirtualNodes == 3) {
-		mVirtualNodes[2]->setInitialVoltage(initialSingleVoltage(0));
-		mSubResistor = std::make_shared<DP::Ph1::Resistor>(mName + "_res", mLogLevel);
-		mSubResistor->setParameters(mResistance);
-		mSubResistor->connect({node(0), mVirtualNodes[2]});
-		mSubResistor->initialize(mFrequencies);
-		mSubResistor->initializeFromPowerflow(frequency);
-		mSubInductor->connect({mVirtualNodes[2], mVirtualNodes[0]});
-	} else {
-		mSubInductor->connect({node(0), mVirtualNodes[0]});
-	}
-	mSubInductor->initialize(mFrequencies);
-	mSubInductor->initializeFromPowerflow(frequency);
-	*/
+		// Create series sub components
+		// leakage inductances
+		mSubLeakageInductorHV = std::make_shared<DP::Ph1::Inductor>(mName + "_indHV", mLogLevel);
+		mSubLeakageInductorHV->setParameters(mInductance / 2);
+		mSubLeakageInductorLV = std::make_shared<DP::Ph1::Inductor>(mName + "_indLV", mLogLevel);
+		mSubLeakageInductorLV->setParameters(mInductance / 2);
+		// loss resistances
+		mSubLossResistorHV = std::make_shared<DP::Ph1::Resistor>(mName + "_resLossHV", mLogLevel);
+		mSubLossResistorHV->setParameters(mResistance / 2);
+		mSubLossResistorLV = std::make_shared<DP::Ph1::Resistor>(mName + "_resLossLV", mLogLevel);
+		mSubLossResistorLV->setParameters(mResistance / 2);
 
-	// connection and init of elements
-	// series elements
-	mSubLeakageInductorHV->connect({ mVirtualNodes[2], mVirtualNodes[3] });
-	mSubLeakageInductorHV->initialize(mFrequencies);
-	mSubLeakageInductorHV->initializeFromPowerflow(frequency);
-	mSLog->info("Connected Series Leakage Inductance (HV) = {} [H]", mInductance / 2);
-	mSubLeakageInductorLV->connect({ mVirtualNodes[3], mVirtualNodes[4] });
-	mSubLeakageInductorLV->initialize(mFrequencies);
-	mSubLeakageInductorLV->initializeFromPowerflow(frequency);
-	mSLog->info("Connected Series Leakage Inductance (LV) = {} [H]", mInductance / 2);
+		// connection and init of elements
+		// series elements
+		mSubLeakageInductorHV->connect({ mVirtualNodes[2], mVirtualNodes[3] });
+		mSubLeakageInductorHV->initialize(mFrequencies);
+		mSubLeakageInductorHV->initializeFromPowerflow(frequency);
+		mSLog->info("Connected Series Leakage Inductance (HV) = {} [H]", mInductance / 2);
+		mSubLeakageInductorLV->connect({ mVirtualNodes[3], mVirtualNodes[4] });
+		mSubLeakageInductorLV->initialize(mFrequencies);
+		mSubLeakageInductorLV->initializeFromPowerflow(frequency);
+		mSLog->info("Connected Series Leakage Inductance (LV) = {} [H]", mInductance / 2);
 
-	mSubLossResistorHV->connect({mVirtualNodes[2], node(0)});
-	mSubLossResistorHV->initialize(mFrequencies);
-	mSubLossResistorHV->initializeFromPowerflow(frequency);
-	mSLog->info("Connected Series Resistance (HV) = {} [Ohm]", mResistance / 2);
-	mSubLossResistorLV->connect({ mVirtualNodes[4], mVirtualNodes[0] });
-	mSubLossResistorLV->initialize(mFrequencies);
-	mSubLossResistorLV->initializeFromPowerflow(frequency);
-	mSLog->info("Connected Series Resistance (LV) = {} [Ohm]", mResistance / 2);
+		mSubLossResistorHV->connect({ mVirtualNodes[2], node(0) });
+		mSubLossResistorHV->initialize(mFrequencies);
+		mSubLossResistorHV->initializeFromPowerflow(frequency);
+		mSLog->info("Connected Series Resistance (HV) = {} [Ohm]", mResistance / 2);
+		mSubLossResistorLV->connect({ mVirtualNodes[4], mVirtualNodes[0] });
+		mSubLossResistorLV->initialize(mFrequencies);
+		mSubLossResistorLV->initializeFromPowerflow(frequency);
+		mSLog->info("Connected Series Resistance (LV) = {} [Ohm]", mResistance / 2);
 
-	// Create parallel sub components at LV side
-	// A snubber conductance is added on the low voltage side (resistance approximately scaled with LV side voltage)
-	mSnubberResistance = std::abs(node(1)->initialSingleVoltage())*1e6;
-	mSubSnubResistor = std::make_shared<DP::Ph1::Resistor>(mName + "_snub_res", mLogLevel);
-	mSubSnubResistor->setParameters(mSnubberResistance);
-	mSubSnubResistor->connect({ node(1), DP::SimNode::GND });
-	mSubSnubResistor->initialize(mFrequencies);
-	mSubSnubResistor->initializeFromPowerflow(frequency);
-	mSLog->info("Snubber Resistance={} [Ohm] (connected to LV side)", mSnubberResistance);
+		// Create parallel sub components at LV side
+		// A snubber conductance is added on the low voltage side (resistance approximately scaled with LV side voltage)
+		mSnubberResistance = std::abs(node(1)->initialSingleVoltage())*1e6;
+		mSubSnubResistor = std::make_shared<DP::Ph1::Resistor>(mName + "_snub_res", mLogLevel);
+		mSubSnubResistor->setParameters(mSnubberResistance);
+		mSubSnubResistor->connect({ node(1), DP::SimNode::GND });
+		mSubSnubResistor->initialize(mFrequencies);
+		mSubSnubResistor->initializeFromPowerflow(frequency);
+		mSLog->info("Snubber Resistance={} [Ohm] (connected to LV side)", mSnubberResistance);
 
-	if (mWithSaturation) {
+		
 		// parallel components
 		mSLog->info("Modeling saturation effects");
 
@@ -177,7 +175,7 @@ void DP::Ph1::Transformer::initializeFromPowerflow(Real frequency) {
 		mSubSatCurrentSrc = std::make_shared<DP::Ph1::CurrentSource>(mName + "_sat_current_src", mLogLevel);
 		// init with zero value. Could be improved
 		mSubSatCurrentSrc->setParameters(Complex(0, 0));
-		mSubSatCurrentSrc->connect({mVirtualNodes[3], SimNode::GND});
+		mSubSatCurrentSrc->connect({ mVirtualNodes[3], SimNode::GND });
 		mSubSatCurrentSrc->initialize(mFrequencies);
 		mSubSatCurrentSrc->initializeFromPowerflow(frequency);
 		mSLog->info("Connected Current Source for saturation");
@@ -202,24 +200,77 @@ void DP::Ph1::Transformer::initializeFromPowerflow(Real frequency) {
 		mSLog->info("Saturation Constant B: {} ", mSatConstB);
 		mSLog->info("Saturation Constant C: {} ", mSatConstC);
 		mSLog->info("Saturation Constant D: {} ", mSatConstD);
+		
+
+
+		mSLog->info(
+			"\n--- Initialization from powerflow ---"
+			"\nVoltage across: {:s}"
+			"\nCurrent: {:s}"
+			"\nTerminal 0 voltage: {:s}"
+			"\nTerminal 1 voltage: {:s}"
+			"\nVoltage across magnetizing impedance: {:s}"
+			"\nVirtual Node 1 voltage: {:s}"
+			"\n--- Initialization from powerflow finished ---",
+			Logger::phasorToString(mIntfVoltage(0, 0)),
+			Logger::phasorToString(mIntfCurrent(0, 0)),
+			Logger::phasorToString(initialSingleVoltage(0)),
+			Logger::phasorToString(initialSingleVoltage(1)),
+			Logger::phasorToString(mVm),
+			Logger::phasorToString(mVirtualNodes[0]->initialSingleVoltage()));
 	}
+	else
+	{
+		// Static calculations from load flow data
+		Real omega = 2.*PI* frequency;
+		Complex impedance = { mResistance, omega * mInductance };
+		mSLog->info("Reactance={} [Ohm] (referred to primary side)", omega * mInductance);
+		mIntfVoltage(0, 0) = mVirtualNodes[0]->initialSingleVoltage() - initialSingleVoltage(0);
+		mIntfCurrent(0, 0) = mIntfVoltage(0, 0) / impedance;
 
+		// Create series sub components
+		mSubLeakageInductorHV = std::make_shared<DP::Ph1::Inductor>(mName + "_ind", mLogLevel);
+		mSubLeakageInductorHV->setParameters(mInductance);
 
-	mSLog->info(
+		if (mNumVirtualNodes == 3) {
+			mVirtualNodes[2]->setInitialVoltage(initialSingleVoltage(0));
+			mSubLossResistorHV = std::make_shared<DP::Ph1::Resistor>(mName + "_res", mLogLevel);
+			mSubLossResistorHV->setParameters(mResistance);
+			mSubLossResistorHV->connect({ node(0), mVirtualNodes[2] });
+			mSubLossResistorHV->initialize(mFrequencies);
+			mSubLossResistorHV->initializeFromPowerflow(frequency);
+			mSubLeakageInductorHV->connect({ mVirtualNodes[2], mVirtualNodes[0] });
+		}
+		else {
+			mSubLeakageInductorHV->connect({ node(0), mVirtualNodes[0] });
+		}
+		mSubLeakageInductorHV->initialize(mFrequencies);
+		mSubLeakageInductorHV->initializeFromPowerflow(frequency);
+
+		// Create parallel sub components
+		// A snubber conductance is added on the low voltage side (resistance approximately scaled with LV side voltage)
+		mSnubberResistance = std::abs(node(1)->initialSingleVoltage())*1e6;
+		mSubSnubResistor = std::make_shared<DP::Ph1::Resistor>(mName + "_snub_res", mLogLevel);
+		mSubSnubResistor->setParameters(mSnubberResistance);
+		mSubSnubResistor->connect({ node(1), DP::SimNode::GND });
+		mSubSnubResistor->initialize(mFrequencies);
+		mSubSnubResistor->initializeFromPowerflow(frequency);
+		mSLog->info("Snubber Resistance={} [Ohm] (connected to LV side)", mSnubberResistance);
+
+		mSLog->info(
 		"\n--- Initialization from powerflow ---"
 		"\nVoltage across: {:s}"
 		"\nCurrent: {:s}"
 		"\nTerminal 0 voltage: {:s}"
 		"\nTerminal 1 voltage: {:s}"
-		"\nVoltage across magnetizing impedance: {:s}"
 		"\nVirtual Node 1 voltage: {:s}"
 		"\n--- Initialization from powerflow finished ---",
-		Logger::phasorToString(mIntfVoltage(0,0)),
-		Logger::phasorToString(mIntfCurrent(0,0)),
+		Logger::phasorToString(mIntfVoltage(0, 0)),
+		Logger::phasorToString(mIntfCurrent(0, 0)),
 		Logger::phasorToString(initialSingleVoltage(0)),
 		Logger::phasorToString(initialSingleVoltage(1)),
-		Logger::phasorToString(mVm),
 		Logger::phasorToString(mVirtualNodes[0]->initialSingleVoltage()));
+	}
 }
 
 void DP::Ph1::Transformer::mnaInitialize(Real omega, Real timeStep, Attribute<Matrix>::Ptr leftVector) {
@@ -227,12 +278,15 @@ void DP::Ph1::Transformer::mnaInitialize(Real omega, Real timeStep, Attribute<Ma
 	updateMatrixNodeIndices();
 
 	mRightVector = Matrix::Zero(leftVector->get().rows(), 1);
-	auto subComponents = MNAInterface::List({mSubLeakageInductorHV, mSubLeakageInductorLV , mSubLossResistorHV, mSubLossResistorLV, mSubSnubResistor});
+	//auto subComponents = MNAInterface::List({mSubLeakageInductorHV, mSubLeakageInductorLV , mSubLossResistorHV, mSubLossResistorLV, mSubSnubResistor});
+	auto subComponents = MNAInterface::List({ mSubLeakageInductorHV , mSubLossResistorHV, mSubSnubResistor });
 	//if (mSubResistor)
 		//subComponents.push_back(mSubResistor);
 	if (mWithSaturation) {
 		subComponents.push_back(mSubSatCurrentSrc);
 		subComponents.push_back(mSubMagnetizingInductor);
+		subComponents.push_back(mSubLeakageInductorLV);
+		subComponents.push_back(mSubLossResistorLV);
 	}
 	for (auto comp : subComponents) {
 		comp->mnaInitialize(omega, timeStep, leftVector);
@@ -263,15 +317,15 @@ void DP::Ph1::Transformer::mnaApplySystemMatrixStamp(Matrix& systemMatrix) {
 
 	// Add inductive part to system matrix
 	mSubLeakageInductorHV->mnaApplySystemMatrixStamp(systemMatrix);
-	mSubLeakageInductorLV->mnaApplySystemMatrixStamp(systemMatrix);
 
 	mSubLossResistorHV->mnaApplySystemMatrixStamp(systemMatrix);
-	mSubLossResistorLV->mnaApplySystemMatrixStamp(systemMatrix);
 
 	mSubSnubResistor->mnaApplySystemMatrixStamp(systemMatrix);
 
 	if (mWithSaturation) {
 		mSLog->info("Stamping Current Source");
+		mSubLeakageInductorLV->mnaApplySystemMatrixStamp(systemMatrix);
+		mSubLossResistorLV->mnaApplySystemMatrixStamp(systemMatrix);
 		mSubSatCurrentSrc->mnaApplySystemMatrixStamp(systemMatrix);
 		mSubMagnetizingInductor->mnaApplySystemMatrixStamp(systemMatrix);
 	}
@@ -298,11 +352,11 @@ void DP::Ph1::Transformer::mnaApplySystemMatrixStamp(Matrix& systemMatrix) {
 void DP::Ph1::Transformer::mnaApplyRightSideVectorStamp(Matrix& rightVector) {
 	//mSubInductor->mnaApplyRightSideVectorStamp(rightVector);
 	mSubLeakageInductorHV->mnaApplyRightSideVectorStamp(rightVector);
-	mSubLeakageInductorLV->mnaApplyRightSideVectorStamp(rightVector);
 	if (mWithSaturation)
 	{
 		mSubSatCurrentSrc->mnaApplyRightSideVectorStamp(rightVector);
 		mSubMagnetizingInductor->mnaApplyRightSideVectorStamp(rightVector);
+		mSubLeakageInductorLV->mnaApplyRightSideVectorStamp(rightVector);
 	}
 
 }
@@ -310,8 +364,10 @@ void DP::Ph1::Transformer::mnaApplyRightSideVectorStamp(Matrix& rightVector) {
 void DP::Ph1::Transformer::MnaPreStep::execute(Real time, Int timeStepCount) {
 	mTransformer.mnaApplyRightSideVectorStamp(mTransformer.mRightVector);
 	// NEW for OLTC
-	mTransformer.mRatioChange = false;
-	mTransformer.updateTapRatio(time, timeStepCount);
+	if (mTransformer.mOLTCActive) {
+		mTransformer.mRatioChange = false;
+		mTransformer.updateTapRatio(time, timeStepCount);
+	}
 }
 
 void DP::Ph1::Transformer::MnaPostStep::execute(Real time, Int timeStepCount) {
@@ -358,6 +414,7 @@ void DP::Ph1::Transformer::updateTapRatio(Real time, Int timeStepCount) {
 		{
 			if (mViolationCounter > mTapChangeTimeDelay)
 			{
+				mSLog->info("\nTime: {}", time);
 				// over or under voltage
 				if (deltaV < 0)
 				{
@@ -386,6 +443,7 @@ void DP::Ph1::Transformer::updateTapRatio(Real time, Int timeStepCount) {
 				}
 				// calculate new tap position
 				mRatio.real(Math::abs(mRatioInitial) * (1 + mCurrTapPos * mDeltaVTapChange));
+				mSLog->info("New ratio: {}", mRatio.real());
 				mRatioChange = true;
 				mViolationCounter = 0;
 			}

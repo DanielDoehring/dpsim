@@ -20,6 +20,11 @@ namespace Base {
         /// Complex nominal voltage [V]
 		Real mVnom;
 
+		// rated Power [VA]
+		Real mSn;
+		Real mInom;
+		Real mCurrentOverload = 1.2;
+
 		/// Power parameters
 		Real mPref;
 		Real mQref;
@@ -33,7 +38,7 @@ namespace Base {
 		/// transformer
 		Real mTransformerResistance;
 		Real mTransformerInductance;
-		Real mTransformerRatioAbs;
+		Real mTransformerRatioAbs = 1;
 		Real mTransformerRatioPhase;
 
 		/// PLL
@@ -85,13 +90,24 @@ namespace Base {
 		
 		/// input vector
 		Matrix mU = Matrix::Zero(7, 1);
+
+
+		/// QU Control parameters
+		Bool mQUControl = false;
+		Real mVRef;
+		Real mDeltaV;
+		Real mStaticGain;
+		Real mDynamicGain;
+		Real mQUDeadband;
+		Real mQmax;
+		Real mQmin;
 		
     public:
 		///
 		AvVoltageSourceInverterDQ(String uid, String name, Logger::Level logLevel = Logger::Level::off);
 
         /// Setter for general parameters
-		void setParameters(Real sysOmega, Real sysVoltNom, Real Pref, Real Qref);
+		void setParameters(Real sysOmega, Real sysVoltNom, Real Pref, Real Qref, Real Sn = 0);
 		/// Setter for parameters of control loops
 		void setControllerParameters(Real Kp_pll, Real Ki_pll, Real Kp_powerCtrl, Real Ki_powerCtrl, Real Kp_currCtrl, Real Ki_currCtrl, Real Omega_cutoff);
 		/// Setter for filter parameters
@@ -102,6 +118,8 @@ namespace Base {
 		/// Setter for initial state values
 		void setInitialStateValues(Real thetaPLLInit, Real phiPLLInit, Real pInit, Real qInit,
 			Real phi_dInit, Real phi_qInit, Real gamma_dInit, Real gamma_qInit);
+		/// Setter for QU Control parameters
+		void setQControlParameters(Bool ctrlActive, Real VRef, Real SGain, Real DGain, Real Deadband, Real Qmax, Real Qmin);
     };
 }
 }

@@ -17,6 +17,8 @@ Base::AvVoltageSourceInverterDQ::AvVoltageSourceInverterDQ(String uid, String na
 	addAttribute<Real>("phipll", &mPhiPLL, Flags::read | Flags::write);
 	addAttribute<Real>("p", &mP, Flags::read | Flags::write);
 	addAttribute<Real>("q", &mQ, Flags::read | Flags::write);
+	addAttribute<Real>("Pref", &mPref, Flags::read | Flags::write);
+	addAttribute<Real>("Qref", &mQref, Flags::read | Flags::write);
 	addAttribute<Real>("phid", &mPhi_d, Flags::read | Flags::write);
 	addAttribute<Real>("phiq", &mPhi_q, Flags::read | Flags::write);
 	addAttribute<Real>("gammad", &mGamma_d, Flags::read | Flags::write);
@@ -41,16 +43,17 @@ void Base::AvVoltageSourceInverterDQ::setTransformerParameters(Real nomVoltageEn
     mSLog->info("Tap Ratio={} [ ] Phase Shift={} [deg]", mTransformerRatioAbs, mTransformerRatioPhase);
 };
 
-void Base::AvVoltageSourceInverterDQ::setParameters(Real sysOmega, Real sysVoltNom, Real Pref, Real Qref) {
+void Base::AvVoltageSourceInverterDQ::setParameters(Real sysOmega, Real sysVoltNom, Real Pref, Real Qref, Real Sn) {
 	mPref = Pref;
 	mQref = Qref;
+	mSn = (Sn > 0) ? Sn : 100 * Pref;
 
 	mVnom = sysVoltNom;
 	mOmegaN = sysOmega;
 
 	mSLog->info("General Parameters:");
 	mSLog->info("Nominal Voltage={} [V] Nominal Omega={} [1/s]", mVnom, mOmegaN);
-	mSLog->info("Active Power={} [W] Reactive Power={} [VAr]", mPref, mQref);    
+	mSLog->info("Active Power={} [W] Reactive Power={} [VAr] Rated Power={} [VA]", mPref, mQref, mSn);    
 
 	// use Pref and Qref as init values for states P and Q
 	// init values for other states remain zero (if not changed using setInitialStateValues)
@@ -142,4 +145,14 @@ void Base::AvVoltageSourceInverterDQ::setInitialStateValues(Real thetaPLLInit, R
 	mSLog->info("PInit = {}, QInit = {}", mPInit, mQInit);
 	mSLog->info("Phi_dInit = {}, Phi_qInit = {}", mPhi_dInit, mPhi_qInit);
 	mSLog->info("Gamma_dInit = {}, Gamma_qInit = {}", mGamma_dInit, mGamma_qInit);
+}
+
+void Base::AvVoltageSourceInverterDQ::setQControlParameters(Bool ctrlActive, Real VRef, Real SGain, Real DGain, Real Deadband, Real Qmax, Real Qmin) {
+	mQUControl = ctrlActive;
+	mVRef = VRef;
+	mStaticGain = SGain;
+	mDynamicGain = DGain;
+	mQUDeadband = Deadband;
+	mQmax = Qmax;
+	mQmin = Qmin;
 };

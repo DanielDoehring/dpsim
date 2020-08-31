@@ -143,11 +143,11 @@ void DP_Ph1_VSI2_4bus_SampleGrid() {
 	logger->addAttribute("phi_pll", vsi->attribute("phipll"));
 	logger->addAttribute("phid", vsi->attribute("phid"));
 	logger->addAttribute("phiq", vsi->attribute("phiq"));
-	logger->addAttribute("gammad", vsi->attribute("gammad"));
-	logger->addAttribute("gammaq", vsi->attribute("gammaq"));
-	logger->addAttribute("ifdq", vsi->attribute("ifdq"));
-	logger->addAttribute("igdq", vsi->attribute("igdq"));
-	logger->addAttribute("Vsdq", vsi->attribute("Vsdq"));
+	//logger->addAttribute("gammad", vsi->attribute("gammad"));
+	//logger->addAttribute("gammaq", vsi->attribute("gammaq"));
+	//logger->addAttribute("ifdq", vsi->attribute("ifdq"));
+	//logger->addAttribute("igdq", vsi->attribute("igdq"));
+	//logger->addAttribute("Vsdq", vsi->attribute("Vsdq"));
 
 
 	// frequency

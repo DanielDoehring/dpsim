@@ -131,7 +131,7 @@ namespace DPsim {
 		void updateOLTCStatus();
 		Bool mUpdateSysMatrix = false;
 
-		void updateSystemMatrix();
+		void updateSystemMatrix(Real time);
 
 	public:
 		/// This constructor should not be called by users.

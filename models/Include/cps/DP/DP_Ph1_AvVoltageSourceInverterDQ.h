@@ -16,6 +16,7 @@
 #include <cps/DP/DP_Ph1_Capacitor.h>
 #include <cps/DP/DP_Ph1_ControlledVoltageSource.h>
 #include <cps/DP/DP_Ph1_Transformer.h>
+#include <cps/DP/DP_Ph1_Switch.h>
 #include <cps/Base/Base_AvVoltageSourceInverterDQ.h>
 #include <cps/PowerProfile.h>
 
@@ -83,6 +84,39 @@ namespace Ph1 {
 		///
 		std::vector<const Matrix*> mRightVectorStamps;
 
+		/// New for protection
+		std::shared_ptr<DP::Ph1::Switch> mSubProtectionSwitch;
+		Bool mSwitchActive;
+		// has state changed? (allow this only once)
+		// could be redundant with internal status of switch element (mnaIsClosed)
+		Real mSwitchStateChange = false;
+		Real mSwitchROpen   = 1e9;
+		Real mSwitchRClosed = 1e-9;
+
+		/// ### new for QU Control ###
+		// update after some set value of seconds
+		Real mUpdateCounter = 0;
+		Real mUpdateCounterValue = 0.05;
+		// wait a time period after votlage has recoverd to reset state
+		Real mRecoveryCounter = 0;
+		Real mRecoveryValue = 0.1;
+		// save time step between to simulation steps
+		Real mDeltaT;
+		// is VSI in fault state? (voltage dependend)
+		Bool mFaultState = false;
+		Real mFaultStartTime = 0;
+		// count time for which fault is active
+		Real mFaultCounter = 0;
+		// time value of previous simulation step
+		Real mPrevTime = 0;
+		// save static values of P and Q for control
+		Real mQRefStatic = 0;
+		Real mPRefStatic = 0;
+		// was P reduced during fault?
+		Bool mPReduced = false;
+		//
+		Real mVpcc = 0;
+
 	public:
 		///
 		std::vector<PQData> mLoadProfile;
@@ -91,7 +125,7 @@ namespace Ph1 {
 		AvVoltageSourceInverterDQ(String name,
 			Logger::Level logLevel = Logger::Level::off) :AvVoltageSourceInverterDQ(name, name, logLevel) {}
 		///
-		AvVoltageSourceInverterDQ(String uid, String name, Logger::Level logLevel = Logger::Level::off, Bool withTrafo = false);
+		AvVoltageSourceInverterDQ(String uid, String name, Logger::Level logLevel = Logger::Level::off, Bool withTrafo = false, Bool switchActive = false);
 		///
 		SimPowerComp<Complex>::Ptr clone(String copySuffix);
 
@@ -141,6 +175,18 @@ namespace Ph1 {
 		///
 		void setProfileUpdateRate(UInt rate){mProfileUndateRate=rate;};
 
+
+		/// ### new for protection ###
+
+		/// new getter for internal switch
+		std::shared_ptr<DP::Ph1::Switch>& getProtectionSwitch() { return mSubProtectionSwitch; };
+
+		/// new update switch state function
+		//void updateSwitchState(const Matrix& leftVector, Real time);
+		void updateSwitchState(Real time);
+
+
+
 		class MnaPreStep : public CPS::Task {
 		public:
 			MnaPreStep(AvVoltageSourceInverterDQ& AvVoltageSourceInverterDQ) :
@@ -149,6 +195,9 @@ namespace Ph1 {
 				mPrevStepDependencies.push_back(AvVoltageSourceInverterDQ.attribute("i_intf"));
 				mPrevStepDependencies.push_back(AvVoltageSourceInverterDQ.attribute("v_intf"));
 				mModifiedAttributes.push_back(AvVoltageSourceInverterDQ.mSubCtrledVoltageSource->attribute("v_intf"));
+				if (AvVoltageSourceInverterDQ.mSwitchActive)
+					mAttributeDependencies.push_back(AvVoltageSourceInverterDQ.mSubProtectionSwitch->attribute("right_vector"));
+
 			}
 
 			void execute(Real time, Int timeStepCount);
@@ -205,6 +254,9 @@ namespace Ph1 {
 				mAttributeDependencies.push_back(AvVoltageSourceInverterDQ.mSubResistorC->attribute("i_intf"));
 				mModifiedAttributes.push_back(AvVoltageSourceInverterDQ.attribute("i_intf"));
 				mModifiedAttributes.push_back(AvVoltageSourceInverterDQ.attribute("v_intf"));
+				if (AvVoltageSourceInverterDQ.mSwitchActive)
+					mAttributeDependencies.push_back(AvVoltageSourceInverterDQ.mSubProtectionSwitch->attribute("i_intf"));
+
 			}
 
 			void execute(Real time, Int timeStepCount);

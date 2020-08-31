@@ -52,7 +52,7 @@ namespace Ph1 {
 	public:
 		/// Defines UID, name and logging level
 		Transformer(String uid, String name,
-			Logger::Level logLevel = Logger::Level::off, Bool withResistiveLosses = false, Bool WithSaturation = false);
+			Logger::Level logLevel = Logger::Level::off, Bool withResistiveLosses = true, Bool WithSaturation = false);
 		/// Defines name and logging level
 		Transformer(String name, Logger::Level logLevel = Logger::Level::off)
 			: Transformer(name, name, logLevel) { }
@@ -100,11 +100,9 @@ namespace Ph1 {
 			MnaPreStep(Transformer& transformer) :
 				Task(transformer.mName + ".MnaPreStep"), mTransformer(transformer) {
 				mAttributeDependencies.push_back(transformer.mSubSnubResistor->attribute("right_vector"));
-
 				mAttributeDependencies.push_back(transformer.mSubLeakageInductorHV->attribute("right_vector"));
-				mAttributeDependencies.push_back(transformer.mSubLeakageInductorLV->attribute("right_vector"));
 				mAttributeDependencies.push_back(transformer.mSubLossResistorHV ->attribute("right_vector"));
-				mAttributeDependencies.push_back(transformer.mSubLossResistorLV->attribute("right_vector"));
+				
 				/*
 				mAttributeDependencies.push_back(transformer.mSubInductor->attribute("right_vector"));
 				if (transformer.mSubResistor)
@@ -114,6 +112,8 @@ namespace Ph1 {
 				{
 					mAttributeDependencies.push_back(transformer.mSubSatCurrentSrc->attribute("right_vector"));
 					mAttributeDependencies.push_back(transformer.mSubMagnetizingInductor->attribute("right_vector"));
+					mAttributeDependencies.push_back(transformer.mSubLossResistorLV->attribute("right_vector"));
+					mAttributeDependencies.push_back(transformer.mSubLeakageInductorLV->attribute("right_vector"));
 				}
 				mModifiedAttributes.push_back(transformer.attribute("right_vector"));
 				mPrevStepDependencies.push_back(transformer.mSubSnubResistor->attribute("v_intf"));
@@ -134,11 +134,12 @@ namespace Ph1 {
 				Task(transformer.mName + ".MnaPostStep"), mTransformer(transformer), mLeftVector(leftVector) {
 				//mAttributeDependencies.push_back(transformer.mSubInductor->attribute("i_intf"));
 				mAttributeDependencies.push_back(transformer.mSubLeakageInductorHV->attribute("right_vector"));
-				mAttributeDependencies.push_back(transformer.mSubLeakageInductorLV->attribute("right_vector"));
+				
 				if (transformer.mWithSaturation)
 				{
 					mAttributeDependencies.push_back(transformer.mSubSatCurrentSrc->attribute("right_vector"));
 					mAttributeDependencies.push_back(transformer.mSubMagnetizingInductor->attribute("right_vector"));
+					mAttributeDependencies.push_back(transformer.mSubLeakageInductorLV->attribute("right_vector"));
 				}
 
 				//mAttributeDependencies.push_back(transformer.mSubSnubResistor->attribute("v_intf"));
