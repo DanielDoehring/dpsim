@@ -45,6 +45,7 @@
 #include <cps/DP/DP_Ph1_VoltageSource.h>
 #include <cps/DP/DP_Ph1_VoltageSourceRamp.h>
 #include <cps/DP/DP_Ph1_VoltageSourceNorton.h>
+#include <cps/DP/DP_Ph1_SVC.h>
 #include <cps/DP/DP_Ph1_Switch.h>
 #include <cps/DP/DP_Ph1_SynchronGeneratorIdeal.h>
 #include <cps/DP/DP_Ph1_SynchronGeneratorTrStab.h>

@@ -10,7 +10,6 @@
 
 #include <cps/Definitions.h>
 
-
 namespace CPS {
 namespace Base {
 namespace Ph1 {

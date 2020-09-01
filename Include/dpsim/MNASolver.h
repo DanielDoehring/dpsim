@@ -19,6 +19,7 @@
 #include <cps/AttributeList.h>
 #include <cps/Solver/MNASwitchInterface.h>
 #include <cps/Solver/MNAOLTCInterface.h>
+#include <cps/Solver/MNAVarElemInterface.h>
 #include <cps/SimSignalComp.h>
 #include <cps/SimPowerComp.h>
 
@@ -70,6 +71,8 @@ namespace DPsim {
 		/// NEW for OLTC - should be updated to MNAOLTCInterface
 		CPS::MNAOLTCInterface::List mOLTCs;
 
+		// NEW List with Elements with variable matrix entries
+		CPS::MNAVarElemInterface::List mVarElems;
 
 		// #### MNA specific attributes ####
 		/// System matrix A that is modified by matrix stamps

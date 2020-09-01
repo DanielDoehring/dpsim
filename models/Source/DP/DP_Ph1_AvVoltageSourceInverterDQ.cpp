@@ -380,7 +380,6 @@ void DP::Ph1::AvVoltageSourceInverterDQ::mnaApplyRightSideVectorStamp(Matrix& ri
 void DP::Ph1::AvVoltageSourceInverterDQ::updateSetPoint(Real time){
 	//if(mQRefInput)
 		//mQref = mQRefInput->get();
-	//Real Vpcc = mIntfVoltage(0, 0).real();
 	mDeltaV =  (mVpcc - mVRef ) / mVRef;
 	Bool QCalcStatic;
 	Real newQRef;
@@ -498,7 +497,7 @@ void DP::Ph1::AvVoltageSourceInverterDQ::MnaPreStep::execute(Real time, Int time
 	else
 		mAvVoltageSourceInverterDQ.mSubCtrledVoltageSource->setParameters(mAvVoltageSourceInverterDQ.mVsdq);
 
-	if(mAvVoltageSourceInverterDQ.mSwitchActive && !mAvVoltageSourceInverterDQ.mSwitchStateChange && time > 0.1)
+	if(mAvVoltageSourceInverterDQ.mSwitchActive && !mAvVoltageSourceInverterDQ.mSwitchStateChange)
 		mAvVoltageSourceInverterDQ.updateSwitchState(time);
 }
 
@@ -506,6 +505,7 @@ void DP::Ph1::AvVoltageSourceInverterDQ::MnaPostStep::execute(Real time, Int tim
 	mAvVoltageSourceInverterDQ.mnaUpdateCurrent(*mLeftVector);
 	mAvVoltageSourceInverterDQ.mDeltaT = time - mAvVoltageSourceInverterDQ.mPrevTime;
 
+	// control for switch and reactive power set point
 	if (!mAvVoltageSourceInverterDQ.mSwitchStateChange) {
 		mAvVoltageSourceInverterDQ.updateInputStateSpaceModel(*mLeftVector, time);
 		mAvVoltageSourceInverterDQ.step(time, timeStepCount);
@@ -544,7 +544,8 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSwitchState(Real time) {
 	Real Vpu, Vmin, Vmax;
 	Bool disconnect = false;
 
-	if (!mSwitchStateChange) {
+	// only if state has not changed and intial oscillations have decayed
+	if (!mSwitchStateChange && time > 0.1) {
 		mDeltaV = (mVpcc - mVRef) / mVRef;
 		
 		Vpu = mVpcc / mVRef;

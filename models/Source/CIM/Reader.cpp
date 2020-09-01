@@ -87,7 +87,10 @@ TopologicalPowerComp::Ptr Reader::mapComponent(BaseClass* obj) {
 		return mapExternalNetworkInjection(extnet);
 	if (EquivalentShunt *shunt = dynamic_cast<EquivalentShunt*>(obj))
 		return mapEquivalentShunt(shunt);
+	if(LinearShuntCompensator *shunt = dynamic_cast<LinearShuntCompensator*>(obj))
+		return mapLinearShuntCompensator(shunt);
 	return nullptr;
+	
 }
 
 ///
@@ -775,6 +778,45 @@ TopologicalPowerComp::Ptr Reader::mapEquivalentShunt(EquivalentShunt* shunt){
 	cpsShunt->setParameters(shunt->g.value, shunt->b.value);
 	cpsShunt->setBaseVoltage(baseVoltage);
 	return cpsShunt;
+}
+
+TopologicalPowerComp::Ptr Reader::mapLinearShuntCompensator(LinearShuntCompensator* shunt) {
+	mSLog->info("Found shunt {}", shunt->name);
+
+	Real baseVoltage = 0;
+	// first look for baseVolt object to set baseVoltage
+	for (auto obj : mModel->Objects) {
+		if (IEC61970::Base::Core::BaseVoltage* baseVolt = dynamic_cast<IEC61970::Base::Core::BaseVoltage*>(obj)) {
+			for (auto comp : baseVolt->ConductingEquipment) {
+				if (comp->name == shunt->name) {
+					baseVoltage = unitValue(baseVolt->nominalVoltage.value, UnitMultiplier::k);
+				}
+			}
+		}
+	}
+	// as second option take baseVoltage of topologicalNode where shunt is connected to
+	if (baseVoltage == 0) {
+		for (auto obj : mModel->Objects) {
+			if (IEC61970::Base::Topology::TopologicalNode* topNode = dynamic_cast<IEC61970::Base::Topology::TopologicalNode*>(obj)) {
+				for (auto term : topNode->Terminal) {
+					if (term->ConductingEquipment->name == shunt->name) {
+						baseVoltage = unitValue(topNode->BaseVoltage->nominalVoltage.value, UnitMultiplier::k);
+					}
+				}
+			}
+		}
+	}
+
+	if (mDomain == Domain::DP && mPhase == PhaseType::Single) {
+		// model as SVC
+		auto cpsShunt = std::make_shared<DP::Ph1::SVC>(shunt->mRID, shunt->name, mComponentLogLevel);
+		Real Sn = 5e6;
+		Real Bmax = Sn / (baseVoltage * baseVoltage);
+		Real Bmin = 1e-6;
+		cpsShunt->setParameters(Bmax, Bmin, baseVoltage);
+		cpsShunt->setControllerParameters(0.15, 20);
+		return cpsShunt;
+	}
 }
 
 

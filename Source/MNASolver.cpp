@@ -290,9 +290,20 @@ void MnaSolver<VarType>::updateOLTCStatus() {
 	for (auto oltc : mOLTCs) {
 		if (oltc->mnaRatioChanged())
 		{
-			mSLog->info("Tap ratio changed");
+			mSLog->info("Tap ratio changed -> Update System Matrix");
 			mUpdateSysMatrix = true;
 			break;
+		}
+	}
+
+	if (!mUpdateSysMatrix) {
+		for (auto varElem : mVarElems) {
+			if (varElem->ValueChanged())
+			{
+				mSLog->info("SVC value changed -> Update System Matrix");
+				mUpdateSysMatrix = true;
+				break;
+			}
 		}
 	}
 }
@@ -354,6 +365,8 @@ void MnaSolver<VarType>::identifyTopologyObjects() {
 	for (auto comp : mSystem.mComponents) {
 		auto swComp = std::dynamic_pointer_cast<CPS::MNASwitchInterface>(comp);
 		if (swComp) {
+			// To Do use continue as those elements shouldnt be stamped in normal (base) matrix
+			//continue;
 			mSwitches.push_back(swComp);
 			continue;
 		}
@@ -363,6 +376,16 @@ void MnaSolver<VarType>::identifyTopologyObjects() {
 		if (oltcComp)
 		{
 			mOLTCs.push_back(oltcComp);
+			// To Do use continue as those elements shouldnt be stamped in normal (base) matrix
+			//continue;
+		}
+
+		// which transformers als oltc?
+		auto varComp = std::dynamic_pointer_cast<CPS::MNAVarElemInterface>(comp);
+		if (varComp)
+		{
+			mVarElems.push_back(varComp);
+			// To Do use continue as those elements shouldnt be stamped in normal (base) matrix
 			//continue;
 		}
 
