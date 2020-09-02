@@ -267,3 +267,23 @@ void DP::Ph1::Capacitor::mnaUpdateCurrentHarm() {
 		SPDLOG_LOGGER_DEBUG(mSLog, "Current {:s}", Logger::phasorToString(mIntfCurrent(0,freq)));
 	}
 }
+
+void DP::Ph1::Capacitor::updateCapacitance(Real capacitance, Real deltaT) {
+	mCapacitance = capacitance;
+	updateVars(deltaT);
+}
+
+void DP::Ph1::Capacitor::updateVars(Real deltaT) {
+	Real equivCondReal = 2.0 * mCapacitance / deltaT;
+	Real prevVoltCoeffReal = 2.0 * mCapacitance / deltaT;
+
+	for (UInt freq = 0; freq < mNumFreqs; freq++) {
+		Real equivCondImag = 2.*PI * mFrequencies(freq, 0) * mCapacitance;
+		mEquivCond(freq, 0) = { equivCondReal, equivCondImag };
+		Real prevVoltCoeffImag = -2.*PI * mFrequencies(freq, 0) * mCapacitance;
+		mPrevVoltCoeff(freq, 0) = { prevVoltCoeffReal, prevVoltCoeffImag };
+
+		mEquivCurrent(freq, 0) = -mIntfCurrent(0, freq) + -mPrevVoltCoeff(freq, 0) * mIntfVoltage(0, freq);
+		mIntfCurrent(0, freq) = mEquivCond(freq, 0) * mIntfVoltage(0, freq) + mEquivCurrent(freq, 0);
+	}
+}

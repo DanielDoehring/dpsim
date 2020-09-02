@@ -271,3 +271,27 @@ void DP::Ph1::Inductor::mnaTearPostStep(Complex voltage, Complex current) {
 	mIntfCurrent(0, 0) = mEquivCond(0,0) * voltage + mEquivCurrent(0,0);
 
 }
+
+
+void DP::Ph1::Inductor::updateInductance(Real inductance, Real deltaT) {
+	mInductance = inductance;
+	updateVars(deltaT);
+}
+
+void DP::Ph1::Inductor::updateVars(Real deltaT) {
+	for (UInt freq = 0; freq < mNumFreqs; freq++) {
+		Real a = deltaT / (2. * mInductance);
+		Real b = deltaT * 2.*PI * mFrequencies(freq, 0) / 2.;
+
+		Real equivCondReal = a / (1. + b * b);
+		Real equivCondImag = -a * b / (1. + b * b);
+		mEquivCond(freq, 0) = { equivCondReal, equivCondImag };
+		Real preCurrFracReal = (1. - b * b) / (1. + b * b);
+		Real preCurrFracImag = (-2. * b) / (1. + b * b);
+		mPrevCurrFac(freq, 0) = { preCurrFracReal, preCurrFracImag };
+
+		// TODO: check if this is correct or if it should be only computed before the step
+		mEquivCurrent(freq, 0) = mEquivCond(freq, 0) * mIntfVoltage(0, freq) + mPrevCurrFac(freq, 0) * mIntfCurrent(0, freq);
+		mIntfCurrent(0, freq) = mEquivCond(freq, 0) * mIntfVoltage(0, freq) + mEquivCurrent(freq, 0);
+	}
+}

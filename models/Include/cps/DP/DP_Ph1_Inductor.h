@@ -68,6 +68,10 @@ namespace Ph1 {
 		void mnaUpdateCurrent(const Matrix& leftVector);
 		void mnaUpdateCurrentHarm();
 
+		// update inductance value during simulation
+		void updateInductance(Real inductance, Real deltaT);
+		void updateVars(Real deltaT);
+
 		// #### Tearing methods ####
 		void mnaTearInitialize(Real omega, Real timestep);
 		void mnaTearApplyMatrixStamp(Matrix& tearMatrix);

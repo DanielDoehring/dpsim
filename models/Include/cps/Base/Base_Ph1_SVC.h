@@ -37,8 +37,6 @@ namespace Ph1 {
 		Real mPrevTimeStep = 0;
 		Real mDeltaT;
 
-		Bool mInductanceChange = false;
-
 		// save for numerical integration
 		Real mPrevVoltage;
 		Real mDeltaV = 0;

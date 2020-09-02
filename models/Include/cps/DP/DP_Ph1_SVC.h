@@ -12,6 +12,10 @@
 //#include <cps/Solver/MNATearInterface.h>
 #include <cps/Solver/MNAVarElemInterface.h>
 #include <cps/Base/Base_Ph1_SVC.h>
+#include <cps/DP/DP_Ph1_Capacitor.h>
+#include <cps/DP/DP_Ph1_Inductor.h>
+#include <cps/DP/DP_Ph1_Resistor.h>
+#include <cps/DP/DP_Ph1_Switch.h>
 
 namespace CPS {
 namespace DP {
@@ -30,14 +34,24 @@ namespace Ph1 {
 		public SimPowerComp<Complex>,
 		public SharedFactory<SVC> {
 	protected:
-		/// DC equivalent current source for harmonics [A]
-		MatrixComp mEquivCurrent;
-		/// Equivalent conductance for harmonics [S]
-		MatrixComp mEquivCond;
-		/// Coefficient in front of previous current value for harmonics
-		MatrixComp mPrevCurrFac;
-		///
-		void initVars(Real timeStep);
+
+		/// ### internal components
+		/// Internal inductor
+		std::shared_ptr<DP::Ph1::Inductor> mSubInductor;
+		std::shared_ptr<DP::Ph1::Switch> mSubInductorProtectionSwitch;
+		/// Internal capacitor
+		std::shared_ptr<DP::Ph1::Capacitor> mSubCapacitor;
+		std::shared_ptr<DP::Ph1::Switch> mSubCapacitorProtectionSwitch;
+
+		Bool mValueChange = false;
+		Bool mInductiveMode = false;
+
+		// has state changed? (allow this only once)
+		// could be redundant with internal status of switch element (mnaIsClosed)
+		Real mSwitchStateChange = false;
+		Real mSwitchROpen = 1e9;
+		Real mSwitchRClosed = 1e-9;
+		Real mCounter = 0;
 
 		Real mBSetCounter = 0;
 		Real mVpcc=0;
@@ -74,15 +88,10 @@ namespace Ph1 {
 		void mnaUpdateCurrentHarm();
 
 		// #### Tearing methods ####
-		void mnaTearInitialize(Real omega, Real timestep);
-		void mnaTearApplyMatrixStamp(Matrix& tearMatrix);
-		void mnaTearApplyVoltageStamp(Matrix& voltageVector);
-		void mnaTearPostStep(Complex voltage, Complex current);
+		Bool ValueChanged() { return mValueChange; };
 
-		Bool ValueChanged() { return mInductanceChange; };
-
+		void setSwitchState();
 		void updateSusceptance();
-		void updateVars();
 
 		class MnaPreStep : public Task {
 		public:
