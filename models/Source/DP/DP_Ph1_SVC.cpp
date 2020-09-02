@@ -20,12 +20,12 @@ DP::Ph1::SVC::SVC(String uid, String name, Logger::Level logLevel)
 	addAttribute<Real>("L", &mInductance, Flags::read | Flags::write);
 	addAttribute<Real>("B", &mBPrev, Flags::read | Flags::write);
 	addAttribute<Real>("DeltaV", &mDeltaV, Flags::read | Flags::write);
-	
+	addAttribute<Real>("Vpcc", &mVpcc, Flags::read | Flags::write);	
 }
 
 SimPowerComp<Complex>::Ptr DP::Ph1::SVC::clone(String name) {
 	auto copy = SVC::make(name, mLogLevel);
-	copy->setParameters(mBMax, mBMin, mNomVolt, mRefVolt);
+	copy->setParameters(mBMax, mBMin, mBN, mNomVolt, mRefVolt);
 	return copy;
 }
 
@@ -42,24 +42,32 @@ void DP::Ph1::SVC::initializeFromPowerflow(Real frequency) {
 
 	Real omega = 2. * PI * frequency;
 	Complex impedance = { 0, omega * mInductance };
+	//Complex impedance = {0, 1 / (mBMin*mBMax) };
 	//mIntfVoltage(0,0) = initialSingleVoltage(1) - initialSingleVoltage(0);
 	mIntfVoltage(0, 0) = initialSingleVoltage(0);
 	mIntfCurrent(0,0) = mIntfVoltage(0,0) / impedance;
+
+	//mBPrev = mBMin;
+	mBPrev = 1 / (omega * mInductance * mBN);
+	mPrevVoltage = mIntfVoltage(0, 0).real();
 
 	mSLog->info(
 		"\n --- Parameters ---"
 		"\n Controller: T={} K={}"
 		"\n Reference Voltage={}"
-		"\n Bmax={} Bmin={}",
-		mTr, mKr, mRefVolt, mBMax, mBMin);
+		"\n Bmax={} Bmin={}"
+		"\n Initial B: {}",
+		mTr, mKr, mRefVolt, mBMax, mBMin, mBPrev);
 
 	mSLog->info(
 		"\n--- Initialization from powerflow ---"
+		"\nImpedance: {}"
 		"\nVoltage across: {:s}"
 		"\nCurrent: {:s}"
 		"\nTerminal 0 voltage: {:s}"
 		//"\nTerminal 1 voltage: {:s}"
 		"\n--- Initialization from powerflow finished ---",
+		impedance,
 		Logger::phasorToString(mIntfVoltage(0,0)),
 		Logger::phasorToString(mIntfCurrent(0,0)),
 		//Logger::phasorToString(initialSingleVoltage(0)),
@@ -84,7 +92,7 @@ void DP::Ph1::SVC::initVars(Real timeStep) {
 		mEquivCurrent(freq,0) = mEquivCond(freq,0) * mIntfVoltage(0,freq) + mPrevCurrFac(freq,0) * mIntfCurrent(0,freq);
 		mIntfCurrent(0,freq) = mEquivCond(freq,0) * mIntfVoltage(0,freq) + mEquivCurrent(freq,0);
 	}
-	mBPrev = 1 / (2 * M_PI * mFrequencies(0, 0) * mInductance);
+	//mBPrev = (1 / (2 * M_PI * mFrequencies(0, 0) * mInductance) ) / mBMax;
 }
 
 void DP::Ph1::SVC::mnaInitialize(Real omega, Real timeStep, Attribute<Matrix>::Ptr leftVector) {
@@ -254,6 +262,7 @@ void DP::Ph1::SVC::mnaUpdateVoltage(const Matrix& leftVector) {
 
 		SPDLOG_LOGGER_DEBUG(mSLog, "Voltage {:s}", Logger::phasorToString(mIntfVoltage(0,freq)));
 	}
+	mVpcc = Math::complexFromVectorElement(leftVector, matrixNodeIndex(0), mNumFreqs, 0).real();
 }
 
 void DP::Ph1::SVC::mnaUpdateVoltageHarm(const Matrix& leftVector, Int freqIdx) {
@@ -283,34 +292,50 @@ void DP::Ph1::SVC::mnaUpdateCurrentHarm() {
 
 void DP::Ph1::SVC::updateSusceptance() {
 	// calculate new B value
-	Real TFactor = mDeltaT / (2 * mTr);
-	TFactor = TFactor / (1 + TFactor);
+
+	// summarize some constants
+	Real Fac1 = mDeltaT / (2 * mTr);
+	Real Fac2 = mDeltaT * mKr / (2 * mTr);
+
 
 	Complex vintf = mIntfVoltage(0, 0);
 	Real V = Math::abs(mIntfVoltage(0, 0).real());
-	mDeltaV = mRefVolt - V;
-	Real deltaVPrev = mRefVolt - mPrevVoltage;
+	//mVpcc = V;
+	//mDeltaV = (mRefVolt - V ) / mNomVolt;
+	//Real deltaVPrev = (mRefVolt - mPrevVoltage) / mNomVolt;
+	mDeltaV = (V - mRefVolt) / mNomVolt;
+	Real deltaVPrev = (mPrevVoltage - mRefVolt) / mNomVolt;
 
 	// calc new B
-	Real B = TFactor * (mKr * (mDeltaV + deltaVPrev) - mBPrev);
+	Real B = (1/(1+Fac1)) * (Fac2 * (mDeltaV + deltaVPrev) + (1-Fac1) * mBPrev);
+	mSLog->info("New B value: percent={}, absolute={}", 100 * B, B * mBN);
 
 	// check bounds
 	if (B > mBMax) {
-		B = mBMax;
+		B =  mBMax;
+		mSLog->info("New B value exceeds Bmax");
 	}
 	else if(B < mBMin)
 	{
 		B = mBMin;
+		mSLog->info("\n New B value exceeds Bmin");
 	}
 
-	// set new B
-	if (B != mBPrev) {
+	// set new B if it has a new value and difference is big enough
+	//if (Math::abs(B-mBPrev) > 0.02) {
+	if (B != mBPrev && mBSetCounter > 0.01) {
 		mInductanceChange = true;
+		mBSetCounter = 0;
 		Real omega = 2 * M_PI*mFrequencies(0, 0);
-		mInductance = 1 / (omega * B);
+		mInductance = 1 / (omega * B * mBN);
+		mSLog->info("New Inductance: L={} [H]", mInductance);
 		// update inductance model
 		updateVars();
 	}
+	else {
+		mBSetCounter = mBSetCounter + mDeltaT;
+	}
+
 
 	// save values
 	mBPrev = B;

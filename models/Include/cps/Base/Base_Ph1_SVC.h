@@ -17,10 +17,14 @@ namespace Ph1 {
 	protected:
 		/// Inductance [H]
 		Real mInductance;
-		/// Maximium susceptance
+		/// Maximium susceptance [p.u.]
 		Real mBMax;
-		/// Minimium susceptance
+		/// Minimium susceptance [p.u.]
 		Real mBMin;
+		/// rated B [S]
+		Real mBN;
+		/// maximum Q
+		Real mQN;
 		/// Time Constant
 		Real mTr;
 		/// Gain
@@ -42,11 +46,15 @@ namespace Ph1 {
 
 	public:
 		/// Sets model specific parameters
-		void setParameters(Real Bmax, Real Bmin, Real nomVolt, Real RefVolt = 0) {
+		void setParameters(Real Bmax, Real Bmin, Real QN, Real nomVolt, Real RefVolt = 0) {
 			// initial inductance very high 10^6 [Ohm] @ 50 Hz
 			mInductance = 3183.1;
-			mBMax = Bmax;
+			//mBMax = Bmax;
+			//mBMin = Bmin;
+			mBMax = 1;
 			mBMin = Bmin;
+			mBN = QN / (nomVolt*nomVolt);
+
 			mNomVolt = nomVolt;
 			mRefVolt = (RefVolt > 0) ? RefVolt : mNomVolt;
 		}

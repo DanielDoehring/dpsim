@@ -38,6 +38,9 @@ namespace Ph1 {
 		MatrixComp mPrevCurrFac;
 		///
 		void initVars(Real timeStep);
+
+		Real mBSetCounter = 0;
+		Real mVpcc=0;
 	public:
 		/// Defines UID, name and log level
 		SVC(String uid, String name, Logger::Level logLevel = Logger::Level::off);

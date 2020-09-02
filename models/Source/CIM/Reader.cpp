@@ -810,11 +810,11 @@ TopologicalPowerComp::Ptr Reader::mapLinearShuntCompensator(LinearShuntCompensat
 	if (mDomain == Domain::DP && mPhase == PhaseType::Single) {
 		// model as SVC
 		auto cpsShunt = std::make_shared<DP::Ph1::SVC>(shunt->mRID, shunt->name, mComponentLogLevel);
-		Real Sn = 5e6;
-		Real Bmax = Sn / (baseVoltage * baseVoltage);
-		Real Bmin = 1e-6;
-		cpsShunt->setParameters(Bmax, Bmin, baseVoltage);
-		cpsShunt->setControllerParameters(0.15, 20);
+		Real Sn = 25e6;
+		Real Bmax = 1;
+		Real Bmin = -1;
+		cpsShunt->setParameters(Bmax, Bmin, Sn, baseVoltage);
+		cpsShunt->setControllerParameters(0.2, 40);
 		return cpsShunt;
 	}
 }
