@@ -22,6 +22,7 @@ namespace Ph3 {
 		Matrix mClosedResistance;
 		/// Defines if Switch is open or closed
 		Bool mSwitchClosed;
+		Bool mValueChanged = false;
 	public:
 		///
 		void setParameters(Matrix openResistance, Matrix closedResistance, Bool closed = false) {
@@ -31,6 +32,7 @@ namespace Ph3 {
 		}
 		void closeSwitch() { mSwitchClosed = true; }
 		void openSwitch() { mSwitchClosed = false; }
+		void setValueChange(Bool value) { mValueChanged = value; };
 	};
 }
 }

@@ -26,6 +26,7 @@ namespace CPS {
 		virtual void mnaClose() { }
 		/// Check if switch is closed
 		virtual Bool mnaIsClosed() = 0;
+		virtual Bool ValueChanged() = 0;
 		/// Close switch if true and open switch if false
 		virtual void mnaSetClosed(Bool value) { }
 		/// Stamps system matrix considering the defined switch position

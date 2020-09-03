@@ -14,7 +14,6 @@
 #include <cps/Base/Base_Ph1_SVC.h>
 #include <cps/DP/DP_Ph1_Capacitor.h>
 #include <cps/DP/DP_Ph1_Inductor.h>
-#include <cps/DP/DP_Ph1_Resistor.h>
 #include <cps/DP/DP_Ph1_Switch.h>
 
 namespace CPS {
@@ -55,6 +54,14 @@ namespace Ph1 {
 
 		Real mBSetCounter = 0;
 		Real mVpcc=0;
+
+		// values of PT1 for measurement of voltage at PCC
+		Real mTm = 0.01;
+		Real mKm = 1;
+		Real mVmeasPrev = 0;
+		Real mLPrev;
+		Real mCPrev;
+
 	public:
 		/// Defines UID, name and log level
 		SVC(String uid, String name, Logger::Level logLevel = Logger::Level::off);
@@ -73,19 +80,19 @@ namespace Ph1 {
 		// #### MNA section ####
 		/// Initializes MNA specific variables
 		void mnaInitialize(Real omega, Real timeStep, Attribute<Matrix>::Ptr leftVector);
-		void mnaInitializeHarm(Real omega, Real timeStep, std::vector<Attribute<Matrix>::Ptr> leftVectors);
+		//void mnaInitializeHarm(Real omega, Real timeStep, std::vector<Attribute<Matrix>::Ptr> leftVectors);
 		/// Stamps system matrix
 		void mnaApplySystemMatrixStamp(Matrix& systemMatrix);
-		void mnaApplySystemMatrixStampHarm(Matrix& systemMatrix, Int freqIdx);
+		//void mnaApplySystemMatrixStampHarm(Matrix& systemMatrix, Int freqIdx);
 		/// Stamps right side (source) vector
 		void mnaApplyRightSideVectorStamp(Matrix& rightVector);
-		void mnaApplyRightSideVectorStampHarm(Matrix& rightVector);
+		//void mnaApplyRightSideVectorStampHarm(Matrix& rightVector);
 		/// Update interface voltage from MNA system results
 		void mnaUpdateVoltage(const Matrix& leftVector);
-		void mnaUpdateVoltageHarm(const Matrix& leftVector, Int freqIdx);
+		//void mnaUpdateVoltageHarm(const Matrix& leftVector, Int freqIdx);
 		/// Update interface current from MNA system results
 		void mnaUpdateCurrent(const Matrix& leftVector);
-		void mnaUpdateCurrentHarm();
+		//void mnaUpdateCurrentHarm();
 
 		// #### Tearing methods ####
 		Bool ValueChanged() { return mValueChange; };

@@ -22,6 +22,7 @@ namespace Ph1 {
 		Real mClosedResistance;
 		/// Defines if Switch is open or closed
 		Bool mIsClosed;
+		Bool mValueChanged = false;
 	public:
 		///
 		void setParameters(Real openResistance, Real closedResistance, Bool closed = false) {
@@ -31,6 +32,7 @@ namespace Ph1 {
 		}
 		void close() { mIsClosed = true; }
 		void open() { mIsClosed = false; }
+		void setValueChange(Bool value) { mValueChanged = value; };
 	};
 }
 }

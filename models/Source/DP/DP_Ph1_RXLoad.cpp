@@ -225,6 +225,8 @@ void DP::Ph1::RXLoad::MnaPreStep::execute(Real time, Int timeStepCount) {
 void DP::Ph1::RXLoad::MnaPostStep::execute(Real time, Int timeStepCount) {
 	mLoad.mnaUpdateVoltage(*mLeftVector);
 	mLoad.mnaUpdateCurrent(*mLeftVector);
+	if (mLoad.mSwitchActive && !mLoad.mSwitchStateChange)
+		mLoad.mSubProtectionSwitch->setValueChange(false);
 }
 
 void DP::Ph1::RXLoad::mnaUpdateVoltage(const Matrix& leftVector) {
@@ -257,6 +259,7 @@ void DP::Ph1::RXLoad::updateSwitchState(Real time) {
 				mSwitchStateChange = true;
 				mSubProtectionSwitch->open();
 				mSLog->info("Opened Switch at {}", (float)time);
+				mSubProtectionSwitch->setValueChange(true);
 			}
 			mCounter = mCounter + mDeltaT;
 		}

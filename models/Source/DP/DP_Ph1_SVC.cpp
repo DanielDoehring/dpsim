@@ -19,12 +19,9 @@ DP::Ph1::SVC::SVC(String uid, String name, Logger::Level logLevel)
 	setTerminalNumber(1);
 	setVirtualNodeNumber(2);
 
-	/*
-	addAttribute<Real>("L", &mInductance, Flags::read | Flags::write);
 	addAttribute<Real>("B", &mBPrev, Flags::read | Flags::write);
 	addAttribute<Real>("DeltaV", &mDeltaV, Flags::read | Flags::write);
-	addAttribute<Real>("Vpcc", &mVpcc, Flags::read | Flags::write);	
-	*/
+	addAttribute<Real>("Vpcc", &mVpcc, Flags::read | Flags::write);
 }
 
 SimPowerComp<Complex>::Ptr DP::Ph1::SVC::clone(String name) {
@@ -45,6 +42,8 @@ void DP::Ph1::SVC::initializeFromPowerflow(Real frequency) {
 	// init L and C with small/high values (both have high impedance)
 	Real LInit = 1e6 / omega;
 	Real CInit = 1e-6 / omega;
+	mLPrev = LInit;
+	mCPrev = CInit;
 
 	// impedances of both branches
 	Complex LImpedance = { mSwitchROpen, omega * LInit };
@@ -56,6 +55,7 @@ void DP::Ph1::SVC::initializeFromPowerflow(Real frequency) {
 
 	mBPrev = 0;
 	mPrevVoltage = mIntfVoltage(0, 0).real();
+	mVmeasPrev = mPrevVoltage;
 
 	mSLog->info(
 		"\n --- Parameters ---"
@@ -79,7 +79,7 @@ void DP::Ph1::SVC::initializeFromPowerflow(Real frequency) {
 	mSubInductor->initialize(mFrequencies);
 	mSubInductor->initializeFromPowerflow(frequency);
 
-	mSubInductorProtectionSwitch = std::make_shared<DP::Ph1::Switch>(mName + "_switch", mLogLevel);
+	mSubInductorProtectionSwitch = std::make_shared<DP::Ph1::Switch>(mName + "_Lswitch", mLogLevel);
 	mSubInductorProtectionSwitch->setParameters(mSwitchROpen, mSwitchRClosed, false);
 	mSubInductorProtectionSwitch->connect({ mVirtualNodes[0], mTerminals[0]->node() });
 	mSubInductorProtectionSwitch->initialize(mFrequencies);
@@ -92,7 +92,7 @@ void DP::Ph1::SVC::initializeFromPowerflow(Real frequency) {
 	mSubCapacitor->initialize(mFrequencies);
 	mSubCapacitor->initializeFromPowerflow(frequency);
 
-	mSubCapacitorProtectionSwitch = std::make_shared<DP::Ph1::Switch>(mName + "_switch", mLogLevel);
+	mSubCapacitorProtectionSwitch = std::make_shared<DP::Ph1::Switch>(mName + "_Cswitch", mLogLevel);
 	mSubCapacitorProtectionSwitch->setParameters(mSwitchROpen, mSwitchRClosed, false);
 	mSubCapacitorProtectionSwitch->connect({ mVirtualNodes[1], mTerminals[0]->node() });
 	mSubCapacitorProtectionSwitch->initialize(mFrequencies);
@@ -135,14 +135,12 @@ void DP::Ph1::SVC::mnaInitialize(Real omega, Real timeStep, Attribute<Matrix>::P
 		mTerminals[0]->node()->name(), mTerminals[0]->node()->matrixNodeIndex());
 }
 
-
 void DP::Ph1::SVC::mnaApplySystemMatrixStamp(Matrix& systemMatrix) {
 	mSubInductor->mnaApplySystemMatrixStamp(systemMatrix);
 	mSubCapacitor->mnaApplySystemMatrixStamp(systemMatrix);
 	mSubCapacitorProtectionSwitch->mnaApplySystemMatrixStamp(systemMatrix);
 	mSubInductorProtectionSwitch->mnaApplySystemMatrixStamp(systemMatrix);
 }
-
 
 void DP::Ph1::SVC::mnaApplyRightSideVectorStamp(Matrix& rightVector) {
 	mSubInductor->mnaApplyRightSideVectorStamp(rightVector);
@@ -151,31 +149,24 @@ void DP::Ph1::SVC::mnaApplyRightSideVectorStamp(Matrix& rightVector) {
 	mSubInductorProtectionSwitch->mnaApplyRightSideVectorStamp(rightVector);
 }
 
-
-
 void DP::Ph1::SVC::MnaPreStep::execute(Real time, Int timeStepCount) {
 	mSVC.mnaApplyRightSideVectorStamp(mSVC.mRightVector);
 	if (time > 0.1)
 		mSVC.updateSusceptance();
 }
 
-
-
 void DP::Ph1::SVC::MnaPostStep::execute(Real time, Int timeStepCount) {
 	mSVC.mnaUpdateVoltage(*mLeftVector);
 	mSVC.mnaUpdateCurrent(*mLeftVector);
 	mSVC.mDeltaT = time - mSVC.mPrevTimeStep;
 	mSVC.mPrevTimeStep = time;
+	mSVC.mValueChange = false;
 }
-
-
 
 void DP::Ph1::SVC::mnaUpdateVoltage(const Matrix& leftVector) {
 	mVpcc = Math::complexFromVectorElement(leftVector, matrixNodeIndex(0), mNumFreqs, 0).real();
 	mIntfVoltage(0, 0) = Math::complexFromVectorElement(leftVector, matrixNodeIndex(0));
 }
-
-
 
 void DP::Ph1::SVC::mnaUpdateCurrent(const Matrix& leftVector) {
 	mIntfCurrent(0, 0) = 0;
@@ -183,26 +174,26 @@ void DP::Ph1::SVC::mnaUpdateCurrent(const Matrix& leftVector) {
 	mIntfCurrent(0, 0) += mSubCapacitor->intfCurrent()(0, 0);
 }
 
-
-
 void DP::Ph1::SVC::updateSusceptance() {
 	// calculate new B value
-
 	// summarize some constants
 	Real Fac1 = mDeltaT / (2 * mTr);
 	Real Fac2 = mDeltaT * mKr / (2 * mTr);
 
 	Complex vintf = mIntfVoltage(0, 0);
 	Real V = Math::abs(mIntfVoltage(0, 0).real());
-	//mVpcc = V;
-	//mDeltaV = (mRefVolt - V ) / mNomVolt;
-	//Real deltaVPrev = (mRefVolt - mPrevVoltage) / mNomVolt;
-	mDeltaV = (V - mRefVolt) / mNomVolt;
-	Real deltaVPrev = (mPrevVoltage - mRefVolt) / mNomVolt;
+
+	// Pt1 with trapez rule for voltage measurement
+	Real Fac3 = mDeltaT / (2 * mTm);
+	Real Vmeas = (1 / (1 + Fac3)) * (V + mPrevVoltage - mVmeasPrev);
+
+	mDeltaV = (Vmeas - mRefVolt) / mNomVolt;
+	Real deltaVPrev = (mVmeasPrev - mRefVolt) / mNomVolt;
 
 	// calc new B with trapezoidal rule
-	Real B = (1/(1+Fac1)) * (Fac2 * (mDeltaV + deltaVPrev) + (1-Fac1) * mBPrev);
-	mSLog->info("New B value: percent={}, absolute={}", 100 * B, B * mBN);
+	//Real B = (1/(1+Fac1)) * (Fac2 * (mDeltaV + deltaVPrev) + (1-Fac1) * mBPrev);
+	Real B = (1 / (1 + Fac1)) * (Fac2 * (mDeltaV + deltaVPrev) + (1 - Fac1) * mBPrev);
+	//mSLog->info("New B value: percent={}, absolute={}", 100 * B, B * mBN);
 
 	// check bounds
 	if (B > mBMax) {
@@ -216,27 +207,42 @@ void DP::Ph1::SVC::updateSusceptance() {
 	}
 
 	// set new B if it has a new value and difference is big enough
-	//if (Math::abs(B-mBPrev) > 0.02) {
-	if (B != mBPrev && mBSetCounter > 0.005) {
-		mValueChange = true;
-		mBSetCounter = 0;
-
+	if (B != mBPrev) {
+	//if (B != mBPrev && mBSetCounter > 0.001){
+		//mValueChange = true;
+		//mBSetCounter = 0;
 		Real omega = 2 * M_PI*mFrequencies(0, 0);
 
 		if (B > 0) {
 			// model inductive behaviour (decrease voltage)
-			mInductiveMode = true;
 			Real inductance = 1 / (omega * B * mBN);
-			mSubInductor->updateInductance(inductance, mDeltaT);
-			mSLog->info("Inductive Mode: New Inductance: L={} [H]", inductance);
+			//check if change in reactance is sufficient to trigger a change
+			if (Math::abs(1 - inductance / mLPrev) > 0.01)
+			{
+				mInductiveMode = true;
+				mSubInductor->updateInductance(inductance, mDeltaT);
+				mSLog->info("Inductive Mode: New Inductance: L = {} [H]", inductance);
+				mLPrev = inductance;
+
+				mValueChange = true;
+				mBSetCounter = 0;
+			}
 		}
 		else
 		{
 			// model capacitive behaviour (increase voltage)
-			mInductiveMode = false;
 			Real capacitance = B * mBN / (-omega);
-			mSubCapacitor->updateCapacitance(capacitance);
-			mSLog->info("Capacitive Mode: New Inductance: L={} [F]", capacitance);
+			//check if change in reactance is sufficient to trigger a change
+			if (Math::abs(1 - capacitance / mCPrev) > 0.01)
+			{
+				mInductiveMode = false;
+				mSubCapacitor->updateCapacitance(capacitance, mDeltaT);
+				mSLog->info("Capacitive Mode: New Inductance: C = {} [F]", capacitance);
+				mCPrev = capacitance;
+
+				mValueChange = true;
+				mBSetCounter = 0;
+			}
 		}
 
 		// update inductance model
@@ -249,44 +255,30 @@ void DP::Ph1::SVC::updateSusceptance() {
 	// save values
 	mBPrev = B;
 	mPrevVoltage = V;
+	mVmeasPrev = Vmeas;
 }
-
 
 void DP::Ph1::SVC::setSwitchState() {
 	// set switches according to current mode of svc
 	if (mInductiveMode) {
-		if(!mSubInductorProtectionSwitch->mnaIsClosed())
+		if (!mSubInductorProtectionSwitch->mnaIsClosed()) {
+			mSLog->info("Closed Inductor Switch");
 			mSubInductorProtectionSwitch->close();
-		if(mSubCapacitorProtectionSwitch->mnaIsClosed())
+		}
+		if (mSubCapacitorProtectionSwitch->mnaIsClosed()) {
 			mSubCapacitorProtectionSwitch->open();
+			mSLog->info("Opened Capacitor Switch");
+		}
 	}
 	else
 	{
-		if (mSubInductorProtectionSwitch->mnaIsClosed())
+		if (mSubInductorProtectionSwitch->mnaIsClosed()) {
 			mSubInductorProtectionSwitch->open();
-		if (!mSubCapacitorProtectionSwitch->mnaIsClosed())
+			mSLog->info("Openend Inductor Switch");
+		}
+		if (!mSubCapacitorProtectionSwitch->mnaIsClosed()) {
 			mSubCapacitorProtectionSwitch->close();
+			mSLog->info("Closed Capcitor Switch");
+		}
 	}
 }
-
-/*
-void DP::Ph1::SVC::updateVars() {
-	for (UInt freq = 0; freq < mNumFreqs; freq++) {
-		Real a = mDeltaT / (2. * mInductance);
-		Real b = mDeltaT * 2.*PI * mFrequencies(freq, 0) / 2.;
-
-		Real equivCondReal = a / (1. + b * b);
-		Real equivCondImag = -a * b / (1. + b * b);
-		mEquivCond(freq, 0) = { equivCondReal, equivCondImag };
-		Real preCurrFracReal = (1. - b * b) / (1. + b * b);
-		Real preCurrFracImag = (-2. * b) / (1. + b * b);
-		mPrevCurrFac(freq, 0) = { preCurrFracReal, preCurrFracImag };
-
-		// TODO: check if this is correct or if it should be only computed before the step
-		mEquivCurrent(freq, 0) = mEquivCond(freq, 0) * mIntfVoltage(0, freq) + mPrevCurrFac(freq, 0) * mIntfCurrent(0, freq);
-		mIntfCurrent(0, freq) = mEquivCond(freq, 0) * mIntfVoltage(0, freq) + mEquivCurrent(freq, 0);
-	}
-}
-*/
-
-

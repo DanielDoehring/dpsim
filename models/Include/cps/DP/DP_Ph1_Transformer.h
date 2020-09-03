@@ -9,7 +9,8 @@
 #pragma once
 
 #include <cps/SimPowerComp.h>
-#include <cps/Solver/MNAOLTCInterface.h>
+//#include <cps/Solver/MNAOLTCInterface.h>
+#include <cps/Solver/MNAVarElemInterface.h>
 #include <cps/DP/DP_Ph1_RxLine.h>
 #include <cps/DP/DP_Ph1_Inductor.h>
 #include <cps/Base/Base_Ph1_Transformer.h>
@@ -21,7 +22,7 @@ namespace Ph1 {
 	/// Transformer that includes an inductance and resistance
 	class Transformer :
 		public SimPowerComp<Complex>,
-		public MNAOLTCInterface,
+		public MNAVarElemInterface,
 		public SharedFactory<Transformer>,
 		public Base::Ph1::Transformer {
 	private:
@@ -82,8 +83,8 @@ namespace Ph1 {
 
 		/// #### OLTC ####
 		void updateTapRatio(Real time, Int timeStepCount);
-
-		Bool mnaRatioChanged() { return mRatioChange; };
+		Bool ValueChanged() { return mRatioChange; };
+		//Bool mnaRatioChanged() { return mRatioChange; };
 
 
 		/// New for saturation modelling

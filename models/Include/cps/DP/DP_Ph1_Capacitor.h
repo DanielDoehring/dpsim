@@ -67,6 +67,10 @@ namespace Ph1 {
 		void mnaUpdateCurrent(const Matrix& leftVector);
 		void mnaUpdateCurrentHarm();
 
+		// update inductance value during simulation
+		void updateCapacitance(Real capacitance, Real deltaT);
+		void updateVars(Real deltaT);
+
 		class MnaPreStep : public Task {
 		public:
 			MnaPreStep(Capacitor& capacitor)

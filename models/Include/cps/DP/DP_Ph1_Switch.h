@@ -72,6 +72,7 @@ namespace Ph1 {
 		// #### MNA section for switches ####
 		/// Check if switch is closed
 		Bool mnaIsClosed() { return mIsClosed; }
+		Bool ValueChanged() { return mValueChanged; };
 
 		/// Stamps system matrix considering the defined switch position
 		void mnaApplySwitchSystemMatrixStamp(Matrix& systemMatrix, Bool closed);

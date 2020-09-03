@@ -172,12 +172,18 @@ void DP::Ph1::Inductor::mnaApplyRightSideVectorStamp(Matrix& rightVector) {
 			Math::setVectorElement(rightVector, matrixNodeIndex(1), -mEquivCurrent(freq,0), mNumFreqs, freq);
 
 		SPDLOG_LOGGER_DEBUG(mSLog, "MNA EquivCurrent {:s}", Logger::complexToString(mEquivCurrent(freq,0)));
-		if (terminalNotGrounded(0))
+		if (terminalNotGrounded(0)) {
 			SPDLOG_LOGGER_DEBUG(mSLog, "Add {:s} to source vector at {:d}",
-			Logger::complexToString(mEquivCurrent(freq,0)), matrixNodeIndex(0));
-		if (terminalNotGrounded(1))
+				Logger::complexToString(mEquivCurrent(freq, 0)), matrixNodeIndex(0));
+			mSLog->info("Add {:s} to source vector at {:d}",
+				Logger::complexToString(mEquivCurrent(freq, 0)), matrixNodeIndex(0));
+		}
+		if (terminalNotGrounded(1)) {
 			SPDLOG_LOGGER_DEBUG(mSLog, "Add {:s} to source vector at {:d}",
-			Logger::complexToString(-mEquivCurrent(freq,0)), matrixNodeIndex(1));
+				Logger::complexToString(-mEquivCurrent(freq, 0)), matrixNodeIndex(1));
+			mSLog->info("Add {:s} to source vector at {:d}",
+				Logger::complexToString(-mEquivCurrent(freq, 0)), matrixNodeIndex(1));
+		}
 	}
 }
 
@@ -271,7 +277,6 @@ void DP::Ph1::Inductor::mnaTearPostStep(Complex voltage, Complex current) {
 	mIntfCurrent(0, 0) = mEquivCond(0,0) * voltage + mEquivCurrent(0,0);
 
 }
-
 
 void DP::Ph1::Inductor::updateInductance(Real inductance, Real deltaT) {
 	mInductance = inductance;

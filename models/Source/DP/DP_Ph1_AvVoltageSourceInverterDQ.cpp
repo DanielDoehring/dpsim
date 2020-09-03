@@ -516,6 +516,8 @@ void DP::Ph1::AvVoltageSourceInverterDQ::MnaPostStep::execute(Real time, Int tim
 		}
 	}
 	mAvVoltageSourceInverterDQ.mPrevTime = time;
+	if (mAvVoltageSourceInverterDQ.mSwitchActive && !mAvVoltageSourceInverterDQ.mSwitchStateChange)
+		mAvVoltageSourceInverterDQ.mSubProtectionSwitch->setValueChange(false);
 }
 
 void DP::Ph1::AvVoltageSourceInverterDQ::CtrlStep::execute(Real time, Int timeStepCount){
@@ -610,6 +612,7 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSwitchState(Real time) {
 			mSwitchStateChange = true;
 			mSubProtectionSwitch->open();
 			mSLog->info("Opened Protection Switch at {}", (float)time);
+			mSubProtectionSwitch->setValueChange(true);
 		}
 	}
 }

@@ -65,6 +65,7 @@ namespace DPsim {
 		CPS::MNAInterface::List mMNAComponents;
 		///
 		CPS::MNASwitchInterface::List mSwitches;
+		CPS::MNASwitchInterface::List mVarElemsSwitches;
 		///
 		CPS::SimSignalComp::List mSimSignalComps;
 
@@ -93,6 +94,9 @@ namespace DPsim {
 		/// Map of LU factorizations related to the system matrices
 		std::unordered_map< std::bitset<SWITCH_NUM>, CPS::LUFactorized > mLuFactorizations;
 		std::unordered_map< std::bitset<SWITCH_NUM>, std::vector<CPS::LUFactorized> > mLuFactorizationsHarm;
+
+		/// New Base Matrix
+		Matrix mBaseSystemMatrix;
 
 		// #### Attributes related to switching ####
 		/// Index of the next switching event
@@ -132,6 +136,7 @@ namespace DPsim {
 
 		/// NEW for OLTC
 		void updateOLTCStatus();
+		void updateVarElemStatus();
 		Bool mUpdateSysMatrix = false;
 
 		void updateSystemMatrix(Real time);
