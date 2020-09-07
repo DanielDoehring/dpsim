@@ -42,7 +42,11 @@ DP::Ph1::AvVoltageSourceInverterDQ::AvVoltageSourceInverterDQ(String uid, String
 	addAttribute<Real>("freq", &mFreqInst, Flags::read | Flags::write);
 	addAttribute<Bool>("ctrl_on", &mCtrlOn, Flags::read | Flags::write);
 	addAttribute<Real>("Vpcc", &mVpcc, Flags::read | Flags::write);
-
+	addAttribute<Real>("DeltaI", &mDeltaIpu, Flags::read | Flags::write);
+	addAttribute<Real>("DeltaV", &mDeltaVPrev, Flags::read | Flags::write);
+	addAttribute<Real>("Vmeas", &mVmeasPrev, Flags::read | Flags::write);
+	addAttribute<Real>("QRefStatic_PU", &mQRefStaticpu, Flags::read | Flags::write);
+	
 	addAttribute<Real>("SwitchStateChange", &mSwitchStateChange, Flags::read | Flags::write);
 	addAttribute<Real>("FaultCounter", &mFaultCounter, Flags::read | Flags::write);
 	
@@ -220,7 +224,11 @@ void DP::Ph1::AvVoltageSourceInverterDQ::initializeFromPowerflow(Real frequency)
 	// set initial interface quantities
 	mIntfVoltage(0, 0) = initialSingleVoltage(0);
 	mIntfCurrent(0, 0) = - std::conj(Complex(mPref, mQref) / mIntfVoltage(0,0));
-	
+
+	// save initial voltages for Q control steps
+	mVmeasPrev = mIntfVoltage(0, 0).real();
+	mVpcc = mVmeasPrev;
+
 	Complex filterInterfaceInitialVoltage;
 	Complex filterInterfaceInitialCurrent;
 
@@ -380,7 +388,12 @@ void DP::Ph1::AvVoltageSourceInverterDQ::mnaApplyRightSideVectorStamp(Matrix& ri
 void DP::Ph1::AvVoltageSourceInverterDQ::updateSetPoint(Real time){
 	//if(mQRefInput)
 		//mQref = mQRefInput->get();
-	mDeltaV =  (mVpcc - mVRef ) / mVRef;
+
+	// calculate measured voltage with PT1
+	Real Vmeas = PT1ControlStep(mVpcc, mVppPrev, mVmeasPrev, 1, 0.01, mDeltaT);
+	mDeltaV = (Vmeas - mVRef) / mVRef;
+
+	Real deltaV = mDeltaV;
 	Bool QCalcStatic;
 	Real newQRef;
 
@@ -390,7 +403,18 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSetPoint(Real time){
 		if ((mFaultCounter > 5) || (Math::abs(mDeltaV) < 0.1 && mRecoveryCounter > mRecoveryValue))
 		{
 			mFaultState = false;
+			mSLog->info("Time: {}", time);
 			mSLog->info("Returning from Fault state to normal at {}", (float)time);
+
+			if (mFaultCounter > 5) {
+				mSLog->info("Reason -> Exceeded maximum fault time of 5s");
+			}
+			else
+			{
+				mSLog->info("Reason -> Voltage returned into allowed band"
+					"\nVoltage Difference is {} [p.u.]. Allowed: 0.1 p.u.",
+					mDeltaV);
+			}
 
 			if (mPReduced)
 			{
@@ -398,15 +422,20 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSetPoint(Real time){
 				mPref = mPRefStatic;
 			}
 			mFaultStartTime = 0;
+			mDeltaIPrev = 0;
+			mDeltaIpu = 0;
 		}
 		mRecoveryCounter = mRecoveryCounter + mUpdateCounter;
 	}
 	else
 	{
 		mFaultState = (Math::abs(mDeltaV) > 0.1) ? true : false;
-		if(mFaultState)
-			mSLog->info("Detected Fault at {}", (float)time);
-		mFaultStartTime = (mFaultStartTime > 0) ? 0 : time;
+		if (mFaultState) {
+			mSLog->info("Time: {}", time);
+			mSLog->info("Detected Fault at {}"
+				"\nVoltage Difference is {} [p.u.]. Allowed: 0.1 p.u.", (float)time, mDeltaV);
+			mFaultStartTime = (mFaultStartTime > 0) ? 0 : time;
+		}		
 	}
 
 	// evauluate calculation method for reactive power
@@ -417,20 +446,20 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSetPoint(Real time){
 	{
 		// static calculation
 		if (Math::abs(mDeltaV) > mQUDeadband) {
-			// Overvoltage
-			if (mDeltaV > 0) {
-				newQRef = mQmin * mStaticGain * (Math::abs(mDeltaV) - mQUDeadband);
-				mQref = (newQRef < mQmin) ? mQmin : newQRef;
+			newQRef = PT1ControlStep(mDeltaV, mDeltaVPrev, mQref/mSn, -mStaticGain, mTS, mDeltaT);
+			mQRefStaticpu = newQRef;
+			newQRef = newQRef * mSn;
+			if (newQRef > 0) {
+				mQref = (newQRef > mQmax) ? mQmax : newQRef;
 			}
-			// Undervoltage
 			else
 			{
-				newQRef = mQmax * mStaticGain * (Math::abs(mDeltaV) - mQUDeadband);
-				mQref = (newQRef > mQmax) ? mQmax : newQRef;
+				mQref = (newQRef < mQmin) ? mQmin : newQRef;
 			}
 		}
 		else
 		{
+			mQRefStaticpu = 0;
 			mQref = 0;
 		}
 		// save static Qref for dynamic calculation
@@ -439,36 +468,41 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSetPoint(Real time){
 	}
 	else
 	{
-		mSLog->info("\nTime: {}"
-			"\nVpcc: {}",
-			time, mVpcc);
-
 		// dynamic calculation
-		Real deltaI = -mDeltaV * mDynamicGain * mInom;
+		Real deltaI = PT1ControlStep(mDeltaV, mDeltaVPrev, mDeltaIPrev/mInom, -mDynamicGain, mTD, mDeltaT);
+		mDeltaIpu = deltaI;
+		deltaI = deltaI * mInom;
+
+		// limiter 
 		if (Math::abs(deltaI) > (mInom * mCurrentOverload)) {
+			mSLog->info("Injecting maximum of Reactive Current for dynamic voltage support");
 			if (deltaI > 0) {
-				// undervoltage -> Q positiv
+				// undervoltage -> Q positiv (voltage increase, capacitive behaviour)
 				deltaI = mInom * mCurrentOverload;
-				mQref = mQRefStatic + deltaI * mVpcc;
+				mQref = mQRefStatic + deltaI * Vmeas;
 				mQref = (mQref > mQmax*mCurrentOverload) ? mQmax * mCurrentOverload : mQref;
 			}
 			else
 			{
-				// overvoltage -> Q negativ
-				deltaI = -mInom * mCurrentOverload;
-				mQref = mQRefStatic + deltaI * mVpcc;
+				// overvoltage -> Q negativ (voltage decrease, inductive behaviour)
+				deltaI = mInom * mCurrentOverload;
+				mQref = mQRefStatic + deltaI * Vmeas;
 				mQref = (mQref < mQmin*mCurrentOverload) ? mQmin * mCurrentOverload : mQref;
 			}
 		}
+		else
+		{
+			mQref = mQRefStatic + deltaI * Vmeas;
+		}
 
-		mSLog->info("Injecting Reactive Current of {} % for dynamic voltage support"
-			"\nAbsolute value of: {} ",
-			100*deltaI/mInom, deltaI);
+		//mSLog->info("Injecting Reactive Current of {} % for dynamic voltage support"
+			//"\nAbsolute value of: {} ",
+			//100*deltaI/mInom, deltaI);
 
 		// is current greater than maximal permitted overload current?
-		if ((sqrt(pow(mPref, 2) + pow(mQref, 2)) / mVpcc) > (mInom * mCurrentOverload) && (Math::abs(mPref) > 0)) {
+		if ((sqrt(pow(mPref, 2) + pow(mQref, 2)) / Vmeas) > (mInom * mCurrentOverload) && (Math::abs(mPref) > 0)) {
 			// then reduce active power input
-			Real newIactive = mInom * mCurrentOverload - Math::abs(deltaI) - Math::abs((mQRefStatic / mVpcc));
+			Real newIactive = mInom * mCurrentOverload - Math::abs(deltaI) - Math::abs((mQRefStatic / Vmeas));
 
 			if (!mPReduced) {
 				// save pre reduced value
@@ -476,17 +510,29 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSetPoint(Real time){
 				mPReduced = true;
 			}
 
-			mPref = (-newIactive * mVpcc) < 0 ? -newIactive * mVpcc : 0;
-			mSLog->info("New P: {}", mPref);
+			mPref = (-newIactive * Vmeas) < 0 ? -newIactive * Vmeas : 0;
+			mSLog->info("Time: {}", time);
 			mSLog->info("Reducing active power input for dynamic reactive power support");
+			mSLog->info("New P: {}", mPref);
 		}
 
-		//mQref = (1 + deltaI) * mQRefStatic;
 		mFaultCounter = time - mFaultStartTime;
+		mDeltaIPrev = deltaI;
 	}
 	// reset update counter
 	mUpdateCounter = 0;
+	mDeltaVPrev = deltaV;
+	mVmeasPrev = Vmeas;
 }
+
+
+Real DP::Ph1::AvVoltageSourceInverterDQ::PT1ControlStep(Real u, Real u_prev, Real y_prev, Real K, Real T, Real deltaT) {
+	// perform control step
+	Real Fac1 = deltaT / (2 * T);
+	Real y = (1 / (1 + Fac1)) * (K * Fac1 * (u + u_prev) + (1 - Fac1) * y_prev);
+	return y;
+}
+
 
 void DP::Ph1::AvVoltageSourceInverterDQ::MnaPreStep::execute(Real time, Int timeStepCount) {
 	if (mAvVoltageSourceInverterDQ.mCtrlOn) {
@@ -511,17 +557,21 @@ void DP::Ph1::AvVoltageSourceInverterDQ::MnaPostStep::execute(Real time, Int tim
 		mAvVoltageSourceInverterDQ.step(time, timeStepCount);
 
 		mAvVoltageSourceInverterDQ.mUpdateCounter = mAvVoltageSourceInverterDQ.mUpdateCounter + mAvVoltageSourceInverterDQ.mDeltaT;
-		if (mAvVoltageSourceInverterDQ.mQUControl && (mAvVoltageSourceInverterDQ.mUpdateCounter > mAvVoltageSourceInverterDQ.mUpdateCounterValue) && time > 0.1) {
+		//if (mAvVoltageSourceInverterDQ.mQUControl && (mAvVoltageSourceInverterDQ.mUpdateCounter > mAvVoltageSourceInverterDQ.mUpdateCounterValue) && time > 0.1) {
+		if (mAvVoltageSourceInverterDQ.mQUControl && time > 0.1) {
 			mAvVoltageSourceInverterDQ.updateSetPoint(time);
 		}
 	}
 	mAvVoltageSourceInverterDQ.mPrevTime = time;
-	if (mAvVoltageSourceInverterDQ.mSwitchActive && !mAvVoltageSourceInverterDQ.mSwitchStateChange)
+	if (mAvVoltageSourceInverterDQ.mSwitchActive && !mAvVoltageSourceInverterDQ.mSwitchStateChange) {
 		mAvVoltageSourceInverterDQ.mSubProtectionSwitch->setValueChange(false);
+	}
+	// save voltage at PCC
+	mAvVoltageSourceInverterDQ.mVppPrev = mAvVoltageSourceInverterDQ.mVpcc;
 }
 
 void DP::Ph1::AvVoltageSourceInverterDQ::CtrlStep::execute(Real time, Int timeStepCount){
-	mAvVoltageSourceInverterDQ.updateSetPoint(time);
+	//mAvVoltageSourceInverterDQ.updateSetPoint(time);
 }
 
 
@@ -548,31 +598,29 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSwitchState(Real time) {
 
 	// only if state has not changed and intial oscillations have decayed
 	if (!mSwitchStateChange && time > 0.1) {
-		mDeltaV = (mVpcc - mVRef) / mVRef;
-		
-		Vpu = mVpcc / mVRef;
 
 		// implementation of TAR Hochspannung VDE AR N 4120
 		if (mFaultState)
 		{
 			if (mFaultCounter > 0.05)
 			{
+
 				if (mDeltaV > 0)
 				{
-					// Over voltage
+					// Overvoltage
 					Vmax = (mFaultCounter < 0.15) ? 1.3 : 1.25;
-					if (Vpu > Vmax) {
+					if ((1 + mDeltaV) > Vmax) {
 						mSLog->info("Disonnect VSI. Reason: Overvoltage"
 							"\Time: {}"
 							"\nGuideline limit: {}"
 							"\nActual value: {}",
-							time, Vmax, Vpu);
+							time, Vmax, (1 + mDeltaV));
 						disconnect = true;
 					}
 				}
 				else
 				{
-					// Under Voltage
+					// Undervoltage
 					if (mFaultCounter < 0.15) {
 						Vmin = 0;
 					}
@@ -585,12 +633,12 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSwitchState(Real time) {
 						Vmin = 0.85;
 					}
 
-					if (Vpu < Vmin) {
+					if ((1 + mDeltaV) < Vmin) {
 						mSLog->info("Disonnect VSI. Reason: Undervoltage"
 							"\Time: {}"
 							"\nGuideline limit: {}"
 							"\nActual value: {}",
-							time, Vmin, Vpu);
+							time, Vmin, (1 + mDeltaV));
 						disconnect = true;
 					}
 				}

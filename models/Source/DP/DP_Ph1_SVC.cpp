@@ -203,7 +203,7 @@ void DP::Ph1::SVC::updateSusceptance() {
 	else if(B < mBMin)
 	{
 		B = mBMin;
-		mSLog->info("\n New B value exceeds Bmin");
+		mSLog->info("New B value exceeds Bmin");
 	}
 
 	// set new B if it has a new value and difference is big enough

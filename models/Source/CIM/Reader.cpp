@@ -526,7 +526,7 @@ TopologicalPowerComp::Ptr Reader::mapPowerTransformer(PowerTransformer* trans) {
 		auto transformer = std::make_shared<DP::Ph1::Transformer>(trans->mRID, trans->name, mComponentLogLevel, withResistiveLosses, withSat);
 		transformer->setParameters(ratioAbs, ratioPhase, resistance, inductance);
 
-		Real NumTaps = 10;
+		Real NumTaps = 6;
 		transformer->setOLTCParamters(NumTaps, voltageNode2);
 		transformer->setOLTCTimeDelay(0.5);
 		transformer->setOLTCDeadband(0.03);
@@ -733,7 +733,7 @@ TopologicalPowerComp::Ptr Reader::mapExternalNetworkInjection(ExternalNetworkInj
 				Real Qmax = Sn;
 				Real Qmin = -Qmax;
 				Real VRef = tr_nomVoltEnd1 * (1 + 0);
-				Real Deadband = 0.03;
+				Real Deadband = 0.01;
 				Real SGain = 20;
 				Real DGain = 3;
 				ext_vsi->setQControlParameters(true, VRef, SGain, DGain, Deadband, Qmax, Qmin);

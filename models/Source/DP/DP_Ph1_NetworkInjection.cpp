@@ -121,11 +121,11 @@ void DP::Ph1::NetworkInjection::updateVoltage(Real time) {
 		mIntfVoltage(0,0) = mVoltageRef->get();
 		
 		if (time > 0.5) {
-			attribute<Complex>("V_ref")->set(Complex(230e3, 0));
+			attribute<Complex>("V_ref")->set(Complex(260e3, 0));
 		}
 		if (time > 1) {
 			//Real V = 245e3 - (time - 1) * (25e3 / 1);
-			attribute<Complex>("V_ref")->set(Complex(210e3, 0));
+			attribute<Complex>("V_ref")->set(Complex(230e3, 0));
 		}
 	}
 	else {
