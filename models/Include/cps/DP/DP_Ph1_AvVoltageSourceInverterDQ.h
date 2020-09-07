@@ -116,6 +116,10 @@ namespace Ph1 {
 		Bool mPReduced = false;
 		//
 		Real mVpcc = 0;
+		Real mDeltaV;
+		Real mDeltaVPrev = 0;
+		Real mDeltaIPrev = 0;
+		Real mDeltaIpu = 0;
 
 	public:
 		///
@@ -185,7 +189,8 @@ namespace Ph1 {
 		//void updateSwitchState(const Matrix& leftVector, Real time);
 		void updateSwitchState(Real time);
 
-
+		/// ### new for Q-Control ###
+		Real PT1ControlStep(Real u, Real u_prev, Real y_prev, Real K, Real T, Real deltaT);
 
 		class MnaPreStep : public CPS::Task {
 		public:

@@ -95,12 +95,17 @@ namespace Base {
 		/// QU Control parameters
 		Bool mQUControl = false;
 		Real mVRef;
-		Real mDeltaV;
 		Real mStaticGain;
 		Real mDynamicGain;
 		Real mQUDeadband;
 		Real mQmax;
 		Real mQmin;
+
+		// Time constants for PT1 controller
+		// dynamic
+		Real mTD = 0.01;
+		// static
+		Real mTS = 0.05;
 		
     public:
 		///
