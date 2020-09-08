@@ -65,7 +65,7 @@ namespace Ph1 {
 		Real mVm = 0;
 		Real mIMag = 0;
 
-		Real mDeltaT;
+		Real mDeltaT = 0;
 		Real mPrevStepTime = 0;
 
 		Bool mSatConstantsSet = false;
@@ -182,8 +182,12 @@ namespace Ph1 {
 			mSatConstantsSet = true;
 		}
 
-		void setSaturationCalculationMethod(Bool satMethod) {
-			mCalcSatDP = satMethod;
+		void setSaturationCalculationMethod(Bool CalcDPDomain) {
+			mCalcSatDP = CalcDPDomain;
+		}
+
+		void setOLTCActive(Bool active) {
+			mOLTCActive = active;
 		}
 
 		void setMagnetizingInductance(Real Lm) {

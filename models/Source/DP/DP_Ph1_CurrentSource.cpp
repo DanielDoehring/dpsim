@@ -67,17 +67,24 @@ void DP::Ph1::CurrentSource::mnaInitialize(Real omega, Real timeStep, Attribute<
 }
 
 void DP::Ph1::CurrentSource::MnaPreStep::execute(Real time, Int timeStepCount) {
+	mCurrentSource.mSLog->info("Time: {}", time);
 	mCurrentSource.mnaApplyRightSideVectorStamp(mCurrentSource.mRightVector);
 }
 
 void DP::Ph1::CurrentSource::mnaApplyRightSideVectorStamp(Matrix& rightVector) {
-	mIntfCurrent(0,0) = mCurrentRef->get();
+	mIntfCurrent(0, 0) = mCurrentRef->get();
 
-	if (terminalNotGrounded(0))
-		Math::setVectorElement(rightVector, matrixNodeIndex(0), -mIntfCurrent(0,0));
-	if (terminalNotGrounded(1))
-		Math::setVectorElement(rightVector, matrixNodeIndex(1), mIntfCurrent(0,0));
+	mSLog->info("Reference CurreNt: {}", Logger::phasorToString(mCurrentRef->get()));
+	if (terminalNotGrounded(0)){
+		mSLog->info("Stamping Reference CurreNt: {} to Index {} in RHS Vector\n", Logger::phasorToString(-mCurrentRef->get()), matrixNodeIndex(0));
+		Math::setVectorElement(rightVector, matrixNodeIndex(0), -mIntfCurrent(0, 0));
+	}
+	if (terminalNotGrounded(1)) {
+		mSLog->info("Stamping Reference CurreNt: {} to Index {} in RHS Vector\n", Logger::phasorToString(mCurrentRef->get()), matrixNodeIndex(1));
+		Math::setVectorElement(rightVector, matrixNodeIndex(1), mIntfCurrent(0, 0));
+	}
 }
+
 
 void DP::Ph1::CurrentSource::MnaPostStep::execute(Real time, Int timeStepCount) {
 	mCurrentSource.mnaUpdateVoltage(*mLeftVector);

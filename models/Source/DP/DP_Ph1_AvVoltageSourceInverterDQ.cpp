@@ -593,7 +593,7 @@ void DP::Ph1::AvVoltageSourceInverterDQ::mnaUpdateCurrent(const Matrix& leftvect
 void DP::Ph1::AvVoltageSourceInverterDQ::updateSwitchState(Real time) {
 	//mSLog->info("Switch Status: {}", (float)mSubProtectionSwitch->attribute<Bool>("is_closed")->get());
 
-	Real Vpu, Vmin, Vmax;
+	Real Vmin, Vmax;
 	Bool disconnect = false;
 
 	// only if state has not changed and intial oscillations have decayed

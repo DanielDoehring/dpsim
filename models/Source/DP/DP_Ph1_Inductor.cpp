@@ -72,6 +72,17 @@ void DP::Ph1::Inductor::initVars(Real timeStep) {
 		// TODO: check if this is correct or if it should be only computed before the step
 		mEquivCurrent(freq,0) = mEquivCond(freq,0) * mIntfVoltage(0,freq) + mPrevCurrFac(freq,0) * mIntfCurrent(0,freq);
 		mIntfCurrent(0,freq) = mEquivCond(freq,0) * mIntfVoltage(0,freq) + mEquivCurrent(freq,0);
+
+		mSLog->info(
+			"\n--- Init Vars for frequency {} ---"
+			"\na: {}"
+			"\nb: {}"
+			"\nequivCondReal: {}"
+			"\nequivCondImag: {}"
+			"\npreCurrFracReal: {}"
+			"\npreCurrFracImag: {}"
+			"\n--- Initialization from powerflow finished ---",
+			mFrequencies(freq, 0),a,b, equivCondReal, equivCondImag, preCurrFracReal, preCurrFracImag);
 	}
 }
 
@@ -162,27 +173,45 @@ void DP::Ph1::Inductor::mnaApplySystemMatrixStampHarm(Matrix& systemMatrix, Int 
 void DP::Ph1::Inductor::mnaApplyRightSideVectorStamp(Matrix& rightVector) {
 	for (UInt freq = 0; freq < mNumFreqs; freq++) {
 		// Calculate equivalent current source for next time step
+		mSLog->info("Equivalent CurreNt: {} before calc for next time step", Logger::complexToString(mEquivCurrent(freq, 0)));
+		mSLog->info(
+			"\n--- Calculation parameters ---"
+			"\nEquivCond {:s}"
+			"\nmIntfVoltage {:s}"
+			"\nmPrevCurrFa {:s}"
+			"\nmIntfCurrent {:s}",
+			Logger::phasorToString(mEquivCond(freq, 0)),
+			Logger::phasorToString(mIntfVoltage(0, freq)),
+			Logger::phasorToString(mPrevCurrFac(freq, 0)),
+			Logger::complexToString(mIntfCurrent(0, 0)));
+
 		mEquivCurrent(freq,0) =
 			mEquivCond(freq,0) * mIntfVoltage(0,freq)
 			+ mPrevCurrFac(freq,0) * mIntfCurrent(0,freq);
 
-		if (terminalNotGrounded(0))
-			Math::setVectorElement(rightVector, matrixNodeIndex(0), mEquivCurrent(freq,0), mNumFreqs, freq);
-		if (terminalNotGrounded(1))
-			Math::setVectorElement(rightVector, matrixNodeIndex(1), -mEquivCurrent(freq,0), mNumFreqs, freq);
+		if (terminalNotGrounded(0)) {
+			mSLog->info("Stamping Equivalent CurreNt: {} to Index {} in RHS Vector\n", Logger::complexToString(mEquivCurrent(freq, 0)), matrixNodeIndex(0));
+			Math::setVectorElement(rightVector, matrixNodeIndex(0), mEquivCurrent(freq, 0), mNumFreqs, freq);
+		}
+		if (terminalNotGrounded(1)) {
+			mSLog->info("Stamping Equivalent CurreNt: {} to Index {} in RHS Vector\n", Logger::complexToString(-mEquivCurrent(freq, 0)), matrixNodeIndex(1));
+			Math::setVectorElement(rightVector, matrixNodeIndex(1), -mEquivCurrent(freq, 0), mNumFreqs, freq);
+		}
+
+
 
 		SPDLOG_LOGGER_DEBUG(mSLog, "MNA EquivCurrent {:s}", Logger::complexToString(mEquivCurrent(freq,0)));
 		if (terminalNotGrounded(0)) {
 			SPDLOG_LOGGER_DEBUG(mSLog, "Add {:s} to source vector at {:d}",
 				Logger::complexToString(mEquivCurrent(freq, 0)), matrixNodeIndex(0));
-			mSLog->info("Add {:s} to source vector at {:d}",
-				Logger::complexToString(mEquivCurrent(freq, 0)), matrixNodeIndex(0));
+			//mSLog->info("Add {:s} to source vector at {:d}",
+				//Logger::complexToString(mEquivCurrent(freq, 0)), matrixNodeIndex(0));
 		}
 		if (terminalNotGrounded(1)) {
 			SPDLOG_LOGGER_DEBUG(mSLog, "Add {:s} to source vector at {:d}",
 				Logger::complexToString(-mEquivCurrent(freq, 0)), matrixNodeIndex(1));
-			mSLog->info("Add {:s} to source vector at {:d}",
-				Logger::complexToString(-mEquivCurrent(freq, 0)), matrixNodeIndex(1));
+			//mSLog->info("Add {:s} to source vector at {:d}",
+				//Logger::complexToString(-mEquivCurrent(freq, 0)), matrixNodeIndex(1));
 		}
 	}
 }
@@ -202,6 +231,7 @@ void DP::Ph1::Inductor::mnaApplyRightSideVectorStampHarm(Matrix& rightVector) {
 }
 
 void DP::Ph1::Inductor::MnaPreStep::execute(Real time, Int timeStepCount) {
+	mInductor.mSLog->info("PreStep (executing RHS stamp) at time: {} Step {}", time, timeStepCount);
 	mInductor.mnaApplyRightSideVectorStamp(mInductor.mRightVector);
 }
 

@@ -177,14 +177,14 @@ void DP::Ph1::Capacitor::mnaApplyRightSideVectorStamp(Matrix& rightVector) {
 		SPDLOG_LOGGER_DEBUG(mSLog, "MNA EquivCurrent {:f}+j{:f}",
 			mEquivCurrent(freq,0).real(), mEquivCurrent(freq,0).imag());
 		if (terminalNotGrounded(0)) {
-			mSLog->info("Add {:f}+j{:f} to source vector at {:d}",
-				mEquivCurrent(freq, 0).real(), mEquivCurrent(freq, 0).imag(), matrixNodeIndex(0));
+			//mSLog->info("Add {:f}+j{:f} to source vector at {:d}",
+			//	mEquivCurrent(freq, 0).real(), mEquivCurrent(freq, 0).imag(), matrixNodeIndex(0));
 			SPDLOG_LOGGER_DEBUG(mSLog, "Add {:f}+j{:f} to source vector at {:d}",
 				mEquivCurrent(freq, 0).real(), mEquivCurrent(freq, 0).imag(), matrixNodeIndex(0));
 		}
 		if (terminalNotGrounded(1)) {
-			mSLog->info("Add {:f}+j{:f} to source vector at {:d}",
-				-mEquivCurrent(freq, 0).real(), -mEquivCurrent(freq, 0).imag(), matrixNodeIndex(1));
+			//mSLog->info("Add {:f}+j{:f} to source vector at {:d}",
+			//	-mEquivCurrent(freq, 0).real(), -mEquivCurrent(freq, 0).imag(), matrixNodeIndex(1));
 			SPDLOG_LOGGER_DEBUG(mSLog, "Add {:f}+j{:f} to source vector at {:d}",
 				-mEquivCurrent(freq, 0).real(), -mEquivCurrent(freq, 0).imag(), matrixNodeIndex(1));
 		}

@@ -17,7 +17,10 @@ DP::Ph1::RXLoad::RXLoad(String uid, String name,
 
 	// NEW for protection
 	mSwitchActive = SwitchActive;
-	setVirtualNodeNumber(1);
+	if (mSwitchActive)
+	{
+		setVirtualNodeNumber(1);
+	}
 
 	mSLog->info("Create {} {}", this->type(), name);
 	mIntfVoltage = MatrixComp::Zero(1, 1);
@@ -75,29 +78,41 @@ void DP::Ph1::RXLoad::initializeFromPowerflow(Real frequency) {
 	mIntfVoltage(0, 0) = mTerminals[0]->initialSingleVoltage();
 	mIntfCurrent(0, 0) = std::conj(Complex(mActivePower, mReactivePower) / mIntfVoltage(0, 0));
 
-	Complex vLoadInit = mTerminals[0]->initialSingleVoltage() - mIntfCurrent(0, 0) * mSwitchRClosed;
-	if (Math::abs(vLoadInit) != Math::abs(vLoadInit)) {
-		mVirtualNodes[0]->setInitialVoltage(mNomVoltage);
-	}
-	else
+	if (mSwitchActive)
 	{
-		mVirtualNodes[0]->setInitialVoltage(vLoadInit);
+		Complex vLoadInit = mTerminals[0]->initialSingleVoltage() - mIntfCurrent(0, 0) * mSwitchRClosed;
+		if (Math::abs(vLoadInit) != Math::abs(vLoadInit)) {
+			mVirtualNodes[0]->setInitialVoltage(mNomVoltage);
+		}
+		else
+		{
+			mVirtualNodes[0]->setInitialVoltage(vLoadInit);
+		}
 	}
+	
 
 	// NEW for connecting ProtectionSwitch
-	mSubProtectionSwitch = std::make_shared<DP::Ph1::Switch>(mName + "_switch", mLogLevel);
-	mSubProtectionSwitch->setParameters(mSwitchROpen, mSwitchRClosed, true);
-	mSubProtectionSwitch->connect({ mVirtualNodes[0], mTerminals[0]->node() });
-	mSubProtectionSwitch->initialize(mFrequencies);
-	mSubProtectionSwitch->initializeFromPowerflow(frequency);
+	if (mSwitchActive) {
+		mSubProtectionSwitch = std::make_shared<DP::Ph1::Switch>(mName + "_switch", mLogLevel);
+		mSubProtectionSwitch->setParameters(mSwitchROpen, mSwitchRClosed, true);
+		mSubProtectionSwitch->connect({ mTerminals[0]->node(), mVirtualNodes[0] });
+		mSubProtectionSwitch->initialize(mFrequencies);
+		mSubProtectionSwitch->initializeFromPowerflow(frequency);
+	}
 
 	if (mActivePower != 0) {
 		mResistance = std::pow(mNomVoltage, 2) / mActivePower;
 		mConductance = 1.0 / mResistance;
 		mSubResistor = std::make_shared<DP::Ph1::Resistor>(mName + "_res", mLogLevel);
 		mSubResistor->setParameters(mResistance);
-		mSubResistor->connect({ SimNode::GND, mVirtualNodes[0] });
-		//mSubResistor->connect({ SimNode::GND, mTerminals[0]->node() });
+		if (mSwitchActive) {
+			mSubResistor->connect({ SimNode::GND, mVirtualNodes[0] });
+		}
+		else
+		{
+			mSubResistor->connect({ SimNode::GND, mTerminals[0]->node() });
+		}
+		
 		mSubResistor->initialize(mFrequencies);
 		mSubResistor->initializeFromPowerflow(frequency);
 	}
@@ -112,8 +127,13 @@ void DP::Ph1::RXLoad::initializeFromPowerflow(Real frequency) {
 
 		mSubInductor = std::make_shared<DP::Ph1::Inductor>(mName + "_ind", mLogLevel);
 		mSubInductor->setParameters(mInductance);
-		mSubInductor->connect({ SimNode::GND, mVirtualNodes[0] });
-		//mSubInductor->connect({ SimNode::GND, mTerminals[0]->node() });
+		if (mSwitchActive) {
+			mSubInductor->connect({ SimNode::GND, mVirtualNodes[0] });
+		}
+		else
+		{
+			mSubInductor->connect({ SimNode::GND, mTerminals[0]->node() });
+		}
 		mSubInductor->initialize(mFrequencies);
 		mSubInductor->initializeFromPowerflow(frequency);
 	} else if (mReactance < 0) {
@@ -121,8 +141,13 @@ void DP::Ph1::RXLoad::initializeFromPowerflow(Real frequency) {
 
 		mSubCapacitor = std::make_shared<DP::Ph1::Capacitor>(mName + "_cap", mLogLevel);
 		mSubCapacitor->setParameters(mCapacitance);
-		mSubCapacitor->connect({ SimNode::GND, mVirtualNodes[0] });
-		//mSubCapacitor->connect({ SimNode::GND, mTerminals[0]->node() });
+		if (mSwitchActive) {
+			mSubCapacitor->connect({ SimNode::GND, mVirtualNodes[0] });
+		}
+		else
+		{
+			mSubCapacitor->connect({ SimNode::GND, mTerminals[0]->node() });
+		}
 		mSubCapacitor->initialize(mFrequencies);
 		mSubCapacitor->initializeFromPowerflow(frequency);
 	}
@@ -170,7 +195,7 @@ void DP::Ph1::RXLoad::mnaInitialize(Real omega, Real timeStep, Attribute<Matrix>
 		}
 	}
 	// New for protection switch
-	if (mSubProtectionSwitch) {
+	if (mSwitchActive) {
 		mSubProtectionSwitch->mnaInitialize(omega, timeStep, leftVector);
 		for (auto task : mSubProtectionSwitch->mnaTasks()) {
 			mMnaTasks.push_back(task);
@@ -196,7 +221,7 @@ void DP::Ph1::RXLoad::mnaApplyRightSideVectorStamp(Matrix& rightVector) {
 	if (mSubResistor)
 		mSubResistor->mnaApplyRightSideVectorStamp(rightVector);
 	// NEW for protection switch
-	if (mSubProtectionSwitch)
+	if (mSwitchActive)
 		mSubProtectionSwitch->mnaApplyRightSideVectorStamp(rightVector);
 	if (mSubInductor)
 		mSubInductor->mnaApplyRightSideVectorStamp(rightVector);
@@ -211,6 +236,7 @@ void DP::Ph1::RXLoad::mnaApplySystemMatrixStamp(Matrix& systemMatrix) {
 		mSubInductor->mnaApplySystemMatrixStamp(systemMatrix);
 	if (mSubCapacitor)
 		mSubCapacitor->mnaApplySystemMatrixStamp(systemMatrix);
+	//mSubProtectionSwitch->mnaApplySystemMatrixStamp(systemMatrix);
 }
 
 void DP::Ph1::RXLoad::MnaPreStep::execute(Real time, Int timeStepCount) {
@@ -225,7 +251,7 @@ void DP::Ph1::RXLoad::MnaPreStep::execute(Real time, Int timeStepCount) {
 void DP::Ph1::RXLoad::MnaPostStep::execute(Real time, Int timeStepCount) {
 	mLoad.mnaUpdateVoltage(*mLeftVector);
 	mLoad.mnaUpdateCurrent(*mLeftVector);
-	if (mLoad.mSwitchActive && !mLoad.mSwitchStateChange)
+	if (mLoad.mSwitchActive)
 		mLoad.mSubProtectionSwitch->setValueChange(false);
 }
 

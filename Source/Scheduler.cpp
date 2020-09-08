@@ -137,7 +137,7 @@ void Scheduler::topologicalSort(const Task::List& tasks, const Edges& inEdges, c
 	}
 	// keep list of tasks without incoming edges;
 	// iteratively remove such tasks from the graph and put them into the schedule
-	Bool drop_tasks = false;
+	Bool drop_tasks = true;
 	while (!q.empty()) {
 		Task::Ptr t = q.front();
 		q.pop_front();

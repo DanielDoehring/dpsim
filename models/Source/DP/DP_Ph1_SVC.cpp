@@ -237,7 +237,7 @@ void DP::Ph1::SVC::updateSusceptance() {
 			{
 				mInductiveMode = false;
 				mSubCapacitor->updateCapacitance(capacitance, mDeltaT);
-				mSLog->info("Capacitive Mode: New Inductance: C = {} [F]", capacitance);
+				mSLog->info("Capacitive Mode: New Capacitance: C = {} [F]", capacitance);
 				mCPrev = capacitance;
 
 				mValueChange = true;

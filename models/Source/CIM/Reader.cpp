@@ -323,7 +323,7 @@ TopologicalPowerComp::Ptr Reader::mapEnergyConsumer(EnergyConsumer* consumer) {
 		return load;
 	}
 	else {
-		Bool switchActive = true;
+		Bool switchActive = false;
 		return std::make_shared<DP::Ph1::RXLoad>(consumer->mRID, consumer->name, mComponentLogLevel, switchActive);
 	}
 }
@@ -521,18 +521,19 @@ TopologicalPowerComp::Ptr Reader::mapPowerTransformer(PowerTransformer* trans) {
 	}
 	else {
 		Bool withResistiveLosses = true;
-		Bool withSat = false;
+		Bool withSat = true;
 		resistance = (resistance > 0) ? resistance : 1e-3;
 		auto transformer = std::make_shared<DP::Ph1::Transformer>(trans->mRID, trans->name, mComponentLogLevel, withResistiveLosses, withSat);
 		transformer->setParameters(ratioAbs, ratioPhase, resistance, inductance);
 
-		Real NumTaps = 6;
-		transformer->setOLTCParamters(NumTaps, voltageNode2);
-		transformer->setOLTCTimeDelay(0.5);
-		transformer->setOLTCDeadband(0.03);
+		//Real NumTaps = 6;
+		//transformer->setOLTCParamters(NumTaps, voltageNode2);
+		//transformer->setOLTCTimeDelay(1.5);
+		//transformer->setOLTCDeadband(0.03);
 
-		transformer->setParametersSaturationDefault(220000, 66000);
-		//transformer->setMagnetizingInductance(1700);
+		transformer->setParametersSaturationDefault(voltageNode1, voltageNode2);
+		//transformer->setMagnetizingInductance(350);
+		//transformer->setSaturationCalculationMethod(true);
 		return transformer;
 	}
 }
@@ -687,7 +688,7 @@ TopologicalPowerComp::Ptr Reader::mapExternalNetworkInjection(ExternalNetworkInj
 			}
 			else
 			{
-				//return nullptr;
+				return nullptr;
 				mSLog->info("NetworkInjection for DP single-phase modeled as VSI in DQ-Frame");
 				Bool has_trafo = true;
 				Bool switchActive = true;
@@ -810,7 +811,7 @@ TopologicalPowerComp::Ptr Reader::mapLinearShuntCompensator(LinearShuntCompensat
 	if (mDomain == Domain::DP && mPhase == PhaseType::Single) {
 		// model as SVC
 		auto cpsShunt = std::make_shared<DP::Ph1::SVC>(shunt->mRID, shunt->name, mComponentLogLevel);
-		Real Sn = 25e6;
+		Real Sn = 0.5e6;
 		Real Bmax = 1;
 		Real Bmin = -1;
 		cpsShunt->setParameters(Bmax, Bmin, Sn, baseVoltage);
