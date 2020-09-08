@@ -49,6 +49,8 @@ namespace Ph1 {
 		std::shared_ptr<DP::Ph1::Inductor> mSubMagnetizingInductor;
 
 		Complex mISrcRef;
+		Real mVPrev = 0;
+		Real mVmeasPrev = 0;
 
 	public:
 		/// Defines UID, name and logging level
@@ -85,7 +87,7 @@ namespace Ph1 {
 		void updateTapRatio(Real time, Int timeStepCount);
 		Bool ValueChanged() { return mRatioChange; };
 		//Bool mnaRatioChanged() { return mRatioChange; };
-
+		Real PT1ControlStep(Real u, Real u_prev, Real y_prev, Real K, Real T, Real deltaT);
 
 		/// New for saturation modelling
 		// EMT trafo for calculation of saturation current

@@ -400,12 +400,21 @@ void DP::Ph1::Transformer::mnaUpdateVoltage(const Matrix& leftVector) {
 	SPDLOG_LOGGER_DEBUG(mSLog, "Voltage {:s}", Logger::phasorToString(mIntfVoltage(0, 0)));
 }
 
+Real DP::Ph1::Transformer::PT1ControlStep(Real u, Real u_prev, Real y_prev, Real K, Real T, Real deltaT) {
+	// perform control step using trapez rule
+	Real Fac1 = deltaT / (2 * T);
+	Real y = (1 / (1 + Fac1)) * (K * Fac1 * (u + u_prev) + (1 - Fac1) * y_prev);
+	return y;
+}
+
 void DP::Ph1::Transformer::updateTapRatio(Real time, Int timeStepCount) {
 	// current lv voltage
 	Real lvVoltage = Math::abs(mSubSnubResistor->intfVoltage()(0, 0));
 
+	Real Vmeas = PT1ControlStep(lvVoltage, mVPrev, mVmeasPrev, 1, 0.01, mDeltaT);
 	// calculate voltage diff
-	Real deltaV = (mRefLV - lvVoltage) / mRefLV;
+	//Real deltaV = (mRefLV - lvVoltage) / mRefLV;
+	Real deltaV = (mRefLV - Vmeas) / mRefLV;
 
 	if (timeStepCount)
 	{
@@ -459,6 +468,8 @@ void DP::Ph1::Transformer::updateTapRatio(Real time, Int timeStepCount) {
 			mViolationCounter = 0;
 		}
 	}
+	mVmeasPrev = Vmeas;
+	mVPrev = lvVoltage;
 }
 void DP::Ph1::Transformer::updateSatCurrentSrcEMT(Real time, const Matrix& leftVector) {
 	// first update flux
