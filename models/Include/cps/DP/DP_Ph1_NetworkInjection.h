@@ -57,6 +57,10 @@ namespace Ph1 {
 		void initializeFromPowerflow(Real frequency);
 		///
 		void setSourceValue(Complex voltage);
+
+		void set_use_profile(bool profile) {
+			use_profile = profile;
+		};
 		///
 		void initialize(Matrix frequencies);
 		///

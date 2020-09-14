@@ -176,12 +176,18 @@ void DP::Ph1::Capacitor::mnaApplyRightSideVectorStamp(Matrix& rightVector) {
 
 		SPDLOG_LOGGER_DEBUG(mSLog, "MNA EquivCurrent {:f}+j{:f}",
 			mEquivCurrent(freq,0).real(), mEquivCurrent(freq,0).imag());
-		if (terminalNotGrounded(0))
+		if (terminalNotGrounded(0)) {
+			mSLog->info("Add {:f}+j{:f} to source vector at {:d}",
+				mEquivCurrent(freq, 0).real(), mEquivCurrent(freq, 0).imag(), matrixNodeIndex(0));
 			SPDLOG_LOGGER_DEBUG(mSLog, "Add {:f}+j{:f} to source vector at {:d}",
-				mEquivCurrent(freq,0).real(), mEquivCurrent(freq,0).imag(), matrixNodeIndex(0));
-		if (terminalNotGrounded(1))
+				mEquivCurrent(freq, 0).real(), mEquivCurrent(freq, 0).imag(), matrixNodeIndex(0));
+		}
+		if (terminalNotGrounded(1)) {
+			mSLog->info("Add {:f}+j{:f} to source vector at {:d}",
+				-mEquivCurrent(freq, 0).real(), -mEquivCurrent(freq, 0).imag(), matrixNodeIndex(1));
 			SPDLOG_LOGGER_DEBUG(mSLog, "Add {:f}+j{:f} to source vector at {:d}",
-				-mEquivCurrent(freq,0).real(), -mEquivCurrent(freq,0).imag(), matrixNodeIndex(1));
+				-mEquivCurrent(freq, 0).real(), -mEquivCurrent(freq, 0).imag(), matrixNodeIndex(1));
+		}
 	}
 }
 
@@ -265,5 +271,25 @@ void DP::Ph1::Capacitor::mnaUpdateCurrentHarm() {
 	for (UInt freq = 0; freq < mNumFreqs; freq++) {
 		mIntfCurrent(0,freq) = mEquivCond(freq,0) * mIntfVoltage(0,freq) + mEquivCurrent(freq,0);
 		SPDLOG_LOGGER_DEBUG(mSLog, "Current {:s}", Logger::phasorToString(mIntfCurrent(0,freq)));
+	}
+}
+
+void DP::Ph1::Capacitor::updateCapacitance(Real capacitance, Real deltaT) {
+	mCapacitance = capacitance;
+	updateVars(deltaT);
+}
+
+void DP::Ph1::Capacitor::updateVars(Real deltaT) {
+	Real equivCondReal = 2.0 * mCapacitance / deltaT;
+	Real prevVoltCoeffReal = 2.0 * mCapacitance / deltaT;
+
+	for (UInt freq = 0; freq < mNumFreqs; freq++) {
+		Real equivCondImag = 2.*PI * mFrequencies(freq, 0) * mCapacitance;
+		mEquivCond(freq, 0) = { equivCondReal, equivCondImag };
+		Real prevVoltCoeffImag = -2.*PI * mFrequencies(freq, 0) * mCapacitance;
+		mPrevVoltCoeff(freq, 0) = { prevVoltCoeffReal, prevVoltCoeffImag };
+
+		mEquivCurrent(freq, 0) = -mIntfCurrent(0, freq) + -mPrevVoltCoeff(freq, 0) * mIntfVoltage(0, freq);
+		mIntfCurrent(0, freq) = mEquivCond(freq, 0) * mIntfVoltage(0, freq) + mEquivCurrent(freq, 0);
 	}
 }

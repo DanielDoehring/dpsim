@@ -90,3 +90,9 @@ void DP::Ph1::CurrentSource::mnaUpdateVoltage(const Matrix& leftVector) {
 	if (terminalNotGrounded(1))
 		mIntfVoltage(0,0) = mIntfVoltage(0,0) - Math::complexFromVectorElement(leftVector, matrixNodeIndex(1));
 }
+
+void DP::Ph1::CurrentSource::setRefCurrent(Complex current) {
+	mCurrentRef->set(current);
+	//Complex curr = mCurrentRef->get();
+	mSLog->info("Reference Current: {}", Logger::phasorToString(mCurrentRef->get()) );
+}

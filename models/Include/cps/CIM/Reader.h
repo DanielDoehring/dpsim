@@ -47,6 +47,7 @@ namespace IEC61970 {
 			class ExternalNetworkInjection;
 			class EnergyConsumer;
 			class PowerTransformer;
+			class LinearShuntCompensator;
 		};
 		namespace Equivalents {
 			class EquivalentShunt;
@@ -149,6 +150,8 @@ namespace CIM {
 		TopologicalPowerComp::Ptr mapExternalNetworkInjection(IEC61970::Base::Wires::ExternalNetworkInjection* extnet);
 		/// Returns a shunt
 		TopologicalPowerComp::Ptr mapEquivalentShunt(IEC61970::Base::Equivalents::EquivalentShunt *shunt);
+		/// return shunt
+		TopologicalPowerComp::Ptr mapLinearShuntCompensator(IEC61970::Base::Wires::LinearShuntCompensator* shunt);
 	public:
 		///
 		enum GeneratorType{Static, Transient};

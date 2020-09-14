@@ -18,6 +18,8 @@
 #include <dpsim/DataLogger.h>
 #include <cps/AttributeList.h>
 #include <cps/Solver/MNASwitchInterface.h>
+#include <cps/Solver/MNAOLTCInterface.h>
+#include <cps/Solver/MNAVarElemInterface.h>
 #include <cps/SimSignalComp.h>
 #include <cps/SimPowerComp.h>
 
@@ -63,8 +65,15 @@ namespace DPsim {
 		CPS::MNAInterface::List mMNAComponents;
 		///
 		CPS::MNASwitchInterface::List mSwitches;
+		CPS::MNASwitchInterface::List mVarElemsSwitches;
 		///
 		CPS::SimSignalComp::List mSimSignalComps;
+
+		/// NEW for OLTC - should be updated to MNAOLTCInterface
+		CPS::MNAOLTCInterface::List mOLTCs;
+
+		// NEW List with Elements with variable matrix entries
+		CPS::MNAVarElemInterface::List mVarElems;
 
 		// #### MNA specific attributes ####
 		/// System matrix A that is modified by matrix stamps
@@ -85,6 +94,9 @@ namespace DPsim {
 		/// Map of LU factorizations related to the system matrices
 		std::unordered_map< std::bitset<SWITCH_NUM>, CPS::LUFactorized > mLuFactorizations;
 		std::unordered_map< std::bitset<SWITCH_NUM>, std::vector<CPS::LUFactorized> > mLuFactorizationsHarm;
+
+		/// New Base Matrix
+		Matrix mBaseSystemMatrix;
 
 		// #### Attributes related to switching ####
 		/// Index of the next switching event
@@ -121,6 +133,14 @@ namespace DPsim {
 		void updateSwitchStatus();
 		/// Logging of system matrices and source vector
 		void logSystemMatrices();
+
+		/// NEW for OLTC
+		void updateOLTCStatus();
+		void updateVarElemStatus();
+		Bool mUpdateSysMatrix = false;
+
+		void updateSystemMatrix(Real time);
+
 	public:
 		/// This constructor should not be called by users.
 		MnaSolver(String name,

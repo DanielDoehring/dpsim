@@ -13,6 +13,7 @@
 #include <cps/DP/DP_Ph1_Capacitor.h>
 #include <cps/DP/DP_Ph1_Inductor.h>
 #include <cps/DP/DP_Ph1_Resistor.h>
+#include <cps/DP/DP_Ph1_Switch.h>
 
 namespace CPS {
 namespace DP {
@@ -53,10 +54,25 @@ namespace Ph1 {
 		std::shared_ptr<DP::Ph1::Capacitor> mSubCapacitor;
 		/// Internal resistance
 		std::shared_ptr<DP::Ph1::Resistor> mSubResistor;
+
+		/// new for protectopn
+		std::shared_ptr<DP::Ph1::Switch> mSubProtectionSwitch;
+		// has state changed? (allow this only once)
+		// could be redundant with internal status of switch element (mnaIsClosed)
+		Real mSwitchStateChange = false;
+		//Bool mSwitchStateChanged = false;
+		Bool mSwitchActive = false;
+		Real mSwitchROpen = 1e6;
+		Real mSwitchRClosed = 1e-6;
+		Real mCounter = 0;
+		Real mDeltaT = 0;
+		Real mPrevTime = 0;
+		Real mSwitchDelayTime = 0.1;
+
 	public:
 		/// Defines UID, name and logging level
 		RXLoad(String uid, String name,
-			Logger::Level logLevel = Logger::Level::off);
+			Logger::Level logLevel = Logger::Level::off, Bool SwitchActive = false);
 		/// Defines name, component parameters and logging level
 		RXLoad(String name,
 			Logger::Level logLevel = Logger::Level::off);
@@ -75,6 +91,12 @@ namespace Ph1 {
 		/// Sets model specific parameters
 		void setParameters(Real activePower, Real ReactivePower, Real volt);
 
+		/// Delay time for action by switch
+		void setSwitchDelayTime(Real Delay) { mSwitchDelayTime = Delay; };
+
+		/// Delay time for action by switch
+		void setNomVoltage(Real Voltage) { mNomVoltage = Voltage; };
+
 		// #### MNA section ####
 		/// Initializes internal variables of the component
 		void mnaInitialize(Real omega, Real timeStep, Attribute<Matrix>::Ptr leftVector);
@@ -86,12 +108,24 @@ namespace Ph1 {
 		void mnaUpdateCurrent(const Matrix& leftVector);
 		void mnaUpdateVoltage(const Matrix& leftVector);
 
+		// #### Internal Switch ####
+		/// new getter for internal switch
+		std::shared_ptr<DP::Ph1::Switch>& getProtectionSwitch() { return mSubProtectionSwitch; };
+
+		/// new update switch state function
+		//void updateSwitchState(const Matrix& leftVector, Real time);
+		void updateSwitchState(Real time);
+
+		Bool mnaStateChanged() { return mSwitchStateChange; };
+
 		class MnaPreStep : public Task {
 		public:
 			MnaPreStep(RXLoad& load) :
 				Task(load.mName + ".MnaPreStep"), mLoad(load) {
 				if (load.mSubResistor)
 					mAttributeDependencies.push_back(load.mSubResistor->attribute("right_vector"));
+				if (load.mSubProtectionSwitch)
+					mAttributeDependencies.push_back(load.mSubProtectionSwitch->attribute("right_vector"));
 				if (load.mSubInductor)
 					mAttributeDependencies.push_back(load.mSubInductor->attribute("right_vector"));
 				if (load.mSubCapacitor)
@@ -113,6 +147,8 @@ namespace Ph1 {
 				mAttributeDependencies.push_back(leftVector);
 				if (load.mSubResistor)
 					mAttributeDependencies.push_back(load.mSubResistor->attribute("i_intf"));
+				if (load.mSubProtectionSwitch)
+					mAttributeDependencies.push_back(load.mSubProtectionSwitch->attribute("i_intf"));
 				if (load.mSubInductor)
 					mAttributeDependencies.push_back(load.mSubInductor->attribute("i_intf"));
 				if (load.mSubCapacitor)

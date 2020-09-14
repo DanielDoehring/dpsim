@@ -55,6 +55,9 @@ namespace Ph1 {
 		///
 		void mnaUpdateVoltage(const Matrix& leftVector);
 
+		///
+		void setRefCurrent(Complex current);
+
 		class MnaPreStep : public Task {
 		public:
 			MnaPreStep(CurrentSource& currentSource) :

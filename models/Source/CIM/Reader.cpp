@@ -87,7 +87,10 @@ TopologicalPowerComp::Ptr Reader::mapComponent(BaseClass* obj) {
 		return mapExternalNetworkInjection(extnet);
 	if (EquivalentShunt *shunt = dynamic_cast<EquivalentShunt*>(obj))
 		return mapEquivalentShunt(shunt);
+	if(LinearShuntCompensator *shunt = dynamic_cast<LinearShuntCompensator*>(obj))
+		return mapLinearShuntCompensator(shunt);
 	return nullptr;
+	
 }
 
 ///
@@ -320,7 +323,8 @@ TopologicalPowerComp::Ptr Reader::mapEnergyConsumer(EnergyConsumer* consumer) {
 		return load;
 	}
 	else {
-		return std::make_shared<DP::Ph1::RXLoad>(consumer->mRID, consumer->name, mComponentLogLevel);
+		Bool switchActive = true;
+		return std::make_shared<DP::Ph1::RXLoad>(consumer->mRID, consumer->name, mComponentLogLevel, switchActive);
 	}
 }
 
@@ -516,9 +520,19 @@ TopologicalPowerComp::Ptr Reader::mapPowerTransformer(PowerTransformer* trans) {
 		return transformer;
 	}
 	else {
-		Bool withResistiveLosses = resistance > 0;
-		auto transformer = std::make_shared<DP::Ph1::Transformer>(trans->mRID, trans->name, mComponentLogLevel, withResistiveLosses);
+		Bool withResistiveLosses = true;
+		Bool withSat = false;
+		resistance = (resistance > 0) ? resistance : 1e-3;
+		auto transformer = std::make_shared<DP::Ph1::Transformer>(trans->mRID, trans->name, mComponentLogLevel, withResistiveLosses, withSat);
 		transformer->setParameters(ratioAbs, ratioPhase, resistance, inductance);
+
+		Real NumTaps = 6;
+		transformer->setOLTCParamters(NumTaps, voltageNode2);
+		transformer->setOLTCTimeDelay(0.5);
+		transformer->setOLTCDeadband(0.03);
+
+		transformer->setParametersSaturationDefault(220000, 66000);
+		//transformer->setMagnetizingInductance(1700);
 		return transformer;
 	}
 }
@@ -633,7 +647,6 @@ TopologicalPowerComp::Ptr Reader::mapExternalNetworkInjection(ExternalNetworkInj
 	else if (mDomain == Domain::DP) {
 		if (mPhase == PhaseType::Single) {
 			//return std::make_shared<DP::Ph1::NetworkInjection>(extnet->mRID, extnet->name, mComponentLogLevel);
-
 			Real baseVoltage = 0;
 			// first look for baseVolt object to set baseVoltage
 			for (auto obj : mModel->Objects) {
@@ -673,41 +686,60 @@ TopologicalPowerComp::Ptr Reader::mapExternalNetworkInjection(ExternalNetworkInj
 			{
 				//return nullptr;
 				mSLog->info("NetworkInjection for DP single-phase modeled as VSI in DQ-Frame");
-				bool has_trafo = true;
-				auto ext_vsi = std::make_shared<DP::Ph1::AvVoltageSourceInverterDQ>(extnet->mRID, extnet->name, mComponentLogLevel);
+				Bool has_trafo = true;
+				Bool switchActive = true;
+				auto ext_vsi = std::make_shared<DP::Ph1::AvVoltageSourceInverterDQ>(extnet->mRID, extnet->name, mComponentLogLevel, has_trafo, switchActive);
 
 				// parameters for vsi
 				Real omegeN = 2 * M_PI * mFrequency;
 				Real Pref = unitValue(extnet->p.value, UnitMultiplier::M);
-				Real Qref = unitValue(extnet->q.value, UnitMultiplier::M);
+				//Real Qref = unitValue(extnet->q.value, UnitMultiplier::M);
+				Real Sn = sqrt(pow(unitValue(extnet->maxP.value, UnitMultiplier::M), 2) + pow(unitValue(extnet->maxQ.value, UnitMultiplier::M),2));
+
+				Real Qref = 0;
 				Real kp_pll = 0.25;
 				Real ki_pll = 2;
 				Real Kp_powerCtrl = 0.001;
 				Real Ki_powerCtrl = 0.08;
-				Real Kp_currCtrl = 3.77;
-				Real Ki_currCtrl = 1400;
-				Real Lf = 9.28e-04;
-				Real Cf = 7.89e-04;
-				Real Rf = 0.01;
-				Real Rc = 0.5;
+				Real Kp_currCtrl = 0.3;
+				Real Ki_currCtrl = 10;
+				Real Lf = 0.002;
+				Real Cf = 7.89e-06;
+				Real Rf = 0.1;
+				Real Rc = 0.1;
 
 				// parameters for connection transformer
 				Real tr_nomVoltEnd1 = baseVoltage;
-				Real tr_nomVoltEnd2 = 400;
+				Real tr_nomVoltEnd2 = 1.5e3;
 				Real tr_ratedPower = 10e6;
-				Real tr_ratioAbs = 25;
-				Real tr_ratioPhase = 30;
-				Real tr_resistance = 0.5;
-				Real tr_inductance = 1.5;
+				Real tr_ratioAbs   = tr_nomVoltEnd1 / tr_nomVoltEnd2;
+				Real tr_ratioPhase = 0;
+				Real tr_resistance = 0.001;
+				Real tr_inductance = 0.001;
 
 				// set parameters for NetworkInjection that is modeled as VSI
-				ext_vsi->setParameters(omegeN, baseVoltage, Pref, Qref, kp_pll, ki_pll, Kp_powerCtrl, Ki_powerCtrl, Kp_currCtrl, Ki_currCtrl, Lf, Cf, Rf, Rc);
-				//ext_vsi->setControllerParameters(kp_pll, ki_pll, Kp_powerCtrl, Ki_powerCtrl, Kp_currCtrl, Ki_currCtrl);
-				//ext_vsi->setFilterParameters(Lf, Cf, Rf, Rc);
-				//ext_vsi->setTransformerParameters(tr_nomVoltEnd1, tr_nomVoltEnd2, tr_ratedPower, tr_ratioAbs, tr_ratioPhase, tr_resistance, tr_inductance, omegeN);
+				ext_vsi->setParameters(omegeN, tr_nomVoltEnd2, Pref, Qref, Sn);
+				ext_vsi->setControllerParameters(kp_pll, ki_pll, Ki_powerCtrl, Ki_powerCtrl, Kp_currCtrl, Ki_currCtrl, omegeN);
+				ext_vsi->setFilterParameters(Lf, Cf, Rf, Rc);
+				ext_vsi->setTransformerParameters(tr_nomVoltEnd1, tr_nomVoltEnd2, tr_ratedPower, tr_ratioAbs, tr_ratioPhase, tr_resistance, tr_inductance, omegeN);
+				ext_vsi->setInitialStateValues(0,0,Pref,Qref,0,0,0,0);
+
+				// Q Control param
+				//Real Qmax = tan(acos(0.95)) * Pref;
+				//Real Qmin = -Qmax;
+				Real Qmax = Sn;
+				Real Qmin = -Qmax;
+				Real VRef = tr_nomVoltEnd1 * (1 + 0);
+				Real Deadband = 0.01;
+				Real SGain = 20;
+				Real DGain = 3;
+				ext_vsi->setQControlParameters(true, VRef, SGain, DGain, Deadband, Qmax, Qmin);
 
 				return ext_vsi;
 			}
+		} else {
+			throw SystemError("Mapping of ExternalNetworkInjection for DP::Ph3 not existent!");
+			return nullptr;
 		}
 	} else
 		return nullptr; // DP network injection not considered yet
@@ -744,6 +776,45 @@ TopologicalPowerComp::Ptr Reader::mapEquivalentShunt(EquivalentShunt* shunt){
 	cpsShunt->setParameters(shunt->g.value, shunt->b.value);
 	cpsShunt->setBaseVoltage(baseVoltage);
 	return cpsShunt;
+}
+
+TopologicalPowerComp::Ptr Reader::mapLinearShuntCompensator(LinearShuntCompensator* shunt) {
+	mSLog->info("Found shunt {}", shunt->name);
+
+	Real baseVoltage = 0;
+	// first look for baseVolt object to set baseVoltage
+	for (auto obj : mModel->Objects) {
+		if (IEC61970::Base::Core::BaseVoltage* baseVolt = dynamic_cast<IEC61970::Base::Core::BaseVoltage*>(obj)) {
+			for (auto comp : baseVolt->ConductingEquipment) {
+				if (comp->name == shunt->name) {
+					baseVoltage = unitValue(baseVolt->nominalVoltage.value, UnitMultiplier::k);
+				}
+			}
+		}
+	}
+	// as second option take baseVoltage of topologicalNode where shunt is connected to
+	if (baseVoltage == 0) {
+		for (auto obj : mModel->Objects) {
+			if (IEC61970::Base::Topology::TopologicalNode* topNode = dynamic_cast<IEC61970::Base::Topology::TopologicalNode*>(obj)) {
+				for (auto term : topNode->Terminal) {
+					if (term->ConductingEquipment->name == shunt->name) {
+						baseVoltage = unitValue(topNode->BaseVoltage->nominalVoltage.value, UnitMultiplier::k);
+					}
+				}
+			}
+		}
+	}
+
+	if (mDomain == Domain::DP && mPhase == PhaseType::Single) {
+		// model as SVC
+		auto cpsShunt = std::make_shared<DP::Ph1::SVC>(shunt->mRID, shunt->name, mComponentLogLevel);
+		Real Sn = 25e6;
+		Real Bmax = 1;
+		Real Bmin = -1;
+		cpsShunt->setParameters(Bmax, Bmin, Sn, baseVoltage);
+		cpsShunt->setControllerParameters(0.2, 40);
+		return cpsShunt;
+	}
 }
 
 

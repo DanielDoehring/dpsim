@@ -14,22 +14,23 @@
 
 namespace CPS {
 	/// \brief MNA interface to be used by switching devices.
-	class MNASwitchInterface : public MNAInterface {
+	class MNASatTrafoInterface : public MNAInterface {
 	public:
-		typedef std::shared_ptr<MNASwitchInterface> Ptr;
+		typedef std::shared_ptr<MNASatTrafoInterface> Ptr;
 		typedef std::vector<Ptr> List;
 
 		// #### MNA section ####
 		/// Open switch
-		virtual void mnaOpen() { }
+		//virtual void mnaOpen() { }
 		/// Close switch
-		virtual void mnaClose() { }
+		//virtual void mnaClose() { }
 		/// Check if switch is closed
-		virtual Bool mnaIsClosed() = 0;
-		virtual Bool ValueChanged() = 0;
+		//virtual Bool mnaIsClosed() = 0;
 		/// Close switch if true and open switch if false
-		virtual void mnaSetClosed(Bool value) { }
+		//virtual void mnaSetClosed(Bool value) { }
 		/// Stamps system matrix considering the defined switch position
-		virtual void mnaApplySwitchSystemMatrixStamp(Matrix& systemMatrix, Bool closed) { }
+		//virtual void mnaApplySwitchSystemMatrixStamp(Matrix& systemMatrix, Bool closed) { }
+		
+		virtual Bool inductanceChange() = 0;
 	};
 }
