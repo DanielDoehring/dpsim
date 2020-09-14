@@ -526,10 +526,10 @@ TopologicalPowerComp::Ptr Reader::mapPowerTransformer(PowerTransformer* trans) {
 		auto transformer = std::make_shared<DP::Ph1::Transformer>(trans->mRID, trans->name, mComponentLogLevel, withResistiveLosses, withSat);
 		transformer->setParameters(ratioAbs, ratioPhase, resistance, inductance);
 
-		//Real NumTaps = 6;
-		//transformer->setOLTCParamters(NumTaps, voltageNode2);
-		//transformer->setOLTCTimeDelay(1.5);
-		//transformer->setOLTCDeadband(0.03);
+		Real NumTaps = 6;
+		transformer->setOLTCParamters(NumTaps, voltageNode2);
+		transformer->setOLTCTimeDelay(1.5);
+		transformer->setOLTCDeadband(0.03);
 
 		transformer->setParametersSaturationDefault(voltageNode1, voltageNode2);
 		//transformer->setMagnetizingInductance(350);
@@ -688,7 +688,7 @@ TopologicalPowerComp::Ptr Reader::mapExternalNetworkInjection(ExternalNetworkInj
 			}
 			else
 			{
-				return nullptr;
+				//return nullptr;
 				mSLog->info("NetworkInjection for DP single-phase modeled as VSI in DQ-Frame");
 				Bool has_trafo = true;
 				Bool switchActive = true;
@@ -714,7 +714,7 @@ TopologicalPowerComp::Ptr Reader::mapExternalNetworkInjection(ExternalNetworkInj
 
 				// parameters for connection transformer
 				Real tr_nomVoltEnd1 = baseVoltage;
-				Real tr_nomVoltEnd2 = 1.5e3;
+				Real tr_nomVoltEnd2 = 0.4e3;
 				Real tr_ratedPower = 10e6;
 				Real tr_ratioAbs   = tr_nomVoltEnd1 / tr_nomVoltEnd2;
 				Real tr_ratioPhase = 0;
@@ -732,6 +732,7 @@ TopologicalPowerComp::Ptr Reader::mapExternalNetworkInjection(ExternalNetworkInj
 				//Real Qmax = tan(acos(0.95)) * Pref;
 				//Real Qmin = -Qmax;
 				Real Qmax = Sn;
+				//Real Qmax = 0.1e3;
 				Real Qmin = -Qmax;
 				Real VRef = tr_nomVoltEnd1 * (1 + 0);
 				Real Deadband = 0.01;
