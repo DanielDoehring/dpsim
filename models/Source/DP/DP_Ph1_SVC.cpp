@@ -59,9 +59,9 @@ void DP::Ph1::SVC::initializeFromPowerflow(Real frequency) {
 
 	mSLog->info(
 		"\n --- Parameters ---"
-		"\n Controller: T={} K={}"
-		"\n Reference Voltage={}"
-		"\n Bmax={} Bmin={}"
+		"\n Controller: T = {} K = {}"
+		"\n Reference Voltage  {} [kV]"
+		"\n Bmax = {} Bmin = {} [p.u.]"
 		"\n Initial B: {}",
 		mTr, mKr, mRefVolt, mBMax, mBMin, mBPrev);
 

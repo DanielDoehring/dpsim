@@ -47,10 +47,10 @@ namespace Ph1 {
 		void setParameters(Real Bmax, Real Bmin, Real QN, Real nomVolt, Real RefVolt = 0) {
 			// initial inductance very high 10^6 [Ohm] @ 50 Hz
 			mInductance = 3183.1;
-			//mBMax = Bmax;
-			//mBMin = Bmin;
-			mBMax = 1;
+			mBMax = Bmax;
 			mBMin = Bmin;
+			//mBMax = 1;
+			//mBMin = Bmin;
 			mBN = QN / (nomVolt*nomVolt);
 
 			mNomVolt = nomVolt;
