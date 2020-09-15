@@ -48,6 +48,7 @@ namespace IEC61970 {
 			class EnergyConsumer;
 			class PowerTransformer;
 			class LinearShuntCompensator;
+			class StaticVarCompensator;
 		};
 		namespace Equivalents {
 			class EquivalentShunt;
@@ -152,6 +153,11 @@ namespace CIM {
 		TopologicalPowerComp::Ptr mapEquivalentShunt(IEC61970::Base::Equivalents::EquivalentShunt *shunt);
 		/// return shunt
 		TopologicalPowerComp::Ptr mapLinearShuntCompensator(IEC61970::Base::Wires::LinearShuntCompensator* shunt);
+		/// return svc
+		TopologicalPowerComp::Ptr mapStaticVarCompensator(IEC61970::Base::Wires::StaticVarCompensator* svc);
+		/// return statcom
+		/// ...
+
 	public:
 		///
 		enum GeneratorType{Static, Transient};

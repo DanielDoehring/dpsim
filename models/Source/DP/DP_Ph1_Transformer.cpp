@@ -347,10 +347,10 @@ void DP::Ph1::Transformer::mnaApplySystemMatrixStamp(Matrix& systemMatrix) {
 }
 
 void DP::Ph1::Transformer::mnaApplyRightSideVectorStamp(Matrix& rightVector) {
-	mSLog->info("Stamping Elements in RHS Vector ...");
+	//mSLog->info("Stamping Elements in RHS Vector ...");
 	if (mWithSaturation)
 	{
-		mSLog->info("Also Stamping Saturation Elements in RHS Vector ...");
+		//mSLog->info("Also Stamping Saturation Elements in RHS Vector ...");
 		mSubLeakageInductorLV->mnaApplyRightSideVectorStamp(rightVector);
 		mSubLeakageInductorHV->mnaApplyRightSideVectorStamp(rightVector);
 		mSubSatCurrentSrc->mnaApplyRightSideVectorStamp(rightVector);
@@ -365,7 +365,7 @@ void DP::Ph1::Transformer::mnaApplyRightSideVectorStamp(Matrix& rightVector) {
 }
 
 void DP::Ph1::Transformer::MnaPreStep::execute(Real time, Int timeStepCount) {
-	mTransformer.mSLog->info("\n ### New PreStep at time: {} timeStep {} ###", time, timeStepCount);
+	//mTransformer.mSLog->info("\n ### New PreStep at time: {} timeStep {} ###", time, timeStepCount);
 	mTransformer.mnaApplyRightSideVectorStamp(mTransformer.mRightVector);
 	// NEW for OLTC
 	if (mTransformer.mOLTCActive) {
@@ -375,7 +375,7 @@ void DP::Ph1::Transformer::MnaPreStep::execute(Real time, Int timeStepCount) {
 }
 
 void DP::Ph1::Transformer::MnaPostStep::execute(Real time, Int timeStepCount) {
-	mTransformer.mSLog->info("\n   ooo Executing PostStep\n");
+	//mTransformer.mSLog->info("\n   ooo Executing PostStep\n");
 	mTransformer.mnaUpdateVoltage(*mLeftVector);
 	mTransformer.mnaUpdateCurrent(*mLeftVector);
 	mTransformer.mDeltaT = time - mTransformer.mPrevStepTime;
@@ -383,7 +383,7 @@ void DP::Ph1::Transformer::MnaPostStep::execute(Real time, Int timeStepCount) {
 	{
 		if (mTransformer.mCalcSatDP)
 		{
-			mTransformer.mSLog->info("Calculating Saturation (DP-Domain) at timeStep: {} time: {}", timeStepCount, time);
+			//mTransformer.mSLog->info("Calculating Saturation (DP-Domain) at timeStep: {} time: {}", timeStepCount, time);
 			mTransformer.updateSatCurrentSrcDP(time, *mLeftVector);
 		}
 		else {
@@ -396,7 +396,7 @@ void DP::Ph1::Transformer::MnaPostStep::execute(Real time, Int timeStepCount) {
 void DP::Ph1::Transformer::mnaUpdateCurrent(const Matrix& leftVector) {
 	// HV level 
 	mIntfCurrent(0,0) = mSubLeakageInductorHV->intfCurrent()(0, 0);
-	mSLog->info("Current at through HV Inductor: {:s}", Logger::phasorToString(mIntfCurrent(0, 0)));
+	//mSLog->info("Current at through HV Inductor: {:s}", Logger::phasorToString(mIntfCurrent(0, 0)));
 }
 
 void DP::Ph1::Transformer::mnaUpdateVoltage(const Matrix& leftVector) {
@@ -404,6 +404,7 @@ void DP::Ph1::Transformer::mnaUpdateVoltage(const Matrix& leftVector) {
 	mIntfVoltage(0, 0) = 0;
 	mIntfVoltage(0, 0) = Math::complexFromVectorElement(leftVector, matrixNodeIndex(1));
 
+	/*
 	mSLog->info("Voltage at (1): {:s}", Logger::phasorToString(mIntfVoltage(0, 0)));
 	mSLog->info("Voltage at v0: {:s}", Logger::phasorToString(Math::complexFromVectorElement(leftVector, mVirtualNodes[0]->matrixNodeIndex())));
 	if (mWithSaturation) {
@@ -413,9 +414,10 @@ void DP::Ph1::Transformer::mnaUpdateVoltage(const Matrix& leftVector) {
 	mSLog->info("Voltage at v2: {:s}", Logger::phasorToString(Math::complexFromVectorElement(leftVector, mVirtualNodes[2]->matrixNodeIndex())));
 	mSLog->info("Voltage at v1: {:s}", Logger::phasorToString(Math::complexFromVectorElement(leftVector, mVirtualNodes[1]->matrixNodeIndex())));
 	mSLog->info("Voltage at (0): {:s}", Logger::phasorToString(Math::complexFromVectorElement(leftVector, matrixNodeIndex(0))));
+	*/
 	mIntfVoltage(0, 0) = mIntfVoltage(0, 0) - Math::complexFromVectorElement(leftVector, mVirtualNodes[0]->matrixNodeIndex());
 	SPDLOG_LOGGER_DEBUG(mSLog, "Voltage {:s}", Logger::phasorToString(mIntfVoltage(0, 0)));
-	mSLog->info("Voltage across trafo: {:s}\n", Logger::phasorToString(mIntfVoltage(0, 0)));
+	//mSLog->info("Voltage across trafo: {:s}\n", Logger::phasorToString(mIntfVoltage(0, 0)));
 }
 
 Real DP::Ph1::Transformer::PT1ControlStep(Real u, Real u_prev, Real y_prev, Real K, Real T, Real deltaT) {

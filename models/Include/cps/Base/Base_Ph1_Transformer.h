@@ -167,6 +167,39 @@ namespace Ph1 {
 				mLm = 278.19;
 				mIM = 0.178;
 			}
+			else
+			{
+				// set some default parameters for saturation for common HV voltage levels
+				if (HV == 220000 || HV == 380000) {
+					mLambdaM = 686.611426;
+					mLambdaK = 1311.63923;
+					mLA = 2.85312113;
+					mLm = 266.412156;
+					mIM = 0.10031921;
+				}
+				else if (HV == 110000) {
+					mLambdaM = 517.682;
+					mLambdaK = 498.93;
+					mLA = 17.86;
+					mLm = 221.71;
+					mIM = 2.335;
+				}
+				else if (HV == 20000) {
+					mLambdaM = 90.032;
+					mLambdaK = 96.954;
+					mLA = 2.51;
+					mLm = 225.11;
+					mIM = 0.165;
+				}
+				else if (HV == 10000) {
+					mLambdaM = 49.517;
+					mLambdaK = 59.42;
+					mLA = 0.45;
+					mLm = 278.19;
+					mIM = 0.178;
+				}
+
+			}
 		}
 
 		void setSaturationConstants() {
