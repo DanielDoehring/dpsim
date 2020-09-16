@@ -135,7 +135,7 @@ namespace DPsim {
 		void logSystemMatrices();
 
 		/// NEW for OLTC
-		void updateOLTCStatus();
+		//void updateOLTCStatus();
 		void updateVarElemStatus();
 		Bool mUpdateSysMatrix = false;
 

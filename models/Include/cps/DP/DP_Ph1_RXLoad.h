@@ -62,8 +62,8 @@ namespace Ph1 {
 		Real mSwitchStateChange = false;
 		//Bool mSwitchStateChanged = false;
 		Bool mSwitchActive = false;
-		Real mSwitchROpen = 1e6;
-		Real mSwitchRClosed = 1e-6;
+		Real mSwitchROpen = 1e9;
+		Real mSwitchRClosed = 1e-9;
 		Real mCounter = 0;
 		Real mDeltaT = 0;
 		Real mPrevTime = 0;
@@ -110,7 +110,7 @@ namespace Ph1 {
 
 		// #### Internal Switch ####
 		/// new getter for internal switch
-		std::shared_ptr<DP::Ph1::Switch>& getProtectionSwitch() { return mSubProtectionSwitch; };
+		std::shared_ptr<DP::Ph1::Switch>& getProtectionSwitch() { return  mSubProtectionSwitch; };
 
 		/// new update switch state function
 		//void updateSwitchState(const Matrix& leftVector, Real time);

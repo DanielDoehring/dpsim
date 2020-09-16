@@ -10,6 +10,7 @@
 
 #include <cps/SimPowerComp.h>
 //#include <cps/Solver/MNAOLTCInterface.h>
+//#include <cps/Solver/MNAInterface.h>
 #include <cps/Solver/MNAVarElemInterface.h>
 #include <cps/DP/DP_Ph1_RxLine.h>
 #include <cps/DP/DP_Ph1_Inductor.h>
@@ -23,6 +24,7 @@ namespace Ph1 {
 	class Transformer :
 		public SimPowerComp<Complex>,
 		public MNAVarElemInterface,
+		//public MNAInterface,
 		public SharedFactory<Transformer>,
 		public Base::Ph1::Transformer {
 	private:
@@ -41,19 +43,20 @@ namespace Ph1 {
 		/// Boolean for considering resistive losses with sub resistor
 		Bool mWithResistiveLosses;
 
-
 		/// NEW for saturation
-		Bool mWithSaturation = false;
+		Bool mWithSaturation = true;
 		/// saturation current source
 		std::shared_ptr<DP::Ph1::CurrentSource> mSubSatCurrentSrc;
 		std::shared_ptr<DP::Ph1::Inductor> mSubMagnetizingInductor;
 
 		Complex mISrcRef;
+		Real mVPrev = 0;
+		Real mVmeasPrev = 0;
 
 	public:
 		/// Defines UID, name and logging level
 		Transformer(String uid, String name,
-			Logger::Level logLevel = Logger::Level::off, Bool withResistiveLosses = true, Bool WithSaturation = false);
+			Logger::Level logLevel = Logger::Level::off, Bool withResistiveLosses = false, Bool WithSaturation = false);
 		/// Defines name and logging level
 		Transformer(String name, Logger::Level logLevel = Logger::Level::off)
 			: Transformer(name, name, logLevel) { }
@@ -85,7 +88,7 @@ namespace Ph1 {
 		void updateTapRatio(Real time, Int timeStepCount);
 		Bool ValueChanged() { return mRatioChange; };
 		//Bool mnaRatioChanged() { return mRatioChange; };
-
+		Real PT1ControlStep(Real u, Real u_prev, Real y_prev, Real K, Real T, Real deltaT);
 
 		/// New for saturation modelling
 		// EMT trafo for calculation of saturation current
@@ -103,12 +106,6 @@ namespace Ph1 {
 				mAttributeDependencies.push_back(transformer.mSubSnubResistor->attribute("right_vector"));
 				mAttributeDependencies.push_back(transformer.mSubLeakageInductorHV->attribute("right_vector"));
 				mAttributeDependencies.push_back(transformer.mSubLossResistorHV ->attribute("right_vector"));
-				
-				/*
-				mAttributeDependencies.push_back(transformer.mSubInductor->attribute("right_vector"));
-				if (transformer.mSubResistor)
-					mAttributeDependencies.push_back(transformer.mSubResistor->attribute("right_vector"));
-				*/
 				if (transformer.mWithSaturation)
 				{
 					mAttributeDependencies.push_back(transformer.mSubSatCurrentSrc->attribute("right_vector"));
@@ -117,9 +114,9 @@ namespace Ph1 {
 					mAttributeDependencies.push_back(transformer.mSubLeakageInductorLV->attribute("right_vector"));
 				}
 				mModifiedAttributes.push_back(transformer.attribute("right_vector"));
-				mPrevStepDependencies.push_back(transformer.mSubSnubResistor->attribute("v_intf"));
-				//mPrevStepDependencies.push_back(transformer.attribute("v_intf"));
-				//mPrevStepDependencies.push_back(transformer.attribute("i_intf"));
+				//mPrevStepDependencies.push_back(transformer.mSubSnubResistor->attribute("v_intf"));
+				mPrevStepDependencies.push_back(transformer.attribute("v_intf"));
+				mPrevStepDependencies.push_back(transformer.attribute("i_intf"));
 			}
 
 			void execute(Real time, Int timeStepCount);
@@ -144,10 +141,12 @@ namespace Ph1 {
 				}
 
 				//mAttributeDependencies.push_back(transformer.mSubSnubResistor->attribute("v_intf"));
+				//mAttributeDependencies.push_back(transformer.mSubLeakageInductorHV->attribute("i_intf"));
+
 				mAttributeDependencies.push_back(leftVector);
 				mModifiedAttributes.push_back(transformer.attribute("i_intf"));
 				mModifiedAttributes.push_back(transformer.attribute("v_intf"));
-				mModifiedAttributes.push_back(transformer.mSubSnubResistor->attribute("v_intf"));
+				
 			}
 
 			void execute(Real time, Int timeStepCount);

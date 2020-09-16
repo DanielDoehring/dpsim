@@ -13,17 +13,17 @@ using namespace CPS;
 DP::Ph1::Transformer::Transformer(String uid, String name,
 	Logger::Level logLevel, Bool withResistiveLosses, Bool WithSaturation)
 	: SimPowerComp<Complex>(uid, name, logLevel), TopologicalPowerComp(uid, name, logLevel) {
-	if (WithSaturation)
+	if (WithSaturation) {
 		setVirtualNodeNumber(5);
-	else
+	}
+	else {
 		// To Do: Fit model for simulation without resistance
 		setVirtualNodeNumber(3);
-	
-	setTerminalNumber(2);
+	}
 
+	setTerminalNumber(2);
 	mWithSaturation = WithSaturation;
 	
-
 	mSLog->info("Create {} {}", this->type(), name);
 	if (mWithSaturation)
 	{
@@ -45,6 +45,9 @@ DP::Ph1::Transformer::Transformer(String uid, String name,
 	addAttribute<Real>("deltaFlux", &mDeltaFlux, Flags::write | Flags::read);
 	addAttribute<Complex>("ISrcRef", &mISrcRef, Flags::write | Flags::read);
 	addAttribute<Real>("IMag", &mIMag, Flags::write | Flags::read);
+	addAttribute<Real>("DeltaT", &mDeltaT, Flags::write | Flags::read);
+
+	addAttribute<Complex>("I_HV", &mIntfCurrent(0, 0), Flags::write | Flags::read);
 }
 
 SimPowerComp<Complex>::Ptr DP::Ph1::Transformer::clone(String name) {
@@ -81,7 +84,6 @@ void DP::Ph1::Transformer::initializeFromPowerflow(Real frequency) {
 	}
 
 	// Set initial voltage of virtual node in between
-	/// ?
 	mVirtualNodes[0]->setInitialVoltage(initialSingleVoltage(1) * mRatio);
 
 	if (mWithSaturation)
@@ -93,7 +95,7 @@ void DP::Ph1::Transformer::initializeFromPowerflow(Real frequency) {
 		//							   |
 		//                             Lm
 		//					           |
-		//--------------------------------------------------------GND
+		//---------------------------------------------------------------GND
 
 		Real omega = 2.*PI* frequency;
 		//Complex impedance = { mResistance, omega * mInductance };
@@ -102,8 +104,6 @@ void DP::Ph1::Transformer::initializeFromPowerflow(Real frequency) {
 
 		mIntfVoltage(0, 0) = mVirtualNodes[0]->initialSingleVoltage() - initialSingleVoltage(0);
 		// series impedance made of half of the whole Rloss und Lleakage
-
-		mResistance = mResistance > 0 ? mResistance : 1e-4;
 		Complex seriesImpedance = Complex(mResistance / 2, omega * mInductance / 2);
 
 		// since elements are symmetric voltage drop will be exactly half at the middle
@@ -137,6 +137,7 @@ void DP::Ph1::Transformer::initializeFromPowerflow(Real frequency) {
 		mSubLossResistorLV = std::make_shared<DP::Ph1::Resistor>(mName + "_resLossLV", mLogLevel);
 		mSubLossResistorLV->setParameters(mResistance / 2);
 
+
 		// connection and init of elements
 		// series elements
 		mSubLeakageInductorHV->connect({ mVirtualNodes[2], mVirtualNodes[3] });
@@ -160,15 +161,14 @@ void DP::Ph1::Transformer::initializeFromPowerflow(Real frequency) {
 		// Create parallel sub components at LV side
 		// A snubber conductance is added on the low voltage side (resistance approximately scaled with LV side voltage)
 		mSnubberResistance = std::abs(node(1)->initialSingleVoltage())*1e6;
-		if (mSnubberResistance < 0.001) {
-			mSnubberResistance = 74474;
-		}
+		mSnubberResistance = (mSnubberResistance > 0) ? mSnubberResistance : 1e9;
 		mSubSnubResistor = std::make_shared<DP::Ph1::Resistor>(mName + "_snub_res", mLogLevel);
 		mSubSnubResistor->setParameters(mSnubberResistance);
 		mSubSnubResistor->connect({ node(1), DP::SimNode::GND });
 		mSubSnubResistor->initialize(mFrequencies);
 		mSubSnubResistor->initializeFromPowerflow(frequency);
 		mSLog->info("Snubber Resistance={} [Ohm] (connected to LV side)", mSnubberResistance);
+
 
 		
 		// parallel components
@@ -195,7 +195,6 @@ void DP::Ph1::Transformer::initializeFromPowerflow(Real frequency) {
 
 		if (!mSatConstantsSet) {
 			setSaturationConstants();
-			mSatConstantsSet = true;
 		}
 
 		// log saturation constants
@@ -203,7 +202,6 @@ void DP::Ph1::Transformer::initializeFromPowerflow(Real frequency) {
 		mSLog->info("Saturation Constant B: {} ", mSatConstB);
 		mSLog->info("Saturation Constant C: {} ", mSatConstC);
 		mSLog->info("Saturation Constant D: {} ", mSatConstD);
-		
 
 
 		mSLog->info(
@@ -213,13 +211,13 @@ void DP::Ph1::Transformer::initializeFromPowerflow(Real frequency) {
 			"\nTerminal 0 voltage: {:s}"
 			"\nTerminal 1 voltage: {:s}"
 			"\nVoltage across magnetizing impedance: {:s}"
-			"\nVirtual Node 1 voltage: {:s}"
+			"\nVirtual Virtual Node 0 voltage: {:s}"
 			"\n--- Initialization from powerflow finished ---",
 			Logger::phasorToString(mIntfVoltage(0, 0)),
 			Logger::phasorToString(mIntfCurrent(0, 0)),
 			Logger::phasorToString(initialSingleVoltage(0)),
 			Logger::phasorToString(initialSingleVoltage(1)),
-			Logger::phasorToString(mVm),
+			Logger::phasorToString(VmInit),
 			Logger::phasorToString(mVirtualNodes[0]->initialSingleVoltage()));
 	}
 	else
@@ -244,7 +242,8 @@ void DP::Ph1::Transformer::initializeFromPowerflow(Real frequency) {
 			mSubLossResistorHV->initializeFromPowerflow(frequency);
 			mSubLeakageInductorHV->connect({ mVirtualNodes[2], mVirtualNodes[0] });
 		}
-		else {
+		else
+		{
 			mSubLeakageInductorHV->connect({ node(0), mVirtualNodes[0] });
 		}
 		mSubLeakageInductorHV->initialize(mFrequencies);
@@ -269,7 +268,7 @@ void DP::Ph1::Transformer::initializeFromPowerflow(Real frequency) {
 		"\nCurrent: {:s}"
 		"\nTerminal 0 voltage: {:s}"
 		"\nTerminal 1 voltage: {:s}"
-		"\nVirtual Node 1 voltage: {:s}"
+		"\nVirtual Virtual Node 0  voltage: {:s}"
 		"\n--- Initialization from powerflow finished ---",
 		Logger::phasorToString(mIntfVoltage(0, 0)),
 		Logger::phasorToString(mIntfCurrent(0, 0)),
@@ -286,14 +285,13 @@ void DP::Ph1::Transformer::mnaInitialize(Real omega, Real timeStep, Attribute<Ma
 	mRightVector = Matrix::Zero(leftVector->get().rows(), 1);
 	//auto subComponents = MNAInterface::List({mSubLeakageInductorHV, mSubLeakageInductorLV , mSubLossResistorHV, mSubLossResistorLV, mSubSnubResistor});
 	auto subComponents = MNAInterface::List({ mSubLeakageInductorHV , mSubLossResistorHV, mSubSnubResistor });
-	//if (mSubResistor)
-		//subComponents.push_back(mSubResistor);
 	if (mWithSaturation) {
 		subComponents.push_back(mSubSatCurrentSrc);
 		subComponents.push_back(mSubMagnetizingInductor);
 		subComponents.push_back(mSubLeakageInductorLV);
 		subComponents.push_back(mSubLossResistorLV);
 	}
+
 	for (auto comp : subComponents) {
 		comp->mnaInitialize(omega, timeStep, leftVector);
 		for (auto task : comp->mnaTasks()) {
@@ -323,13 +321,11 @@ void DP::Ph1::Transformer::mnaApplySystemMatrixStamp(Matrix& systemMatrix) {
 
 	// Add inductive part to system matrix
 	mSubLeakageInductorHV->mnaApplySystemMatrixStamp(systemMatrix);
-
 	mSubLossResistorHV->mnaApplySystemMatrixStamp(systemMatrix);
-
 	mSubSnubResistor->mnaApplySystemMatrixStamp(systemMatrix);
 
 	if (mWithSaturation) {
-		mSLog->info("Stamping Current Source");
+		mSLog->info("Stamping Saturation Elements Source");
 		mSubLeakageInductorLV->mnaApplySystemMatrixStamp(systemMatrix);
 		mSubLossResistorLV->mnaApplySystemMatrixStamp(systemMatrix);
 		mSubSatCurrentSrc->mnaApplySystemMatrixStamp(systemMatrix);
@@ -356,18 +352,25 @@ void DP::Ph1::Transformer::mnaApplySystemMatrixStamp(Matrix& systemMatrix) {
 }
 
 void DP::Ph1::Transformer::mnaApplyRightSideVectorStamp(Matrix& rightVector) {
-	//mSubInductor->mnaApplyRightSideVectorStamp(rightVector);
-	mSubLeakageInductorHV->mnaApplyRightSideVectorStamp(rightVector);
+	mSLog->info("Stamping Elements in RHS Vector ...");
 	if (mWithSaturation)
 	{
+		mSLog->info("Also Stamping Saturation Elements in RHS Vector ...");
+		mSubLeakageInductorLV->mnaApplyRightSideVectorStamp(rightVector);
+		mSubLeakageInductorHV->mnaApplyRightSideVectorStamp(rightVector);
 		mSubSatCurrentSrc->mnaApplyRightSideVectorStamp(rightVector);
 		mSubMagnetizingInductor->mnaApplyRightSideVectorStamp(rightVector);
-		mSubLeakageInductorLV->mnaApplyRightSideVectorStamp(rightVector);
+		
+	}
+	else
+	{
+		mSubLeakageInductorHV->mnaApplyRightSideVectorStamp(rightVector);
 	}
 
 }
 
 void DP::Ph1::Transformer::MnaPreStep::execute(Real time, Int timeStepCount) {
+	mTransformer.mSLog->info("\n ### New PreStep at time: {} timeStep {} ###", time, timeStepCount);
 	mTransformer.mnaApplyRightSideVectorStamp(mTransformer.mRightVector);
 	// NEW for OLTC
 	if (mTransformer.mOLTCActive) {
@@ -377,41 +380,64 @@ void DP::Ph1::Transformer::MnaPreStep::execute(Real time, Int timeStepCount) {
 }
 
 void DP::Ph1::Transformer::MnaPostStep::execute(Real time, Int timeStepCount) {
+	mTransformer.mSLog->info("\n   ooo Executing PostStep\n");
 	mTransformer.mnaUpdateVoltage(*mLeftVector);
 	mTransformer.mnaUpdateCurrent(*mLeftVector);
+	mTransformer.mDeltaT = time - mTransformer.mPrevStepTime;
 	if (mTransformer.mWithSaturation)
 	{
 		if (mTransformer.mCalcSatDP)
 		{
+			mTransformer.mSLog->info("Calculating Saturation (DP-Domain) at timeStep: {} time: {}", timeStepCount, time);
 			mTransformer.updateSatCurrentSrcDP(time, *mLeftVector);
 		}
 		else {
 			mTransformer.updateSatCurrentSrcEMT(time, *mLeftVector);
 		}
 	}
-	mTransformer.mDeltaT = time - mTransformer.mPrevStepTime;
 	mTransformer.mPrevStepTime = time;
 }
 
 void DP::Ph1::Transformer::mnaUpdateCurrent(const Matrix& leftVector) {
 	// HV level 
 	mIntfCurrent(0,0) = mSubLeakageInductorHV->intfCurrent()(0, 0);
+	mSLog->info("Current at through HV Inductor: {:s}", Logger::phasorToString(mIntfCurrent(0, 0)));
 }
 
 void DP::Ph1::Transformer::mnaUpdateVoltage(const Matrix& leftVector) {
 	// v1 - v0
 	mIntfVoltage(0, 0) = 0;
 	mIntfVoltage(0, 0) = Math::complexFromVectorElement(leftVector, matrixNodeIndex(1));
+
+	mSLog->info("Voltage at (1): {:s}", Logger::phasorToString(mIntfVoltage(0, 0)));
+	mSLog->info("Voltage at v0: {:s}", Logger::phasorToString(Math::complexFromVectorElement(leftVector, mVirtualNodes[0]->matrixNodeIndex())));
+	if (mWithSaturation) {
+		mSLog->info("Voltage at v4: {:s}", Logger::phasorToString(Math::complexFromVectorElement(leftVector, mVirtualNodes[4]->matrixNodeIndex())));
+		mSLog->info("Voltage at v3: {:s}", Logger::phasorToString(Math::complexFromVectorElement(leftVector, mVirtualNodes[3]->matrixNodeIndex())));
+	}
+	mSLog->info("Voltage at v2: {:s}", Logger::phasorToString(Math::complexFromVectorElement(leftVector, mVirtualNodes[2]->matrixNodeIndex())));
+	mSLog->info("Voltage at v1: {:s}", Logger::phasorToString(Math::complexFromVectorElement(leftVector, mVirtualNodes[1]->matrixNodeIndex())));
+	mSLog->info("Voltage at (0): {:s}", Logger::phasorToString(Math::complexFromVectorElement(leftVector, matrixNodeIndex(0))));
 	mIntfVoltage(0, 0) = mIntfVoltage(0, 0) - Math::complexFromVectorElement(leftVector, mVirtualNodes[0]->matrixNodeIndex());
 	SPDLOG_LOGGER_DEBUG(mSLog, "Voltage {:s}", Logger::phasorToString(mIntfVoltage(0, 0)));
+	mSLog->info("Voltage across trafo: {:s}\n", Logger::phasorToString(mIntfVoltage(0, 0)));
+}
+
+Real DP::Ph1::Transformer::PT1ControlStep(Real u, Real u_prev, Real y_prev, Real K, Real T, Real deltaT) {
+	// perform control step using trapez rule
+	Real Fac1 = deltaT / (2 * T);
+	Real y = (1 / (1 + Fac1)) * (K * Fac1 * (u + u_prev) + (1 - Fac1) * y_prev);
+	return y;
 }
 
 void DP::Ph1::Transformer::updateTapRatio(Real time, Int timeStepCount) {
 	// current lv voltage
 	Real lvVoltage = Math::abs(mSubSnubResistor->intfVoltage()(0, 0));
 
+	Real Vmeas = PT1ControlStep(lvVoltage, mVPrev, mVmeasPrev, 1, 0.01, mDeltaT);
 	// calculate voltage diff
-	Real deltaV = (mRefLV - lvVoltage) / mRefLV;
+	//Real deltaV = (mRefLV - lvVoltage) / mRefLV;
+	Real deltaV = (mRefLV - Vmeas) / mRefLV;
 
 	if (timeStepCount)
 	{
@@ -465,6 +491,8 @@ void DP::Ph1::Transformer::updateTapRatio(Real time, Int timeStepCount) {
 			mViolationCounter = 0;
 		}
 	}
+	mVmeasPrev = Vmeas;
+	mVPrev = lvVoltage;
 }
 void DP::Ph1::Transformer::updateSatCurrentSrcEMT(Real time, const Matrix& leftVector) {
 	// first update flux
@@ -472,7 +500,7 @@ void DP::Ph1::Transformer::updateSatCurrentSrcEMT(Real time, const Matrix& leftV
 	Real omega = 2. * PI * mFrequencies(0, 0);
 
 	// now calculate correct magnetizing current
-	Real iMag_sqrt = sqrt( (mCurrentFlux - mLambdaK) * (mCurrentFlux - mLambdaK) + 4 * mSatConstD * mLA );
+	Real iMag_sqrt = sqrt( ((mCurrentFlux - mLambdaK) * (mCurrentFlux - mLambdaK)) + (4 * mSatConstD * mLA) );
 	mIMag = ( (iMag_sqrt + mCurrentFlux - mLambdaK) / (2 * mLA) ) - (mSatConstD / mLambdaK);
 	mSLog->info("\nCurrent Flux of {} leads to magnetizing current of {}", mCurrentFlux, mIMag);
 
@@ -480,6 +508,7 @@ void DP::Ph1::Transformer::updateSatCurrentSrcEMT(Real time, const Matrix& leftV
 	// I_currSrc = Imagnetizing - I_Lm
 	mLMagCurrentReal = mCurrentFlux / mLm;
 	Real iSrc = mIMag - mLMagCurrentReal;
+	//Real iSrc = mIMag;
 
 	// Now this needs to be again transformed into DP-Domain
 	// multiply with e^-jw_s*t
@@ -490,7 +519,7 @@ void DP::Ph1::Transformer::updateSatCurrentSrcEMT(Real time, const Matrix& leftV
 }
 
 void DP::Ph1::Transformer::updateFluxEMT(Real time, const Matrix& leftVector) {
-	if (time > 0) {
+	if (mDeltaT > 0) {
 		// update flux value through integration of voltage
 		// transform values from dp to emt
 		Real omega = 2. * PI * mFrequencies(0, 0);
@@ -532,10 +561,11 @@ void DP::Ph1::Transformer::updateSatCurrentSrcDP(Real time, const Matrix& leftVe
 
 	// transform mag current to DP domain
 	// multiply with e^-jw_s*t
-	Complex magCurrent = Complex( mIMag * cos(omega  *time), -mIMag * sin(omega * time) );
+	Complex magCurrent = Complex( mIMag * cos(omega * time), -mIMag * sin(omega * time) );
 
 	// calc Ref current for current source
 	mISrcRef = magCurrent - mSubMagnetizingInductor->intfCurrent()(0, 0);
+	//mISrcRef = magCurrent;
 
 	// set ref value for internal current source
 	mSubSatCurrentSrc->setRefCurrent(mISrcRef);
@@ -543,17 +573,16 @@ void DP::Ph1::Transformer::updateSatCurrentSrcDP(Real time, const Matrix& leftVe
 
 void DP::Ph1::Transformer::updateFluxDP(Real time, const Matrix& leftVector) {
 	Real omega = 2. * PI * mFrequencies(0, 0);
-	if (time > 0)
-	{
+	if (time > 0) {
 		// current voltage through magnetizing branch
 		Complex currentVoltage = Math::complexFromVectorElement(leftVector, mVirtualNodes[3]->matrixNodeIndex());
 
 		// calculate paramters A and B
-		mAphi = ( Complex(2 * Math::abs(mTD) * mDeltaT, 0) ) /
-				( Complex(4, 0) * mTD + Complex(0, 2 * omega * Math::abs(mTD) * mDeltaT) + Complex(mDeltaT, 0));
+		mAphi = (Complex(2 * Math::abs(mTD) * mDeltaT, 0)) /
+			(Complex(4, 0) * mTD + Complex(0, 2 * omega * Math::abs(mTD) * mDeltaT) + Complex(mDeltaT, 0));
 
-		mBphi = ( Complex(4, 0) * mTD - Complex(0, 2 * omega * Math::abs(mTD) * mDeltaT) - Complex(mDeltaT, 0)) /
-				( Complex(4, 0) * mTD + Complex(0, 2 * omega * Math::abs(mTD) * mDeltaT) + Complex(mDeltaT, 0));
+		mBphi = (Complex(4, 0) * mTD - Complex(0, 2 * omega * Math::abs(mTD) * mDeltaT) - Complex(mDeltaT, 0)) /
+			(Complex(4, 0) * mTD + Complex(0, 2 * omega * Math::abs(mTD) * mDeltaT) + Complex(mDeltaT, 0));
 
 		// calculate history term
 		mHphi = mAphi * (Complex(1, 0) + mBphi) * mVmDP + mBphi * mHphi;

@@ -65,7 +65,7 @@ namespace Ph1 {
 		Real mVm = 0;
 		Real mIMag = 0;
 
-		Real mDeltaT;
+		Real mDeltaT = 0;
 		Real mPrevStepTime = 0;
 
 		Bool mSatConstantsSet = false;
@@ -145,11 +145,11 @@ namespace Ph1 {
 			}
 			else if (HV == 20000 && LV == 660)
 			{
-				mLambdaM = 0.132;
-				mLambdaK = 0.145;
-				mLA = 0.01;
-				mLm = 1400.1;
-				mIM = 0.165;
+				mLambdaM = 95.205;
+				mLambdaK = 99.05;
+				mLA = 0.12;
+				mLm = 355.17;
+				mIM = 1.3865;
 				std::cout << "Parameter gesetzt" << std::endl;
 			}
 			else if (HV == 115000 && LV == 21000)
@@ -178,13 +178,17 @@ namespace Ph1 {
 
 			mSatConstC = mIM * (mLA * mIM - mLambdaM + mLambdaK);
 
-			mSatConstD = (mSatConstB - sqrt( (mSatConstB*mSatConstB) - 4*mSatConstA*mSatConstC )) / (2 * mSatConstA);
+			mSatConstD = (-mSatConstB - sqrt( (mSatConstB*mSatConstB) - 4*mSatConstA*mSatConstC )) / (2 * mSatConstA);
 
 			mSatConstantsSet = true;
 		}
 
-		void setSaturationCalculationMethod(Bool satMethod) {
-			mCalcSatDP = satMethod;
+		void setSaturationCalculationMethod(Bool CalcDPDomain) {
+			mCalcSatDP = CalcDPDomain;
+		}
+
+		void setOLTCActive(Bool active) {
+			mOLTCActive = active;
 		}
 
 		void setMagnetizingInductance(Real Lm) {

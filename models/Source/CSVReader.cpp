@@ -288,6 +288,7 @@ void CSVReader::assignLoadProfileDP(std::vector<std::shared_ptr<CPS::DP::Ph1::Av
 
 	switch (mode) {
 		case CSVReader::Mode::AUTO: {
+			mSLog->info("Reading .csv data for Network injektion");
 			for (auto load : loads) {
 				if(!load->isLoad())
 					continue;
@@ -347,6 +348,7 @@ void CSVReader::assignSourceProfile(std::vector<std::shared_ptr<CPS::DP::Ph1::Ne
 
 	switch (mode) {
 	case CSVReader::Mode::AUTO: {
+		mSLog->info("Assigning source profiles");
 		for (auto source : sources) {
 			String source_name = source->name();
 			for (auto file : mFileList) {
