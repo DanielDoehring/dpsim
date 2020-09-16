@@ -274,17 +274,26 @@ void DP::Ph1::RXLoad::updateSwitchState(Real time) {
 	//mSLog->info("Switch Status: {}", (float)mSubProtectionSwitch->attribute<Bool>("is_closed")->get());
 	if (time > 0 && mSubProtectionSwitch->attribute<Bool>("is_closed")->get()) {
 		Real VRef = Math::abs(mNomVoltage);
-		Real V = Math::abs(mIntfVoltage(0, 0));
+		Real V = mIntfVoltage(0, 0).real();
+		Real Vpu = V/VRef;
 
-		Real deltaV = Math::abs((V - VRef) / VRef);
+		Real deltaV =  Vpu - 1;
 
 		mDeltaT = time - mPrevTime;
-		if (deltaV > 0.1)
+		if (Math::abs(deltaV > 0.1))
 		{
 			if (mCounter > mSwitchDelayTime) {
 				mSwitchStateChange = true;
 				mSubProtectionSwitch->open();
 				mSLog->info("Opened Switch at {}", (float)time);
+				if (Vpu > 1) {
+					mSLog->info("Reason -> Overvoltage (Voltage at PCC: {} [p.u.])", Vpu);
+				}
+				else
+				{
+					mSLog->info("Reason -> Undervoltage (Voltage at PCC: {} [p.u.])", Vpu);
+				}
+				
 				mSubProtectionSwitch->setValueChange(true);
 			}
 			mCounter = mCounter + mDeltaT;

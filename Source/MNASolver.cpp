@@ -450,11 +450,13 @@ void MnaSolver<VarType>::updateSystemMatrix(Real time) {
 	}
 	// Now switches
 	for (auto comp : mVarElemsSwitches) {
-		// components
-		comp->mnaApplySystemMatrixStamp(mSwitchedMatrices[std::bitset<SWITCH_NUM>(0)]);
-		auto idObj = std::dynamic_pointer_cast<IdentifiedObject>(comp);
-		mSLog->debug("Updating {:s} {:s} in system matrix (variabel switch)",
-			idObj->type(), idObj->name());
+		if (comp) {
+			// apply stamp. first check if element is actice/exists
+			comp->mnaApplySystemMatrixStamp(mSwitchedMatrices[std::bitset<SWITCH_NUM>(0)]);
+			auto idObj = std::dynamic_pointer_cast<IdentifiedObject>(comp);
+			mSLog->debug("Updating {:s} {:s} in system matrix (variabel switch)",
+				idObj->type(), idObj->name());
+		}
 	}
 
 	mLuFactorizations[std::bitset<SWITCH_NUM>(0)] = Eigen::PartialPivLU<Matrix>(mSwitchedMatrices[std::bitset<SWITCH_NUM>(0)]);
