@@ -522,7 +522,7 @@ TopologicalPowerComp::Ptr Reader::mapPowerTransformer(PowerTransformer* trans) {
 	}
 	else {
 		Bool withResistiveLosses = true;
-		Bool withSat = false;
+		Bool withSat = true;
 		resistance = (resistance > 0) ? resistance : 1e-3;
 		auto transformer = std::make_shared<DP::Ph1::Transformer>(trans->mRID, trans->name, mComponentLogLevel, withResistiveLosses, withSat);
 		transformer->setParameters(ratioAbs, ratioPhase, resistance, inductance);
@@ -705,19 +705,23 @@ TopologicalPowerComp::Ptr Reader::mapExternalNetworkInjection(ExternalNetworkInj
 				Real Qref = 0;
 				Real kp_pll = 0.25;
 				Real ki_pll = 2;
-				Real Kp_powerCtrl = 0.001;
-				Real Ki_powerCtrl = 0.08;
-				Real Kp_currCtrl = 0.3;
-				Real Ki_currCtrl = 10;
+				//Real Kp_powerCtrl = 0.001;
+				//Real Ki_powerCtrl = 0.08;
+				//Real Kp_currCtrl = 0.3;
+				//Real Ki_currCtrl = 10;
+				Real Kp_powerCtrl = 0.0005;
+				Real Ki_powerCtrl = 0.01;
+				Real Kp_currCtrl = 0.1;
+				Real Ki_currCtrl = 2;
 				Real Lf = 0.002;
-				Real Cf = 7.89e-06;
-				Real Rf = 0.1;
-				Real Rc = 0.1;
+				Real Cf = 7.89e-07;
+				Real Rf = 0.01;
+				Real Rc = 0.01;
 
 				// parameters for connection transformer
 				Real tr_nomVoltEnd1 = baseVoltage;
-				Real tr_nomVoltEnd2 = 1.5e3;
-				Real tr_ratedPower = 10e6;
+				Real tr_nomVoltEnd2 = 15e3;
+				Real tr_ratedPower = 50e6;
 				Real tr_ratioAbs = tr_nomVoltEnd1 / tr_nomVoltEnd2;
 				Real tr_ratioPhase = 0;
 				Real tr_resistance = 0.001;
@@ -731,11 +735,9 @@ TopologicalPowerComp::Ptr Reader::mapExternalNetworkInjection(ExternalNetworkInj
 				ext_vsi->setInitialStateValues(0,0,Pref,Qref,0,0,0,0);
 
 				// Q Control param
-				//Real Qmax = tan(acos(0.95)) * Pref;
-				//Real Qmin = -Qmax;
-				Real Qmax = Sn;
+				Real Qmax = unitValue(extnet->maxQ.value, UnitMultiplier::M);
 				Real Qmin = -Qmax;
-				Real VRef = tr_nomVoltEnd1 * (1 + 0);
+				Real VRef = tr_nomVoltEnd1 * (1 + 0.05);
 				Real Deadband = 0.01;
 				Real SGain = 20;
 				Real DGain = 3;
@@ -834,10 +836,14 @@ TopologicalPowerComp::Ptr Reader::mapStaticVarCompensator(StaticVarCompensator* 
 			
 			Real ki_pll = 2;
 			Real kp_pll = 0.25;
-			Real Kp_powerCtrl = 0.001;
-			Real Ki_powerCtrl = 0.08;
-			Real Kp_currCtrl = 0.3;
-			Real Ki_currCtrl = 10;
+			//Real Kp_powerCtrl = 0.001;
+			//Real Ki_powerCtrl = 0.08;
+			//Real Kp_currCtrl = 0.3;
+			//Real Ki_currCtrl = 10;
+			Real Kp_powerCtrl = 0.0005;
+			Real Ki_powerCtrl = 0.01;
+			Real Kp_currCtrl = 0.1;
+			Real Ki_currCtrl = 2;
 			Real Lf = 0.002;
 			Real Cf = 7.89e-06;
 			Real Rf = 0.1;
@@ -845,8 +851,8 @@ TopologicalPowerComp::Ptr Reader::mapStaticVarCompensator(StaticVarCompensator* 
 
 			// parameters for connection transformer
 			Real tr_nomVoltEnd1 = baseVoltage;
-			Real tr_nomVoltEnd2 = 1.5e3;
-			Real tr_ratedPower  = 10e6;
+			Real tr_nomVoltEnd2 = 15e3;
+			Real tr_ratedPower  = 50e6;
 			Real tr_ratioAbs = tr_nomVoltEnd1 / tr_nomVoltEnd2;
 			Real tr_ratioPhase = 0;
 			Real tr_resistance = 0.001;

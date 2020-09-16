@@ -114,8 +114,12 @@ namespace Ph1 {
 		Real mPRefStatic = 0;
 		// was P reduced during fault?
 		Bool mPReduced = false;
+		Real mPNewPrev;
+
 		//
 		Real mVpcc = 0;
+		Real mRefVoltPCC;
+		Real mDeltaVNom = 0;
 		Real mDeltaV = 0;
 		Real mDeltaVPrev = 0;
 		Real mVppPrev = 0;
@@ -123,6 +127,8 @@ namespace Ph1 {
 		Real mDeltaIPrev = 0;
 		Real mDeltaIpu = 0;
 		Real mQRefStaticpu = 0;
+
+		Bool mDisconnected = false;
 
 	public:
 		///
@@ -219,10 +225,12 @@ namespace Ph1 {
 			AddBStep(AvVoltageSourceInverterDQ& AvVoltageSourceInverterDQ) :
 				Task(AvVoltageSourceInverterDQ.mName + ".AddBStep"), mAvVoltageSourceInverterDQ(AvVoltageSourceInverterDQ) {
 				mAttributeDependencies.push_back(AvVoltageSourceInverterDQ.mSubInductorF->attribute("right_vector"));
-				mAttributeDependencies.push_back(AvVoltageSourceInverterDQ.mConnectionTransformer->attribute("right_vector"));
 				mAttributeDependencies.push_back(AvVoltageSourceInverterDQ.mSubCapacitorF->attribute("right_vector"));
 				mAttributeDependencies.push_back(AvVoltageSourceInverterDQ.mSubCtrledVoltageSource->attribute("right_vector"));
 				mModifiedAttributes.push_back(AvVoltageSourceInverterDQ.attribute("right_vector"));
+				if (mAvVoltageSourceInverterDQ.mWithConnectionTransformer) {
+					mAttributeDependencies.push_back(AvVoltageSourceInverterDQ.mConnectionTransformer->attribute("right_vector"));
+				}
 			}
 
 			void execute(Real time, Int timeStepCount);
@@ -258,7 +266,9 @@ namespace Ph1 {
 				mAttributeDependencies.push_back(AvVoltageSourceInverterDQ.mSubCtrledVoltageSource->attribute("i_intf"));
 				mAttributeDependencies.push_back(AvVoltageSourceInverterDQ.mSubResistorF->attribute("i_intf"));
 				mAttributeDependencies.push_back(AvVoltageSourceInverterDQ.mSubInductorF->attribute("i_intf"));
-				mAttributeDependencies.push_back(AvVoltageSourceInverterDQ.mConnectionTransformer->attribute("i_intf"));
+				if (mAvVoltageSourceInverterDQ.mWithConnectionTransformer) {
+					mAttributeDependencies.push_back(AvVoltageSourceInverterDQ.mConnectionTransformer->attribute("i_intf"));
+				}
 				mAttributeDependencies.push_back(AvVoltageSourceInverterDQ.mSubResistorC->attribute("i_intf"));
 				mModifiedAttributes.push_back(AvVoltageSourceInverterDQ.attribute("i_intf"));
 				mModifiedAttributes.push_back(AvVoltageSourceInverterDQ.attribute("v_intf"));

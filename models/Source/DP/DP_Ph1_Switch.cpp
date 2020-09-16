@@ -73,6 +73,7 @@ void DP::Ph1::Switch::mnaApplySystemMatrixStamp(Matrix& systemMatrix) {
 		Math::addToMatrixElement(systemMatrix, matrixNodeIndex(1), matrixNodeIndex(0), -conductance);
 	}
 
+	/*
 	mSLog->info("-- Stamp ---");
 	if (terminalNotGrounded(0))
 		mSLog->info("Add {:s} to system at ({:d},{:d})", Logger::complexToString(conductance), matrixNodeIndex(0), matrixNodeIndex(0));
@@ -82,6 +83,7 @@ void DP::Ph1::Switch::mnaApplySystemMatrixStamp(Matrix& systemMatrix) {
 		mSLog->info("Add {:s} to system at ({:d},{:d})", Logger::complexToString(-conductance), matrixNodeIndex(0), matrixNodeIndex(1));
 		mSLog->info("Add {:s} to system at ({:d},{:d})", Logger::complexToString(-conductance), matrixNodeIndex(1), matrixNodeIndex(0));
 	}
+	*/
 }
 
 void DP::Ph1::Switch::mnaApplySwitchSystemMatrixStamp(Matrix& systemMatrix, Bool closed) {
@@ -101,6 +103,7 @@ void DP::Ph1::Switch::mnaApplySwitchSystemMatrixStamp(Matrix& systemMatrix, Bool
 		Math::addToMatrixElement(systemMatrix, matrixNodeIndex(1), matrixNodeIndex(0), -conductance);
 	}
 
+	/*
 	mSLog->info("-- Stamp ---");
 	if (terminalNotGrounded(0))
 		mSLog->info("Add {:s} to system at ({:d},{:d})", Logger::complexToString(conductance), matrixNodeIndex(0), matrixNodeIndex(0));
@@ -110,6 +113,7 @@ void DP::Ph1::Switch::mnaApplySwitchSystemMatrixStamp(Matrix& systemMatrix, Bool
 		mSLog->info("Add {:s} to system at ({:d},{:d})", Logger::complexToString(-conductance), matrixNodeIndex(0), matrixNodeIndex(1));
 		mSLog->info("Add {:s} to system at ({:d},{:d})", Logger::complexToString(-conductance), matrixNodeIndex(1), matrixNodeIndex(0));
 	}
+	*/
 }
 
 void DP::Ph1::Switch::mnaApplyRightSideVectorStamp(Matrix& rightVector) { }

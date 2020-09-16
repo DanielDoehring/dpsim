@@ -52,6 +52,7 @@ namespace Ph1 {
 		Complex mISrcRef;
 		Real mVPrev = 0;
 		Real mVmeasPrev = 0;
+		Real mLVVoltage;
 
 	public:
 		/// Defines UID, name and logging level

@@ -46,6 +46,7 @@ DP::Ph1::Transformer::Transformer(String uid, String name,
 	addAttribute<Complex>("ISrcRef", &mISrcRef, Flags::write | Flags::read);
 	addAttribute<Real>("IMag", &mIMag, Flags::write | Flags::read);
 	addAttribute<Real>("DeltaT", &mDeltaT, Flags::write | Flags::read);
+	addAttribute<Real>("LV Voltage", &mLVVoltage, Flags::write | Flags::read);
 }
 
 SimPowerComp<Complex>::Ptr DP::Ph1::Transformer::clone(String name) {
@@ -320,7 +321,7 @@ void DP::Ph1::Transformer::mnaApplySystemMatrixStamp(Matrix& systemMatrix) {
 	mSubSnubResistor->mnaApplySystemMatrixStamp(systemMatrix);
 
 	if (mWithSaturation) {
-		mSLog->info("Stamping Saturation Elements Source");
+		//mSLog->info("Stamping Saturation Elements Source");
 		mSubLeakageInductorLV->mnaApplySystemMatrixStamp(systemMatrix);
 		mSubLossResistorLV->mnaApplySystemMatrixStamp(systemMatrix);
 		mSubSatCurrentSrc->mnaApplySystemMatrixStamp(systemMatrix);
@@ -331,7 +332,7 @@ void DP::Ph1::Transformer::mnaApplySystemMatrixStamp(Matrix& systemMatrix) {
 		mSubResistor->mnaApplySystemMatrixStamp(systemMatrix);
 	}
 	*/
-
+	/*
 	if (terminalNotGrounded(0)) {
 		mSLog->info("Add {:s} to system at ({:d},{:d})", Logger::complexToString(Complex(-1.0, 0)),
 			mVirtualNodes[0]->matrixNodeIndex(),  mVirtualNodes[1]->matrixNodeIndex());
@@ -344,6 +345,7 @@ void DP::Ph1::Transformer::mnaApplySystemMatrixStamp(Matrix& systemMatrix) {
 		mSLog->info("Add {:s} to system at ({:d},{:d})", Logger::complexToString(-mRatio),
 			mVirtualNodes[1]->matrixNodeIndex(), matrixNodeIndex(1));
 	}
+	*/
 }
 
 void DP::Ph1::Transformer::mnaApplyRightSideVectorStamp(Matrix& rightVector) {
@@ -416,6 +418,8 @@ void DP::Ph1::Transformer::mnaUpdateVoltage(const Matrix& leftVector) {
 	mSLog->info("Voltage at (0): {:s}", Logger::phasorToString(Math::complexFromVectorElement(leftVector, matrixNodeIndex(0))));
 	*/
 	mIntfVoltage(0, 0) = mIntfVoltage(0, 0) - Math::complexFromVectorElement(leftVector, mVirtualNodes[0]->matrixNodeIndex());
+	mLVVoltage = Math::complexFromVectorElement(leftVector, matrixNodeIndex(1)).real();
+
 	SPDLOG_LOGGER_DEBUG(mSLog, "Voltage {:s}", Logger::phasorToString(mIntfVoltage(0, 0)));
 	//mSLog->info("Voltage across trafo: {:s}\n", Logger::phasorToString(mIntfVoltage(0, 0)));
 }
@@ -429,7 +433,8 @@ Real DP::Ph1::Transformer::PT1ControlStep(Real u, Real u_prev, Real y_prev, Real
 
 void DP::Ph1::Transformer::updateTapRatio(Real time, Int timeStepCount) {
 	// current lv voltage
-	Real lvVoltage = Math::abs(mSubSnubResistor->intfVoltage()(0, 0));
+	//Real lvVoltage = Math::abs(mSubSnubResistor->intfVoltage()(0, 0));
+	Real lvVoltage = mLVVoltage;
 
 	Real Vmeas = PT1ControlStep(lvVoltage, mVPrev, mVmeasPrev, 1, 0.01, mDeltaT);
 	// calculate voltage diff
@@ -499,7 +504,7 @@ void DP::Ph1::Transformer::updateSatCurrentSrcEMT(Real time, const Matrix& leftV
 	// now calculate correct magnetizing current
 	Real iMag_sqrt = sqrt( (mCurrentFlux - mLambdaK) * (mCurrentFlux - mLambdaK) + 4 * mSatConstD * mLA );
 	mIMag = ( (iMag_sqrt + mCurrentFlux - mLambdaK) / (2 * mLA) ) - (mSatConstD / mLambdaK);
-	mSLog->info("\nCurrent Flux of {} leads to magnetizing current of {}", mCurrentFlux, mIMag);
+	//mSLog->info("\nCurrent Flux of {} leads to magnetizing current of {}", mCurrentFlux, mIMag);
 
 	// calc new ref value for current source
 	// I_currSrc = Imagnetizing - I_Lm
@@ -534,7 +539,7 @@ void DP::Ph1::Transformer::updateFluxEMT(Real time, const Matrix& leftVector) {
 
 		// update magnetizing voltage
 		mVm = currentVoltageReal;
-		mSLog->info("Current Voltage across magnetizing branch: {} \n", mVm);
+		//mSLog->info("Current Voltage across magnetizing branch: {} \n", mVm);
 
 		// update flux
 		mCurrentFlux = mCurrentFlux + mDeltaFlux;
@@ -554,7 +559,7 @@ void DP::Ph1::Transformer::updateSatCurrentSrcDP(Real time, const Matrix& leftVe
 	// calc magnetizing current
 	Real iMag_sqrt = sqrt((mCurrentFlux - mLambdaK) * (mCurrentFlux - mLambdaK) + 4 * mSatConstD * mLA);
 	mIMag = ((iMag_sqrt + mCurrentFlux - mLambdaK) / (2 * mLA)) - (mSatConstD / mLambdaK);
-	mSLog->info("\nCurrent Flux of {} leads to magnetizing current of {}", mCurrentFlux, mIMag);
+	//mSLog->info("\nCurrent Flux of {} leads to magnetizing current of {}", mCurrentFlux, mIMag);
 
 	// transform mag current to DP domain
 	// multiply with e^-jw_s*t

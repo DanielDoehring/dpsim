@@ -46,7 +46,7 @@ void Base::AvVoltageSourceInverterDQ::setTransformerParameters(Real nomVoltageEn
 void Base::AvVoltageSourceInverterDQ::setParameters(Real sysOmega, Real sysVoltNom, Real Pref, Real Qref, Real Sn) {
 	mPref = Pref;
 	mQref = Qref;
-	mSn = (Sn > 0) ? Sn : 100 * Pref;
+	mSn = (Sn > 0) ? Sn : sqrt(Pref*Pref + Qref*Qref);
 
 	mVnom = sysVoltNom;
 	mOmegaN = sysOmega;

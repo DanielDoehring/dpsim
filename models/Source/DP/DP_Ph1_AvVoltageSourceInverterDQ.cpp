@@ -232,7 +232,7 @@ void DP::Ph1::AvVoltageSourceInverterDQ::initializeFromPowerflow(Real frequency)
 	Complex filterInterfaceInitialVoltage;
 	Complex filterInterfaceInitialCurrent;
 
-	mVirtualNodes[5]->setInitialVoltage(mIntfVoltage(0, 0) - mIntfCurrent(0, 0) * Complex(mSwitchRClosed, 0));
+	mVirtualNodes[mNumVirtualNodes-1]->setInitialVoltage(mIntfVoltage(0, 0) - mIntfCurrent(0, 0) * Complex(mSwitchRClosed, 0));
 
 	if (mWithConnectionTransformer) {		
 		// calculate quantities of low voltage side of transformer (being the interface quantities of the filter)
@@ -308,7 +308,11 @@ void DP::Ph1::AvVoltageSourceInverterDQ::initializeFromPowerflow(Real frequency)
 	mSubCapacitorF->initializeFromPowerflow(frequency);
 	mSubResistorC->initializeFromPowerflow(frequency);
 	mSubProtectionSwitch->initializeFromPowerflow(frequency);
-	
+
+	if (mQUControl) {
+		mRefVoltPCC = mWithConnectionTransformer ? mVnom * mTransformerRatioAbs : mVnom;
+	}
+
 	mSLog->info(
 		"\n--- Initialization from powerflow ---"
 		"\nVoltage across: {:s}"
@@ -391,16 +395,20 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSetPoint(Real time){
 
 	// calculate measured voltage with PT1
 	Real Vmeas = PT1ControlStep(mVpcc, mVppPrev, mVmeasPrev, 1, 0.01, mDeltaT);
+	// voltage difference wrt reference voltage of Control
 	mDeltaV = (Vmeas - mVRef) / mVRef;
+	//mDeltaV = (Vmeas - mRefVoltPCC) / mRefVoltPCC;
 
-	Real deltaV = mDeltaV;
+	// voltage difference wrt system base voltage (for system state evaluation)
+	Real mDeltaVNom = (Vmeas - mRefVoltPCC) / mRefVoltPCC;
+
 	Bool QCalcStatic;
 	Real newQRef;
 
 	// evaluate state of system voltage
 	if (mFaultState) {
 		QCalcStatic = false;
-		if ((mFaultCounter > 5) || (Math::abs(mDeltaV) < 0.1 && mRecoveryCounter > mRecoveryValue))
+		if ((mFaultCounter > 5) || (Math::abs(mDeltaVNom) < 0.1 && mRecoveryCounter > mRecoveryValue))
 		{
 			mFaultState = false;
 			mSLog->info("Time: {}", time);
@@ -429,11 +437,11 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSetPoint(Real time){
 	}
 	else
 	{
-		mFaultState = (Math::abs(mDeltaV) > 0.1) ? true : false;
+		mFaultState = (Math::abs(mDeltaVNom) > 0.1) ? true : false;
 		if (mFaultState) {
 			mSLog->info("Time: {}", time);
 			mSLog->info("Detected Fault at {}"
-				"\nVoltage Difference is {} [p.u.]. Allowed: 0.1 p.u.", (float)time, mDeltaV);
+				"\nVoltage Difference is {} [p.u.]. Allowed: 0.1 p.u.", (float)time, mDeltaVNom);
 			mFaultStartTime = (mFaultStartTime > 0) ? 0 : time;
 		}		
 	}
@@ -507,10 +515,18 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSetPoint(Real time){
 			if (!mPReduced) {
 				// save pre reduced value
 				mPRefStatic = mPref;
+				// initialize value of new P calc
+				mPNewPrev = mPref;
 				mPReduced = true;
 			}
 
-			mPref = (-newIactive * Vmeas) < 0 ? -newIactive * Vmeas : 0;
+			//mPref = (-newIactive * Vmeas) < 0 ? -newIactive * Vmeas : 0;
+
+			// use PT1 to smoothly decrease P
+			Real PNew = (-newIactive * Vmeas) < 0 ? -newIactive * Vmeas : 0;
+			mPref = PT1ControlStep(PNew, mPNewPrev, mPref, 1, 0.01, mDeltaT);
+			mPNewPrev = PNew;
+
 			mSLog->info("Time: {}", time);
 			mSLog->info("Reducing active power input for dynamic reactive power support");
 			mSLog->info("New P: {}", mPref);
@@ -521,7 +537,7 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSetPoint(Real time){
 	}
 	// reset update counter
 	mUpdateCounter = 0;
-	mDeltaVPrev = deltaV;
+	mDeltaVPrev = mDeltaV;
 	mVmeasPrev = Vmeas;
 }
 
@@ -543,8 +559,12 @@ void DP::Ph1::AvVoltageSourceInverterDQ::MnaPreStep::execute(Real time, Int time
 	else
 		mAvVoltageSourceInverterDQ.mSubCtrledVoltageSource->setParameters(mAvVoltageSourceInverterDQ.mVsdq);
 
-	if(mAvVoltageSourceInverterDQ.mSwitchActive && !mAvVoltageSourceInverterDQ.mSwitchStateChange)
-		mAvVoltageSourceInverterDQ.updateSwitchState(time);
+	if (!mAvVoltageSourceInverterDQ.mDisconnected)
+	{
+		if (mAvVoltageSourceInverterDQ.mSwitchActive && !mAvVoltageSourceInverterDQ.mSwitchStateChange)
+			mAvVoltageSourceInverterDQ.updateSwitchState(time);
+	}
+	
 }
 
 void DP::Ph1::AvVoltageSourceInverterDQ::MnaPostStep::execute(Real time, Int timeStepCount) {
@@ -552,20 +572,24 @@ void DP::Ph1::AvVoltageSourceInverterDQ::MnaPostStep::execute(Real time, Int tim
 	mAvVoltageSourceInverterDQ.mDeltaT = time - mAvVoltageSourceInverterDQ.mPrevTime;
 
 	// control for switch and reactive power set point
-	if (!mAvVoltageSourceInverterDQ.mSwitchStateChange) {
-		mAvVoltageSourceInverterDQ.updateInputStateSpaceModel(*mLeftVector, time);
-		mAvVoltageSourceInverterDQ.step(time, timeStepCount);
+	if (!mAvVoltageSourceInverterDQ.mDisconnected)
+	{
+		if (!mAvVoltageSourceInverterDQ.mSwitchStateChange) {
+			mAvVoltageSourceInverterDQ.updateInputStateSpaceModel(*mLeftVector, time);
+			mAvVoltageSourceInverterDQ.step(time, timeStepCount);
 
-		mAvVoltageSourceInverterDQ.mUpdateCounter = mAvVoltageSourceInverterDQ.mUpdateCounter + mAvVoltageSourceInverterDQ.mDeltaT;
-		//if (mAvVoltageSourceInverterDQ.mQUControl && (mAvVoltageSourceInverterDQ.mUpdateCounter > mAvVoltageSourceInverterDQ.mUpdateCounterValue) && time > 0.1) {
-		if (mAvVoltageSourceInverterDQ.mQUControl && time > 0.1) {
-			mAvVoltageSourceInverterDQ.updateSetPoint(time);
+			mAvVoltageSourceInverterDQ.mUpdateCounter = mAvVoltageSourceInverterDQ.mUpdateCounter + mAvVoltageSourceInverterDQ.mDeltaT;
+			//if (mAvVoltageSourceInverterDQ.mQUControl && (mAvVoltageSourceInverterDQ.mUpdateCounter > mAvVoltageSourceInverterDQ.mUpdateCounterValue) && time > 0.1) {
+			if (mAvVoltageSourceInverterDQ.mQUControl && time > 0.1) {
+				mAvVoltageSourceInverterDQ.updateSetPoint(time);
+			}
+		}
+		mAvVoltageSourceInverterDQ.mPrevTime = time;
+		if (mAvVoltageSourceInverterDQ.mSwitchActive && !mAvVoltageSourceInverterDQ.mSwitchStateChange) {
+			mAvVoltageSourceInverterDQ.mSubProtectionSwitch->setValueChange(false);
 		}
 	}
-	mAvVoltageSourceInverterDQ.mPrevTime = time;
-	if (mAvVoltageSourceInverterDQ.mSwitchActive && !mAvVoltageSourceInverterDQ.mSwitchStateChange) {
-		mAvVoltageSourceInverterDQ.mSubProtectionSwitch->setValueChange(false);
-	}
+	
 	// save voltage at PCC
 	mAvVoltageSourceInverterDQ.mVppPrev = mAvVoltageSourceInverterDQ.mVpcc;
 }
@@ -605,16 +629,16 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSwitchState(Real time) {
 			if (mFaultCounter > 0.05)
 			{
 
-				if (mDeltaV > 0)
+				if (mDeltaVNom > 0)
 				{
 					// Overvoltage
 					Vmax = (mFaultCounter < 0.15) ? 1.3 : 1.25;
-					if ((1 + mDeltaV) > Vmax) {
+					if ((1 + mDeltaVNom) > Vmax) {
 						mSLog->info("Disonnect VSI. Reason: Overvoltage"
-							"\Time: {}"
+							"\nTime: {}"
 							"\nGuideline limit: {}"
 							"\nActual value: {}",
-							time, Vmax, (1 + mDeltaV));
+							time, Vmax, (1 + mDeltaVNom));
 						disconnect = true;
 					}
 				}
@@ -633,12 +657,12 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSwitchState(Real time) {
 						Vmin = 0.85;
 					}
 
-					if ((1 + mDeltaV) < Vmin) {
+					if ((1 + mDeltaVNom) < Vmin) {
 						mSLog->info("Disonnect VSI. Reason: Undervoltage"
-							"\Time: {}"
+							"\nTime: {}"
 							"\nGuideline limit: {}"
 							"\nActual value: {}",
-							time, Vmin, (1 + mDeltaV));
+							time, Vmin, (1 + mDeltaVNom));
 						disconnect = true;
 					}
 				}
@@ -657,6 +681,7 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSwitchState(Real time) {
 		*/
 		// disconnect if guideline is violated
 		if (disconnect) {
+			mDisconnected = true;
 			mSwitchStateChange = true;
 			mSubProtectionSwitch->open();
 			mSLog->info("Opened Protection Switch at {}", (float)time);
