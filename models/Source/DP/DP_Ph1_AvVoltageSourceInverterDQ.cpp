@@ -44,6 +44,7 @@ DP::Ph1::AvVoltageSourceInverterDQ::AvVoltageSourceInverterDQ(String uid, String
 	addAttribute<Real>("Vpcc", &mVpcc, Flags::read | Flags::write);
 	addAttribute<Real>("DeltaI", &mDeltaIpu, Flags::read | Flags::write);
 	addAttribute<Real>("DeltaV", &mDeltaVPrev, Flags::read | Flags::write);
+	addAttribute<Real>("DeltaVNom", &mDeltaVNom, Flags::read | Flags::write);
 	addAttribute<Real>("Vmeas", &mVmeasPrev, Flags::read | Flags::write);
 	addAttribute<Real>("QRefStatic_PU", &mQRefStaticpu, Flags::read | Flags::write);
 	
@@ -400,7 +401,7 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSetPoint(Real time){
 	//mDeltaV = (Vmeas - mRefVoltPCC) / mRefVoltPCC;
 
 	// voltage difference wrt system base voltage (for system state evaluation)
-	Real mDeltaVNom = (Vmeas - mRefVoltPCC) / mRefVoltPCC;
+	mDeltaVNom = (Vmeas - mRefVoltPCC) / mRefVoltPCC;
 
 	Bool QCalcStatic;
 	Real newQRef;
