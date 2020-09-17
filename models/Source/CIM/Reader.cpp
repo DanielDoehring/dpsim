@@ -527,10 +527,10 @@ TopologicalPowerComp::Ptr Reader::mapPowerTransformer(PowerTransformer* trans) {
 		auto transformer = std::make_shared<DP::Ph1::Transformer>(trans->mRID, trans->name, mComponentLogLevel, withResistiveLosses, withSat);
 		transformer->setParameters(ratioAbs, ratioPhase, resistance, inductance);
 
-		Real NumTaps = 6;
-		transformer->setOLTCParamters(NumTaps, voltageNode2);
-		transformer->setOLTCTimeDelay(1.5);
-		transformer->setOLTCDeadband(0.03);
+		Real NumTaps = 10;
+		transformer->setOLTCParamters(NumTaps, voltageNode2*1.05);
+		transformer->setOLTCTimeDelay(15);
+		transformer->setOLTCDeadband(0.01);
 
 		transformer->setParametersSaturationDefault(220000, 66000);
 		//transformer->setMagnetizingInductance(350);
@@ -891,6 +891,7 @@ TopologicalPowerComp::Ptr Reader::mapStaticVarCompensator(StaticVarCompensator* 
 			Real RefVoltage = unitValue(svc->voltageSetPoint.value, UnitMultiplier::k);
 
 			cpsSVC->setParameters(Bmax, Bmin, Qmax, baseVoltage, RefVoltage);
+			// vorher K = 40
 			cpsSVC->setControllerParameters(0.2, 40);
 			return cpsSVC;
 		}
