@@ -61,9 +61,10 @@ void DP::Ph1::SVC::initializeFromPowerflow(Real frequency) {
 		"\n --- Parameters ---"
 		"\n Controller: T = {} K = {}"
 		"\n Reference Voltage  {} [kV]"
+		"\n Qmax = {} [var] -> BN = {} [S]"
 		"\n Bmax = {} Bmin = {} [p.u.]"
 		"\n Initial B: {}",
-		mTr, mKr, mRefVolt, mBMax, mBMin, mBPrev);
+		mTr, mKr, mRefVolt, mQN, mBN, mBMax, mBMin, mBPrev);
 
 	// set voltages at virtual nodes
 	Complex VLSwitch = mIntfVoltage(0, 0) - LImpedance * mIntfCurrent(0, 0);
@@ -198,12 +199,12 @@ void DP::Ph1::SVC::updateSusceptance() {
 	// check bounds
 	if (B > mBMax) {
 		B =  mBMax;
-		mSLog->info("New B value exceeds Bmax");
+		//mSLog->debug("New B value exceeds Bmax");
 	}
 	else if(B < mBMin)
 	{
 		B = mBMin;
-		mSLog->info("New B value exceeds Bmin");
+		//mSLog->debug("New B value exceeds Bmin");
 	}
 
 	// set new B if it has a new value and difference is big enough
@@ -221,7 +222,7 @@ void DP::Ph1::SVC::updateSusceptance() {
 			{
 				mInductiveMode = true;
 				mSubInductor->updateInductance(inductance, mDeltaT);
-				mSLog->info("Inductive Mode: New Inductance: L = {} [H]", inductance);
+				//mSLog->debug("Inductive Mode: New Inductance: L = {} [H]", inductance);
 				mLPrev = inductance;
 
 				mValueChange = true;
@@ -237,7 +238,7 @@ void DP::Ph1::SVC::updateSusceptance() {
 			{
 				mInductiveMode = false;
 				mSubCapacitor->updateCapacitance(capacitance, mDeltaT);
-				mSLog->info("Capacitive Mode: New Capacitance: C = {} [F]", capacitance);
+				//mSLog->debug("Capacitive Mode: New Capacitance: C = {} [F]", capacitance);
 				mCPrev = capacitance;
 
 				mValueChange = true;

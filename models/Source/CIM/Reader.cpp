@@ -869,7 +869,7 @@ TopologicalPowerComp::Ptr Reader::mapStaticVarCompensator(StaticVarCompensator* 
 			Real VRef = unitValue(svc->voltageSetPoint.value, UnitMultiplier::k);
 			Real Deadband = 0.01;
 			Real SGain = 20;
-			Real DGain = 3;
+			Real DGain = 5;
 			statcom->setQControlParameters(true, VRef, SGain, DGain, Deadband, -QIndMax, -QCapMax);
 
 			return statcom;

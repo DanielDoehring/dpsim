@@ -103,9 +103,11 @@ namespace Base {
 
 		// Time constants for PT1 controller
 		// dynamic
-		Real mTD = 0.01;
+		// Real mTD = 0.01
+		Real mTD = 0.05;
 		// static
-		Real mTS = 0.05;
+		// Real mTS = 0.05
+		Real mTS = 0.2;
 		
     public:
 		///

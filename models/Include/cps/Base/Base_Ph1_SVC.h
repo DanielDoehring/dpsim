@@ -51,6 +51,7 @@ namespace Ph1 {
 			mBMin = Bmin;
 			//mBMax = 1;
 			//mBMin = Bmin;
+			mQN = QN;
 			mBN = QN / (nomVolt*nomVolt);
 
 			mNomVolt = nomVolt;
