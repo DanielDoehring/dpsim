@@ -927,6 +927,7 @@ TopologicalPowerComp::Ptr Reader::mapLinearShuntCompensator(LinearShuntCompensat
 	}
 
 	if (mDomain == Domain::DP && mPhase == PhaseType::Single) {
+		/*
 		// model as SVC
 		auto cpsShunt = std::make_shared<DP::Ph1::SVC>(shunt->mRID, shunt->name, mComponentLogLevel);
 		Real Sn = 0.5e6;
@@ -935,6 +936,27 @@ TopologicalPowerComp::Ptr Reader::mapLinearShuntCompensator(LinearShuntCompensat
 		cpsShunt->setParameters(Bmax, Bmin, Sn, baseVoltage);
 		cpsShunt->setControllerParameters(0.2, 40);
 		return cpsShunt;
+		*/
+
+		// test mechanical model
+		mSLog->info("Found Shunt Element: {} -> model as: SVC (mechanical model)", shunt->name);
+		auto cpsSVC = std::make_shared<DP::Ph1::SVC>(shunt->mRID, shunt->name, mComponentLogLevel);
+
+		Real deadband = 0.01;
+		Real switchDelay = 15;
+		Real maxPos = shunt->maximumSections.value;
+		Real minPos = 0;
+		Real initPos = shunt->sections.value;
+		Real nomVolt = baseVoltage;
+		//Real refVolt = nomVolt * 1.05;
+		Real refVolt = unitValue(shunt->nomU.value, UnitMultiplier::k) * 1.05;
+		Real BN = Math::abs(unitValue(shunt->bPerSection.value, UnitMultiplier::none)) * maxPos;
+
+		cpsSVC->setMechModelParameter(deadband, switchDelay, maxPos, minPos, nomVolt, refVolt, BN, initPos);
+
+		return cpsSVC;
+
+
 	}
 }
 

@@ -100,6 +100,8 @@ namespace Ph1 {
 		void setSwitchState();
 		void updateSusceptance();
 
+		void mechanicalModelUpdate(Real time);
+
 		class MnaPreStep : public Task {
 		public:
 			MnaPreStep(SVC& svc) :

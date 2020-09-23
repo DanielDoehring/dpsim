@@ -22,6 +22,8 @@ DP::Ph1::SVC::SVC(String uid, String name, Logger::Level logLevel)
 	addAttribute<Real>("B", &mBPrev, Flags::read | Flags::write);
 	addAttribute<Real>("DeltaV", &mDeltaV, Flags::read | Flags::write);
 	addAttribute<Real>("Vpcc", &mVpcc, Flags::read | Flags::write);
+	addAttribute<Real>("Vmeas", &mVmeasPrev, Flags::read | Flags::write);
+	addAttribute<Real>("ViolationCounter", &mViolationCounter, Flags::read | Flags::write);
 }
 
 SimPowerComp<Complex>::Ptr DP::Ph1::SVC::clone(String name) {
@@ -56,6 +58,10 @@ void DP::Ph1::SVC::initializeFromPowerflow(Real frequency) {
 	mBPrev = 0;
 	mPrevVoltage = mIntfVoltage(0, 0).real();
 	mVmeasPrev = mPrevVoltage;
+
+	if (mMechMode) {
+		mSLog->info("Using Mechanical Model");
+	}
 
 	mSLog->info(
 		"\n --- Parameters ---"
@@ -152,8 +158,17 @@ void DP::Ph1::SVC::mnaApplyRightSideVectorStamp(Matrix& rightVector) {
 
 void DP::Ph1::SVC::MnaPreStep::execute(Real time, Int timeStepCount) {
 	mSVC.mnaApplyRightSideVectorStamp(mSVC.mRightVector);
-	if (time > 0.1)
-		mSVC.updateSusceptance();
+	if (time > 0.1) {
+		if (mSVC.mMechMode)
+		{
+			mSVC.mechanicalModelUpdate(time);
+		}
+		else
+		{
+			mSVC.updateSusceptance();
+		}
+	}
+		
 }
 
 void DP::Ph1::SVC::MnaPostStep::execute(Real time, Int timeStepCount) {
@@ -258,6 +273,98 @@ void DP::Ph1::SVC::updateSusceptance() {
 	mPrevVoltage = V;
 	mVmeasPrev = Vmeas;
 }
+
+
+// model SVC with a mechanical component and discrete
+void DP::Ph1::SVC::mechanicalModelUpdate(Real time) {
+	// current voltage
+	Real V = Math::abs(mIntfVoltage(0, 0).real());
+	Real omega = 2 * M_PI*mFrequencies(0, 0);
+
+	// Pt1 with trapez rule for voltage measurement
+	Real Fac3 = mDeltaT / (2 * mTm);
+	Real Vmeas = (1 / (1 + Fac3)) * (V + mPrevVoltage - mVmeasPrev);
+
+	// V diff in pu
+	Real deltaV = (mRefVolt - Vmeas) / mRefVolt;
+
+	if (Math::abs(deltaV) > mDeadband) {
+		if (mViolationCounter > mMechSwitchDelay)
+		{
+			// change suszeptance one step
+			if (deltaV > 0 && (mTapPos > mMinPos)) {
+				// undervoltage
+				
+				mTapPos = mTapPos - 1;
+				mTapPos = (mTapPos < mMinPos) ? mMinPos : mTapPos;
+				mViolationCounter = 0;
+				mSLog->info("Time: {}"
+					"\nDecreasing Tap. Reason: Undervoltage"
+					"\nNew Tap Position: {}", time, mTapPos);
+			}
+			else if(deltaV < 0 && (mTapPos < mMaxPos))
+			{
+				// overvoltage
+				mTapPos = mTapPos + 1;
+				mTapPos = (mTapPos > mMaxPos) ? mMaxPos : mTapPos;
+				mViolationCounter = 0;
+				mSLog->info("Time: {}"
+					"\nIncreasing Tap. Reason: Overvoltag"
+					"\nNew Tap Position: {}", time, mTapPos);
+			}
+
+			if (mViolationCounter == 0)
+			{
+				// new value for suszeptance
+				if (mTapPos > 0) {
+					// inductor is active
+					mInductiveMode = true;
+					Real inductance = 1 / ((mTapPos / mMaxPos) * mBN * omega);
+					mSLog->info("New inductance: {}", inductance);
+					mSubInductor->updateInductance(inductance, mDeltaT);
+					mValueChange = true;
+					setSwitchState();
+				}
+				else if (mTapPos < 0)
+				{
+					// capacitor is active
+					mInductiveMode = false;
+					Real capacitance = ((mTapPos / mMinPos) * mBN) / omega;
+					mSLog->info("New capacitance: {}", capacitance);
+					mSubCapacitor->updateCapacitance(capacitance, mDeltaT);
+					mValueChange = true;
+					setSwitchState();
+
+				}
+				else if (mTapPos = 0)
+				{
+					// open both
+					mSLog->info("Time: {}"
+						"Tap Position: 0. Open both elements", time);
+					mSubInductorProtectionSwitch->open();
+					mSubCapacitorProtectionSwitch->open();
+
+				}
+			}
+
+		}
+		else
+		{
+			// increase counter 
+			mViolationCounter = mViolationCounter + mDeltaT;
+		}
+	}
+	else
+	{
+		// reset counter
+		mViolationCounter = 0;
+	}
+
+	// save states
+	mPrevVoltage = V;
+	mVmeasPrev = Vmeas;
+}
+
 
 void DP::Ph1::SVC::setSwitchState() {
 	// set switches according to current mode of svc

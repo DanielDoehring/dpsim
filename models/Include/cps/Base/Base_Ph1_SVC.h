@@ -37,6 +37,17 @@ namespace Ph1 {
 		Real mPrevTimeStep = 0;
 		Real mDeltaT;
 
+
+		// param for mechanical model
+		Bool mMechMode = false;
+		Real mViolationCounter = 0;
+		Real mDeadband;
+		Real mMechSwitchDelay;
+		Real mTapPos;
+		Real mMaxPos;
+		Real mMinPos;
+
+
 		// save for numerical integration
 		Real mPrevVoltage;
 		Real mDeltaV = 0;
@@ -63,6 +74,26 @@ namespace Ph1 {
 			mTr = T;
 			mKr = K;
 		};
+
+		void setMechModelParameter(Real deadband, Real switchDelay, Real maxPos, Real minPos, Real nomVolt, Real RefVolt, Real BN, Real initPos=0) {
+			mMechMode = true;
+			// initial inductance very high 10^6 [Ohm] @ 50 Hz
+			mInductance = 3183.1;
+
+			mDeadband = deadband;
+			mMechSwitchDelay = switchDelay;
+			mMaxPos = maxPos;
+			mMinPos = minPos;
+			mTapPos = initPos;
+
+			mNomVolt = nomVolt;
+			mRefVolt = (RefVolt > 0) ? RefVolt : mNomVolt;
+			mBN = BN;
+			mBMax = mBN;
+			mBMin = mMinPos * mBN;
+			mQN = mBN * nomVolt * nomVolt;
+		}
+
 	};
 }
 }
