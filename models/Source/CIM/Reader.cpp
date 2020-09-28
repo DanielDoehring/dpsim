@@ -529,7 +529,7 @@ TopologicalPowerComp::Ptr Reader::mapPowerTransformer(PowerTransformer* trans) {
 
 		Real NumTaps = 10;
 		transformer->setOLTCParamters(NumTaps, voltageNode2*1.05);
-		transformer->setOLTCTimeDelay(15);
+		transformer->setOLTCTimeDelay(30);
 		transformer->setOLTCDeadband(0.01);
 
 		transformer->setParametersSaturationDefault(220000, 66000);
@@ -869,7 +869,8 @@ TopologicalPowerComp::Ptr Reader::mapStaticVarCompensator(StaticVarCompensator* 
 			Real VRef = unitValue(svc->voltageSetPoint.value, UnitMultiplier::k);
 			Real Deadband = 0.01;
 			Real SGain = 20;
-			Real DGain = 5;
+			//Real DGain = 5;
+			Real DGain = 6;
 			statcom->setQControlParameters(true, VRef, SGain, DGain, Deadband, -QIndMax, -QCapMax);
 
 			return statcom;

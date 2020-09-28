@@ -62,6 +62,12 @@ namespace Ph1 {
 		Real mLPrev;
 		Real mCPrev;
 
+		// variables for protection
+		Real mProtCount1 = 0;
+		Real mProtCount2 = 0;
+		Real mProtCount3 = 0;
+		Bool mDisconnect = false;
+
 	public:
 		/// Defines UID, name and log level
 		SVC(String uid, String name, Logger::Level logLevel = Logger::Level::off);
@@ -98,9 +104,12 @@ namespace Ph1 {
 		Bool ValueChanged() { return mValueChange; };
 
 		void setSwitchState();
-		void updateSusceptance();
 
-		void mechanicalModelUpdate(Real time);
+		void updateSusceptance();
+		void mechanicalModelUpdateSusceptance(Real time);
+		// check protection function
+		void checkProtection(Real time);
+
 
 		class MnaPreStep : public Task {
 		public:

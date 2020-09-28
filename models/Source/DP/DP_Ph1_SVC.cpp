@@ -158,17 +158,17 @@ void DP::Ph1::SVC::mnaApplyRightSideVectorStamp(Matrix& rightVector) {
 
 void DP::Ph1::SVC::MnaPreStep::execute(Real time, Int timeStepCount) {
 	mSVC.mnaApplyRightSideVectorStamp(mSVC.mRightVector);
-	if (time > 0.1) {
+	if (time > 0.1 && !mSVC.mDisconnect) {
 		if (mSVC.mMechMode)
 		{
-			mSVC.mechanicalModelUpdate(time);
+			mSVC.mechanicalModelUpdateSusceptance(time);
 		}
 		else
 		{
 			mSVC.updateSusceptance();
 		}
+		mSVC.checkProtection(time);
 	}
-		
 }
 
 void DP::Ph1::SVC::MnaPostStep::execute(Real time, Int timeStepCount) {
@@ -189,6 +189,55 @@ void DP::Ph1::SVC::mnaUpdateCurrent(const Matrix& leftVector) {
 	mIntfCurrent(0, 0) += mSubInductor->intfCurrent()(0, 0);
 	mIntfCurrent(0, 0) += mSubCapacitor->intfCurrent()(0, 0);
 }
+
+
+void DP::Ph1::SVC::checkProtection(Real time) {
+	// check states for violation of protection values
+	// get inverse protection curve value (time delay value)
+	//Real TLimit = 
+
+	Real Vpu = mVmeasPrev / mNomVolt;
+	if (Vpu > 1.4) {
+		mProtCount1 = mProtCount1 + mDeltaT;
+		if (mProtCount1 > 0.1) {
+			mDisconnect = true;
+		}
+	}
+	else
+	{
+		mProtCount1 = 0;
+	}
+	if (Vpu > 1.25)
+	{
+		mProtCount2 = mProtCount2 + mDeltaT;
+		if (mProtCount2 > 1) {
+			mDisconnect = true;
+		}
+	}
+	else
+	{
+		mProtCount2 = 0;
+	}
+	if (Vpu > 1.15)
+	{
+		mProtCount3 = mProtCount3 + mDeltaT;
+		if (mProtCount3 > 5) {
+			mDisconnect = true;
+		}
+	}
+	else
+	{
+		mProtCount3 = 0;
+	}
+
+	if (mDisconnect) {
+		mSLog->info("Disconnect SVC because of overvoltage at {}", time);
+		mSubCapacitorProtectionSwitch->open();
+		mSubInductorProtectionSwitch->open();
+		mValueChange = true;
+	}
+}
+
 
 void DP::Ph1::SVC::updateSusceptance() {
 	// calculate new B value
@@ -276,7 +325,7 @@ void DP::Ph1::SVC::updateSusceptance() {
 
 
 // model SVC with a mechanical component and discrete
-void DP::Ph1::SVC::mechanicalModelUpdate(Real time) {
+void DP::Ph1::SVC::mechanicalModelUpdateSusceptance(Real time) {
 	// current voltage
 	Real V = Math::abs(mIntfVoltage(0, 0).real());
 	Real omega = 2 * M_PI*mFrequencies(0, 0);
@@ -370,23 +419,23 @@ void DP::Ph1::SVC::setSwitchState() {
 	// set switches according to current mode of svc
 	if (mInductiveMode) {
 		if (!mSubInductorProtectionSwitch->mnaIsClosed()) {
-			mSLog->info("Closed Inductor Switch");
+			mSLog->info("Inductive Mode: Closed Inductor Switch");
 			mSubInductorProtectionSwitch->close();
 		}
 		if (mSubCapacitorProtectionSwitch->mnaIsClosed()) {
 			mSubCapacitorProtectionSwitch->open();
-			mSLog->info("Opened Capacitor Switch");
+			mSLog->info("Inductive Mode: Opened Capacitor Switch");
 		}
 	}
 	else
 	{
 		if (mSubInductorProtectionSwitch->mnaIsClosed()) {
 			mSubInductorProtectionSwitch->open();
-			mSLog->info("Openend Inductor Switch");
+			mSLog->info("Capacitive Mode: Openend Inductor Switch");
 		}
 		if (!mSubCapacitorProtectionSwitch->mnaIsClosed()) {
 			mSubCapacitorProtectionSwitch->close();
-			mSLog->info("Closed Capcitor Switch");
+			mSLog->info("Capacitive Mode: Closed Capcitor Switch");
 		}
 	}
 }
