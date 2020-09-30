@@ -118,7 +118,6 @@ namespace Ph1 {
 
 		//
 		Real mVpcc = 0;
-		Real mRefVoltPCC;
 		Real mDeltaVNom = 0;
 		Real mDeltaV = 0;
 		Real mDeltaVPrev = 0;
@@ -127,8 +126,10 @@ namespace Ph1 {
 		Real mDeltaIPrev = 0;
 		Real mDeltaIpu = 0;
 		Real mQRefStaticpu = 0;
+		Bool mResetQ = false;
 
 		Bool mDisconnected = false;
+		Real mFaultStartDelay = 0;
 
 	public:
 		///
@@ -197,6 +198,7 @@ namespace Ph1 {
 		/// new update switch state function
 		//void updateSwitchState(const Matrix& leftVector, Real time);
 		void updateSwitchState(Real time);
+		Bool checkFRTGuidelineValue(Real time, Real voltageLevel);
 
 		/// ### new for Q-Control ###
 		Real PT1ControlStep(Real u, Real u_prev, Real y_prev, Real K, Real T, Real deltaT);
