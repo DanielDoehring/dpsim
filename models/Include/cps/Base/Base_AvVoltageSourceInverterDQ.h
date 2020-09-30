@@ -101,6 +101,10 @@ namespace Base {
 		Real mQmax;
 		Real mQmin;
 
+		// which FRT Guidline should be used
+		// 1 = HV/EHV 2 = MV 3 = LV
+		Real mFRTGuideline = 1;
+
 		// Time constants for PT1 controller
 		// dynamic
 		// Real mTD = 0.01
@@ -127,6 +131,8 @@ namespace Base {
 			Real phi_dInit, Real phi_qInit, Real gamma_dInit, Real gamma_qInit);
 		/// Setter for QU Control parameters
 		void setQControlParameters(Bool ctrlActive, Real VRef, Real SGain, Real DGain, Real Deadband, Real Qmax, Real Qmin);
+		/// set FRT guideline
+		void setFRTGuidline(Real FRTGuideline) { mFRTGuideline = FRTGuideline; };
     };
 }
 }

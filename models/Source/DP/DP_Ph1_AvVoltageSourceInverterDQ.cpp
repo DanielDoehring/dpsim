@@ -411,6 +411,7 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSetPoint(Real time){
 		QCalcStatic = false;
 		if ((mFaultCounter > 5) || (Math::abs(mDeltaVNom) < 0.1 && mRecoveryCounter > mRecoveryValue))
 		{
+			// end fault state
 			mFaultState = false;
 			mSLog->info("Time: {}", time);
 			mSLog->info("Returning from Fault state to normal at {}", (float)time);
@@ -433,18 +434,30 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSetPoint(Real time){
 			mFaultStartTime = 0;
 			mDeltaIPrev = 0;
 			mDeltaIpu = 0;
+			mResetQ = true;
 		}
 		mRecoveryCounter = mRecoveryCounter + mUpdateCounter;
 	}
 	else
 	{
 		mFaultState = (Math::abs(mDeltaVNom) > 0.1) ? true : false;
-		if (mFaultState) {
+		if (mFaultState)
+		{
+			mFaultStartDelay = mFaultStartDelay + mDeltaT;
+		}
+
+		//if (mFaultState) {
+		if (mFaultStartDelay > 0.05) {
 			mSLog->info("Time: {}", time);
-			mSLog->info("Detected Fault at {}"
-				"\nVoltage Difference is {} [p.u.]. Allowed: 0.1 p.u.", (float)time, mDeltaVNom);
-			mFaultStartTime = (mFaultStartTime > 0) ? 0 : time;
-		}		
+			mSLog->info("Detected Fault at {} (with Delay of {})"
+				"\nVoltage Difference is {} [p.u.]. Allowed: 0.1 p.u.", (float)time, mFaultStartDelay, mDeltaVNom);
+			mFaultStartTime = (mFaultStartTime > 0) ? 0 : (time - mFaultStartDelay);
+			mFaultStartDelay = 0;
+		}
+		else
+		{
+			mFaultState = false;
+		}
 	}
 
 	// evauluate calculation method for reactive power
@@ -455,21 +468,46 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSetPoint(Real time){
 	{
 		// static calculation
 		if (Math::abs(mDeltaV) > mQUDeadband) {
-			newQRef = PT1ControlStep(mDeltaV, mDeltaVPrev, mQref/mSn, -mStaticGain, mTS, mDeltaT);
-			mQRefStaticpu = newQRef;
-			newQRef = newQRef * mSn;
-			if (newQRef > 0) {
-				mQref = (newQRef > mQmax) ? mQmax : newQRef;
+			if (mResetQ){
+				if (mQref > mQmax || mQref < mQmin) {
+					// if Q exceeds ratings, reset Q slowly to prefault value (maximum or minimum)
+					if (mQref < mQmin) {
+						mQref = mQmin * (mDeltaT / (2. * 0.05)) + mQref * (1. - (mDeltaT / (2. * 0.05)));
+					}
+					else
+					{
+						mQref = mQmax * (mDeltaT / (2. * 0.05)) + mQref * (1. - (mDeltaT / (2. * 0.05)));
+					}
+				}
+				else
+				{
+					// Q is restored after fault
+					mResetQ = false;
+				}
 			}
 			else
 			{
-				mQref = (newQRef < mQmin) ? mQmin : newQRef;
+				// calc new Q with static factor
+				newQRef = PT1ControlStep(mDeltaV, mDeltaVPrev, mQref / mSn, -mStaticGain, mTS, mDeltaT);
+				mQRefStaticpu = newQRef;
+				newQRef = newQRef * mSn;
+				if (newQRef > 0) {
+					mQref = (newQRef > mQmax) ? mQmax : newQRef;
+				}
+				else
+				{
+					mQref = (newQRef < mQmin) ? mQmin : newQRef;
+				}
 			}
 		}
 		else
 		{
-			mQRefStaticpu = 0;
-			mQref = 0;
+			//mQRefStaticpu = 0;
+			//mQref = 0;
+			//mQref = mQref * (1 - 1 / (1 + (mDeltaT / (2 * 0.02))));
+
+			// set to zero (with T = 0.02)
+			mQref = mQref * (399. / 400.);
 		}
 		// save static Qref for dynamic calculation
 		mQRefStatic = mQref;
@@ -565,7 +603,6 @@ void DP::Ph1::AvVoltageSourceInverterDQ::MnaPreStep::execute(Real time, Int time
 		if (mAvVoltageSourceInverterDQ.mSwitchActive && !mAvVoltageSourceInverterDQ.mSwitchStateChange)
 			mAvVoltageSourceInverterDQ.updateSwitchState(time);
 	}
-	
 }
 
 void DP::Ph1::AvVoltageSourceInverterDQ::MnaPostStep::execute(Real time, Int timeStepCount) {
@@ -627,6 +664,8 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSwitchState(Real time) {
 		// implementation of TAR Hochspannung VDE AR N 4120
 		if (mFaultState)
 		{
+			disconnect = checkFRTGuidelineValue(time, mFRTGuideline);
+			/*
 			if (mFaultCounter > 0.05)
 			{
 
@@ -668,6 +707,7 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSwitchState(Real time) {
 					}
 				}
 			}
+			*/
 		}
 		// To Do: better coordination with fault and steady state 
 		/*
@@ -689,4 +729,87 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSwitchState(Real time) {
 			mSubProtectionSwitch->setValueChange(true);
 		}
 	}
+}
+
+
+Bool DP::Ph1::AvVoltageSourceInverterDQ::checkFRTGuidelineValue(Real time, Real VoltageLevel) {
+	Real Vmin, Vmax;
+	Bool disconnect = false;
+
+	if (VoltageLevel == 1)
+	{
+		// EHV and HV
+		if (mFaultCounter < 0.15)
+		{
+			Vmax = 1.3;
+			Vmin = 0;
+		}
+		else if (mFaultCounter < 3)
+		{
+			Vmin = (0.85 / 2.85) * mFaultCounter - 0.0447;
+			Vmax = 1.25;
+		}
+		else if (mFaultCounter < 60)
+		{
+			Vmin = 0.85;
+		}
+		else if (mFaultCounter > 60)
+		{
+			Vmax = 1.15;
+		}
+	}
+	else if (VoltageLevel == 2)
+	{
+		// MV
+		if (mFaultCounter < 0.1)
+		{
+			Vmax = 1.25;
+			Vmin = 0.15;
+		}
+		else if (mFaultCounter < 0.15)
+		{
+			Vmax = 1.2;
+		}
+		else if (mFaultCounter < 3)
+		{
+			Vmin = 0.11325 + time * 0.245;
+		}
+		else if (mFaultCounter < 5)
+		{
+			Vmin = 0.85;
+		}
+		else if (mFaultCounter < 60)
+		{
+			Vmax = 1.15;
+		}
+		else if (mFaultCounter > 60)
+		{
+			Vmin = 0.9;
+			Vmax = 1.1;
+		}
+	}
+
+	// check for violation
+	if (mDeltaVNom > 0) {
+		if ((1 + mDeltaVNom) > Vmax) {
+			mSLog->info("Disonnect VSI. Reason: Overvoltage"
+				"\nTime: {}"
+				"\nGuideline limit: {}"
+				"\nActual value: {}",
+				time, Vmax, (1 + mDeltaVNom));
+			disconnect = true;
+		}
+	}
+	else
+	{
+		if ((1 + mDeltaVNom) < Vmin) {
+			mSLog->info("Disonnect VSI. Reason: Undervoltage"
+				"\nTime: {}"
+				"\nGuideline limit: {}"
+				"\nActual value: {}",
+				time, Vmin, (1 + mDeltaVNom));
+			disconnect = true;
+		}
+	}
+	return disconnect;
 }
