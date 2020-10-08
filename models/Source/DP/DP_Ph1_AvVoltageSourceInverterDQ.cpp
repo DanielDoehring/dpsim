@@ -250,6 +250,7 @@ void DP::Ph1::AvVoltageSourceInverterDQ::initializeFromPowerflow(Real frequency)
 
 		mVnomHV = (mVnom * mTransformerRatioAbs);
 		mInom = mSn / mVnomHV;
+		mIBnom = Math::abs(mQmax) / mVnomHV;
 	} else {
 		// if no transformer used, filter interface equal to inverter interface
 		filterInterfaceInitialVoltage = mIntfVoltage(0, 0);
@@ -257,6 +258,7 @@ void DP::Ph1::AvVoltageSourceInverterDQ::initializeFromPowerflow(Real frequency)
 
 		mVnomHV = mVnom;
 		mInom = mSn / mVnom;
+		mIBnom = Math::abs(mQmax) / mVnom;
 	}
 
 	// derive initialization quantities of filter
@@ -436,6 +438,7 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSetPoint(Real time){
 			{
 				mSLog->info("Increasing active power input to pre-fault value");
 				mPref = mPRefStatic;
+				// To Do: Use Pt1 for smooth recovery
 			}
 			mFaultStartTime = 0;
 			mDeltaIPrev = 0;
@@ -475,14 +478,14 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSetPoint(Real time){
 		// static calculation
 		if (Math::abs(mDeltaV) > mQUDeadband) {
 			if (mResetQ){
-				if (mQref > mQmax || mQref < mQmin) {
+				if (mQref > (1.01 * mQmax) || mQref < (1.01 * mQmin)) {
 					// if Q exceeds ratings, reset Q slowly to prefault value (maximum or minimum)
 					if (mQref < mQmin) {
-						mQref = mQmin * (mDeltaT / (2. * 0.05)) + mQref * (1. - (mDeltaT / (2. * 0.05)));
+						mQref = mQmin * (mDeltaT / (2. * 0.02)) + mQref * (1. - (mDeltaT / (2. * 0.02)));
 					}
 					else
 					{
-						mQref = mQmax * (mDeltaT / (2. * 0.05)) + mQref * (1. - (mDeltaT / (2. * 0.05)));
+						mQref = mQmax * (mDeltaT / (2. * 0.02)) + mQref * (1. - (mDeltaT / (2. * 0.02)));
 					}
 				}
 				else
@@ -519,16 +522,40 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSetPoint(Real time){
 		mQRefStatic = mQref;
 		mFaultCounter = 0;
 	}
-	else
+	else if(mDynamicGain != 0)
 	{
+
 		// dynamic calculation
-		Real deltaI = PT1ControlStep(mDeltaV, mDeltaVPrev, mDeltaIPrev/mInom, -mDynamicGain, mTD, mDeltaT);
+		// set dV Value according to SDLWind with deadband of 10 %
+		Real u1 = mDeltaVNom > 0 ? (mDeltaVNom - 0.1) : (mDeltaVNom + 0.1);
+		Real u2 = mDeltaVNomPrev > 0 ? (mDeltaVNomPrev - 0.1) : (mDeltaVNomPrev + 0.1);
+		Real deltaI = PT1ControlStep(u1, u2, mDeltaIPrev/mInom, -mDynamicGain, mTD, mDeltaT);
 		mDeltaIpu = deltaI;
 		deltaI = deltaI * mInom;
 
-		// limiter 
-		if (Math::abs(deltaI) > (mInom * mCurrentOverload)) {
+		// set new Qref value
+		mQref = mQRefStatic + deltaI * Vmeas;
+
+		// limit Qref wrt to rated power of device
+		if (Math::abs(mQref) > mSn * mCurrentOverload) {
+			if (mQref > 0) {
+				// undervoltage -> Q positiv (voltage increase, capacitive behaviour)
+				mSLog->info("Injecting maximum of reactive current (inductive) for dynamic voltage support");
+				mQref = mSn * mCurrentOverload;
+			}
+			else
+			{
+				// overvoltage -> Q negativ (voltage decrease, inductive behaviour)
+				mSLog->info("Injecting maximum of reactive current (capacitive) for dynamic voltage support");
+				mQref = -mSn * mCurrentOverload;
+			}
+		}
+
+		/*
+		// limiter. Is new current greater than rated current (minus already injected current)? 
+		if (Math::abs(deltaI) > (mInom * mCurrentOverload - Math::abs(mQRefStatic / Vmeas))) {
 			mSLog->info("Injecting maximum of Reactive Current for dynamic voltage support");
+			
 			if (deltaI > 0) {
 				// undervoltage -> Q positiv (voltage increase, capacitive behaviour)
 				deltaI = mInom * mCurrentOverload;
@@ -543,15 +570,15 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSetPoint(Real time){
 				mQref = mQRefStatic + deltaI * Vmeas;
 				mQref = (mQref < mQmin*mCurrentOverload) ? mQmin * mCurrentOverload : mQref;
 			}
+			
+			deltaI = mInom * mCurrentOverload - (mQRefStatic / Vmeas);
 		}
 		else
 		{
 			mQref = mQRefStatic + deltaI * Vmeas;
 		}
+		*/
 
-		//mSLog->info("Injecting Reactive Current of {} % for dynamic voltage support"
-			//"\nAbsolute value of: {} ",
-			//100*deltaI/mInom, deltaI);
 		// is power excedding rated power?
 		if ((sqrt(pow(mPref, 2) + pow(mQref, 2)) / Vmeas) > (mInom * mCurrentOverload) && (Math::abs(mPref) > 0)) {
 			// then reduce active power input
@@ -564,7 +591,6 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSetPoint(Real time){
 				mPNewPrev = mPref;
 				mPReduced = true;
 			}
-			//mPref = (-newIactive * Vmeas) < 0 ? -newIactive * Vmeas : 0;
 			// use PT1 to smoothly decrease P
 			Real PNew = (-newIactive * Vmeas) < 0 ? -newIactive * Vmeas : 0;
 			mPref = PT1ControlStep(PNew, mPNewPrev, mPref, 1, 0.01, mDeltaT);
@@ -581,12 +607,13 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSetPoint(Real time){
 	// reset update counter
 	mUpdateCounter = 0;
 	mDeltaVPrev = mDeltaV;
+	mDeltaVNomPrev = mDeltaVNom;
 	mVmeasPrev = Vmeas;
 }
 
 
 Real DP::Ph1::AvVoltageSourceInverterDQ::PT1ControlStep(Real u, Real u_prev, Real y_prev, Real K, Real T, Real deltaT) {
-	// perform control step
+	// perform control step using trapezoidal rule
 	Real Fac1 = deltaT / (2 * T);
 	Real y = (1 / (1 + Fac1)) * (K * Fac1 * (u + u_prev) + (1 - Fac1) * y_prev);
 	return y;

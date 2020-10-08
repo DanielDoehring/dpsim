@@ -23,8 +23,12 @@ namespace Base {
 
 		// rated Power [VA]
 		Real mSn;
+		// rated current of device
 		Real mInom;
-		Real mCurrentOverload = 1.2;
+		// rated reactive current
+		Real mIBnom;
+		// overloading of power electronic devices
+		Real mCurrentOverload = 1;
 
 		/// Power parameters
 		Real mPref;

@@ -119,8 +119,13 @@ void DP::Ph1::NetworkInjection::mnaApplyRightSideVectorStampHarm(Matrix& rightVe
 void DP::Ph1::NetworkInjection::updateVoltage(Real time) {
 	if (mSrcFreq->get() < 0) {
 		mIntfVoltage(0,0) = mVoltageRef->get();
-		
+
+		/*
 		if (time > 1) {
+			Real V = 1.25 * 220e3;
+			attribute<Complex>("V_ref")->set(Complex(V, 0));
+		}
+		if (time > 1.1) {
 			Real V = 1.2 * 220e3;
 			attribute<Complex>("V_ref")->set(Complex(V, 0));
 		}
@@ -129,17 +134,18 @@ void DP::Ph1::NetworkInjection::updateVoltage(Real time) {
 			Real V = 1.15 * 220e3;
 			attribute<Complex>("V_ref")->set(Complex(V, 0));
 		}
-		/*
-		if (time > 2) {
-			//Real V = 234e3;
-			Real V = 270e3 - 39e3 * (time - 2);
+		*/
+		
+		if (time > 0.5) {
+			Real V = 260e3;
 			attribute<Complex>("V_ref")->set(Complex(V, 0));
 		}
-		if (time > 3) {
+		if (time > 2) {
+			//Real V = 260e3 - (29e3 * (time - 2));
 			Real V = 231e3;
 			attribute<Complex>("V_ref")->set(Complex(V, 0));
 		}
-		*/
+		
 
 	}
 	else {

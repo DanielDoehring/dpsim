@@ -522,7 +522,7 @@ TopologicalPowerComp::Ptr Reader::mapPowerTransformer(PowerTransformer* trans) {
 	}
 	else {
 		Bool withResistiveLosses = true;
-		Bool withSat = true;
+		Bool withSat = false;
 		resistance = (resistance > 0) ? resistance : 1e-3;
 		auto transformer = std::make_shared<DP::Ph1::Transformer>(trans->mRID, trans->name, mComponentLogLevel, withResistiveLosses, withSat);
 		transformer->setParameters(ratioAbs, ratioPhase, resistance, inductance);
@@ -740,7 +740,7 @@ TopologicalPowerComp::Ptr Reader::mapExternalNetworkInjection(ExternalNetworkInj
 				Real VRef = tr_nomVoltEnd1 * (1 + 0.05);
 				Real Deadband = 0.01;
 				Real SGain = 20;
-				Real DGain = 3;
+				Real DGain = 4;
 				ext_vsi->setQControlParameters(true, VRef, SGain, DGain, Deadband, Qmax, Qmin);
 
 				return ext_vsi;
@@ -787,7 +787,7 @@ TopologicalPowerComp::Ptr Reader::mapEquivalentShunt(EquivalentShunt* shunt){
 
 TopologicalPowerComp::Ptr Reader::mapStaticVarCompensator(StaticVarCompensator* svc) {
 	//mSLog->info("Found FACTS Element: {}", svc->name);
-
+	return nullptr;
 	Real baseVoltage = 0;
 	// first look for baseVolt object to set baseVoltage
 	for (auto obj : mModel->Objects) {
@@ -901,6 +901,7 @@ TopologicalPowerComp::Ptr Reader::mapStaticVarCompensator(StaticVarCompensator* 
 
 
 TopologicalPowerComp::Ptr Reader::mapLinearShuntCompensator(LinearShuntCompensator* shunt) {
+	return nullptr;
 	mSLog->info("Found LinearShuntCompensator {}", shunt->name);
 
 	Real baseVoltage = 0;
@@ -956,8 +957,6 @@ TopologicalPowerComp::Ptr Reader::mapLinearShuntCompensator(LinearShuntCompensat
 		cpsSVC->setMechModelParameter(deadband, switchDelay, maxPos, minPos, nomVolt, refVolt, BN, initPos);
 
 		return cpsSVC;
-
-
 	}
 }
 

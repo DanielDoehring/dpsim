@@ -117,17 +117,31 @@ namespace Ph1 {
 		Real mPNewPrev;
 
 		//
+		// voltage at PCC
 		Real mVpcc = 0;
+
+		// votlage diff concerning rated voltage
 		Real mDeltaVNom = 0;
+
+		// voltage diff concerning reference voltage
 		Real mDeltaV = 0;
+
+		// voltage diff from prev time step
 		Real mDeltaVPrev = 0;
+		Real mDeltaVNomPrev = 0;
 		Real mVppPrev = 0;
+
+		// previous measured voltage
 		Real mVmeasPrev = 0;
+
+		// previous current diff
 		Real mDeltaIPrev = 0;
 		Real mDeltaIpu = 0;
+
 		Real mQRefStaticpu = 0;
 		Bool mResetQ = false;
 
+		// is device disconnected
 		Bool mDisconnected = false;
 		Real mFaultStartDelay = 0;
 
