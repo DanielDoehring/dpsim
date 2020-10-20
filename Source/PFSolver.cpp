@@ -22,6 +22,9 @@ PFSolver::PFSolver(CPS::String name, CPS::SystemTopology system, CPS::Real timeS
 	mSLog = Logger::get(name + "_PF", logLevel, Logger::Level::warn);
 	mSystem = system;
 	mTimeStep = timeStep;
+	mAdmittanceMatrixLog = std::make_shared<DataLogger>(name + "_SystemMatrix", true);
+	mJacobianLog = std::make_shared<DataLogger>(name + "_jacobianMatrix", true);
+
     initialize();
 }
 
@@ -63,7 +66,7 @@ void PFSolver::assignMatrixNodeIndices() {
 	UInt matrixNodeIndexIdx = 0;
 	for (UInt idx = 0; idx < mSystem.mNodes.size(); idx++) {
 		mSystem.mNodes[idx]->setMatrixNodeIndex(0, matrixNodeIndexIdx);
-		mSLog->info("Node {}: MatrixNodeIndex {}", mSystem.mNodes[idx]->uid(), mSystem.mNodes[idx]->matrixNodeIndex());
+		mSLog->info("Node {}: MatrixNodeIndex {}", mSystem.mNodes[idx]->name(), mSystem.mNodes[idx]->matrixNodeIndex());
 		matrixNodeIndexIdx++;
 	}	
 	mSLog->info("Number of simulation nodes: {:d}", matrixNodeIndexIdx);
@@ -275,6 +278,10 @@ void PFSolver::composeAdmittanceMatrix() {
 	if(mLines.empty() && mTransformers.empty()) {
 		throw std::invalid_argument("There are no bus");
 	}
+
+	// save admittance matrix
+	mYfull = Eigen::MatrixXcd(mY);
+	mAdmittanceMatrixLog->logPhasorNodeValues(0, mYfull);
 }
 
 CPS::Real PFSolver::G(int i, int j) {
@@ -303,7 +310,6 @@ Bool PFSolver::solvePowerflow() {
 
     mIterations = 0;
     for (unsigned i = 1; i < mMaxIterations && !isConverged; ++i) {
-
         calculateJacobian();
 		auto sparseJ = mJ.sparseView();
 

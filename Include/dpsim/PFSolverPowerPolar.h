@@ -27,6 +27,7 @@ namespace DPsim {
         /// Solution vector of representing sol_P and sol_Q as complex quantity
         CPS::VectorComp sol_S_complex;
 
+
         CPS::Vector Pesp;
         CPS::Vector Qesp;
 

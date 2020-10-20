@@ -26,6 +26,7 @@ MnaSolver<VarType>::MnaSolver(String name,
 	// Raw source and solution vector logging
 	mLeftVectorLog = std::make_shared<DataLogger>(name + "_LeftVector", logLevel != CPS::Logger::Level::off);
 	mRightVectorLog = std::make_shared<DataLogger>(name + "_RightVector", logLevel != CPS::Logger::Level::off);
+	mSysMatrixLog = std::make_shared<DataLogger>(name + "_SystemMatrix", logLevel != CPS::Logger::Level::off);
 }
 
 template <typename VarType>
@@ -312,6 +313,9 @@ void MnaSolver<VarType>::initializeSystem() {
 			}
 
 			mLuFactorizations[std::bitset<SWITCH_NUM>(0)] = Eigen::PartialPivLU<Matrix>(mSwitchedMatrices[std::bitset<SWITCH_NUM>(0)]);
+			// log system matrix
+			mSLog->info("Logging intial System Matrix");
+			mSysMatrixLog->logPhasorNodeValues(0, mSwitchedMatrices[std::bitset<SWITCH_NUM>(0)]);
 		}
 		else {
 			// Generate switching state dependent system matrices
@@ -393,6 +397,7 @@ void MnaSolver<VarType>::updateVarElemStatus() {
 			mSLog->info("Component ({:s} {:s}) value changed -> Update System Matrix",
 				idObj->type(), idObj->name());
 			mUpdateSysMatrix = true;
+			mLogSysMatrix = true;
 			break;
 		}
 	}
@@ -406,6 +411,7 @@ void MnaSolver<VarType>::updateVarElemStatus() {
 					mSLog->info("Switch ({:s} {:s}) value changed -> Update System Matrix",
 						idObj->type(), idObj->name());
 					mUpdateSysMatrix = true;
+					mLogSysMatrix = true;
 					break;
 				}
 			}
@@ -911,6 +917,10 @@ void MnaSolver<VarType>::log(Real time) {
 	else {
 		mLeftVectorLog->logPhasorNodeValues(time, leftSideVector());
 		mRightVectorLog->logPhasorNodeValues(time, rightSideVector());
+		if (mLogSysMatrix) {
+			mSysMatrixLog->logPhasorNodeValues(time, mSwitchedMatrices[std::bitset<SWITCH_NUM>(0)]);
+			mLogSysMatrix = false;
+		}
 	}
 }
 

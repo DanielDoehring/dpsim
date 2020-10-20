@@ -111,6 +111,8 @@ namespace DPsim {
 		std::shared_ptr<DataLogger> mLeftVectorLog;
 		/// Right side vector logger
 		std::shared_ptr<DataLogger> mRightVectorLog;
+		/// System matrix logger
+		std::shared_ptr<DataLogger> mSysMatrixLog;
 
 		/// Initialization of individual components
 		void initializeComponents();
@@ -138,6 +140,7 @@ namespace DPsim {
 		//void updateOLTCStatus();
 		void updateVarElemStatus();
 		Bool mUpdateSysMatrix = false;
+		Bool mLogSysMatrix = false;
 
 		void updateSystemMatrix(Real time);
 

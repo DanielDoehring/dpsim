@@ -27,9 +27,9 @@ void PFSolverPowerPolar::generateInitialSolution(Real time, bool keep_last_solut
                 load->calculatePerUnitParameters(mBaseApparentPower, mSystem.mSystemOmega);
             }
         }
-        else if (std::shared_ptr<CPS::SP::Ph1::AvVoltageSourceInverterDQ> vsi =
-				std::dynamic_pointer_cast<CPS::SP::Ph1::AvVoltageSourceInverterDQ>(comp)) {
-            vsi->updatePQ(time);
+        else if (std::shared_ptr<CPS::SP::Ph1::AvVoltageSourceInverterDQ> vsi = std::dynamic_pointer_cast<CPS::SP::Ph1::AvVoltageSourceInverterDQ>(comp)) {
+			if(!vsi->mLoadProfile.empty())
+				vsi->updatePQ(time);
         }
     }
 
@@ -278,6 +278,7 @@ void PFSolverPowerPolar::setSolution() {
 		for (UInt i = 0; i < mSystem.mNodes.size(); i++) {
 			mSLog->info("{}\t{}\t{}\t{}", sol_P[i], sol_Q[i], sol_V[i], sol_D[i]);
 		}
+		mJacobianLog->logPhasorNodeValues(0, mJ);
     }
     for (UInt i = 0; i < mSystem.mNodes.size(); i++) {
         sol_S_complex(i) = CPS::Complex(sol_P.coeff(i), sol_Q.coeff(i));
@@ -312,7 +313,7 @@ void PFSolverPowerPolar::setSolution() {
                 }
 			}
             else
-                mSLog->warn("Unable to get base voltage at {}", node->name());
+                mSLog->warn("setSolution: Unable to get base voltage at {}", node->name());
 		}
 		std::dynamic_pointer_cast<CPS::SimNode<CPS::Complex>>(node)->setVoltage(sol_V_complex(node->matrixNodeIndex())*baseVoltage_);
 	}

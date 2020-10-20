@@ -524,12 +524,11 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSetPoint(Real time){
 	}
 	else if(mDynamicGain != 0)
 	{
-
 		// dynamic calculation
-		// set dV Value according to SDLWind with deadband of 10 %
-		Real u1 = mDeltaVNom > 0 ? (mDeltaVNom - 0.1) : (mDeltaVNom + 0.1);
-		Real u2 = mDeltaVNomPrev > 0 ? (mDeltaVNomPrev - 0.1) : (mDeltaVNomPrev + 0.1);
-		Real deltaI = PT1ControlStep(u1, u2, mDeltaIPrev/mInom, -mDynamicGain, mTD, mDeltaT);
+		// set dV Value according to VDE 4130 with deadband of 10 %
+		//Real u1 = mDeltaVNom > 0 ? (mDeltaVNom - 0.1) : (mDeltaVNom + 0.1);
+		//Real u2 = mDeltaVNomPrev > 0 ? (mDeltaVNomPrev - 0.1) : (mDeltaVNomPrev + 0.1);
+		Real deltaI = PT1ControlStep(mDeltaVNom, mDeltaVNomPrev, mDeltaIPrev/mInom, -mDynamicGain, mTD, mDeltaT);
 		mDeltaIpu = deltaI;
 		deltaI = deltaI * mInom;
 
@@ -550,34 +549,6 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSetPoint(Real time){
 				mQref = -mSn * mCurrentOverload;
 			}
 		}
-
-		/*
-		// limiter. Is new current greater than rated current (minus already injected current)? 
-		if (Math::abs(deltaI) > (mInom * mCurrentOverload - Math::abs(mQRefStatic / Vmeas))) {
-			mSLog->info("Injecting maximum of Reactive Current for dynamic voltage support");
-			
-			if (deltaI > 0) {
-				// undervoltage -> Q positiv (voltage increase, capacitive behaviour)
-				deltaI = mInom * mCurrentOverload;
-				mQref = mQRefStatic + deltaI * Vmeas;
-				// is current greater than maximal permitted overload current?
-				mQref = (mQref > mQmax*mCurrentOverload) ? mQmax * mCurrentOverload : mQref;
-			}
-			else
-			{
-				// overvoltage -> Q negativ (voltage decrease, inductive behaviour)
-				deltaI = mInom * mCurrentOverload;
-				mQref = mQRefStatic + deltaI * Vmeas;
-				mQref = (mQref < mQmin*mCurrentOverload) ? mQmin * mCurrentOverload : mQref;
-			}
-			
-			deltaI = mInom * mCurrentOverload - (mQRefStatic / Vmeas);
-		}
-		else
-		{
-			mQref = mQRefStatic + deltaI * Vmeas;
-		}
-		*/
 
 		// is power excedding rated power?
 		if ((sqrt(pow(mPref, 2) + pow(mQref, 2)) / Vmeas) > (mInom * mCurrentOverload) && (Math::abs(mPref) > 0)) {

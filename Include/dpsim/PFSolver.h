@@ -13,6 +13,7 @@
 
 #include <dpsim/Solver.h>
 #include <dpsim/Scheduler.h>
+#include <dpsim/DataLogger.h>
 #include "cps/SystemTopology.h"
 #include "cps/Components.h"
 
@@ -45,8 +46,14 @@ namespace DPsim {
         /// Vector with indices of both PQ and PV buses
         std::vector<CPS::UInt> mPQPVBusIndices;
 
+		/// System matrix logger
+		std::shared_ptr<DataLogger> mAdmittanceMatrixLog;
+		std::shared_ptr<DataLogger> mJacobianLog;
+
         /// Admittance matrix
         CPS::SparseMatrixCompRow mY;
+		CPS::MatrixComp mYfull;
+
 
         /// Jacobian matrix
         CPS::Matrix mJ;

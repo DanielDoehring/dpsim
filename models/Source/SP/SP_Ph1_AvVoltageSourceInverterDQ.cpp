@@ -505,7 +505,7 @@ void SP::Ph1::AvVoltageSourceInverterDQ::modifyPowerFlowBusType(PowerflowBusType
 }
 
 void SP::Ph1::AvVoltageSourceInverterDQ::PowerFlowStep::execute(Real time, Int timeStepCount){
-	mAvVoltageSourceInverterDQ.updatePQ(time);
+	//mAvVoltageSourceInverterDQ.updatePQ(time);
 }
 
 void SP::Ph1::AvVoltageSourceInverterDQ::pfBusInitialize(){

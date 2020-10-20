@@ -294,6 +294,31 @@ Matrix::Index Reader::mapTopologicalNode(String mrid) {
 
 TopologicalPowerComp::Ptr Reader::mapEnergyConsumer(EnergyConsumer* consumer) {
 	mSLog->info("    Found EnergyConsumer {}", consumer->name);
+	Real baseVoltage = 0;
+	// first look for baseVolt object to set baseVoltage
+	for (auto obj : mModel->Objects) {
+		if (IEC61970::Base::Core::BaseVoltage* baseVolt = dynamic_cast<IEC61970::Base::Core::BaseVoltage*>(obj)) {
+			for (auto comp : baseVolt->ConductingEquipment) {
+				if (comp->name == consumer->name) {
+					baseVoltage = unitValue(baseVolt->nominalVoltage.value, UnitMultiplier::k);
+				}
+			}
+		}
+	}
+	// as second option take baseVoltage of topologicalNode where line is connected to
+	if (baseVoltage == 0) {
+		for (auto obj : mModel->Objects) {
+			if (IEC61970::Base::Topology::TopologicalNode* topNode = dynamic_cast<IEC61970::Base::Topology::TopologicalNode*>(obj)) {
+				for (auto term : topNode->Terminal) {
+					if (term->ConductingEquipment->name == consumer->name) {
+						baseVoltage = unitValue(topNode->BaseVoltage->nominalVoltage.value, UnitMultiplier::k);
+					}
+				}
+			}
+		}
+	}
+
+
 	if (mDomain == Domain::EMT) {
 		if (mPhase == PhaseType::ABC) {
 			return std::make_shared<EMT::Ph3::RXLoad>(consumer->mRID, consumer->name, mComponentLogLevel);
@@ -308,7 +333,7 @@ TopologicalPowerComp::Ptr Reader::mapEnergyConsumer(EnergyConsumer* consumer) {
 		auto load = std::make_shared<SP::Ph1::Load>(consumer->mRID, consumer->name, mComponentLogLevel);
 
 		// TODO: Use EnergyConsumer.P and EnergyConsumer.Q if available, overwrite if existent SvPowerFlow data
-		/*
+		
 		Real p = 0;
 		Real q = 0;
 		if (consumer->p.value){
@@ -316,10 +341,10 @@ TopologicalPowerComp::Ptr Reader::mapEnergyConsumer(EnergyConsumer* consumer) {
 		}
 		if (consumer->q.value){
 			q = unitValue(consumer->q.value,UnitMultiplier::M);
-		}*/
+		}
 
 		// P and Q values will be set according to SvPowerFlow data
-		load->setParameters(0, 0, 0);
+		load->setParameters(p, q, baseVoltage);
 		load->modifyPowerFlowBusType(PowerflowBusType::PQ); // for powerflow solver set as PQ component as default
 		return load;
 	}
@@ -529,7 +554,7 @@ TopologicalPowerComp::Ptr Reader::mapPowerTransformer(PowerTransformer* trans) {
 
 		Real NumTaps = 10;
 		transformer->setOLTCParamters(NumTaps, voltageNode2*1.05);
-		transformer->setOLTCTimeDelay(30);
+		transformer->setOLTCTimeDelay(0.3);
 		transformer->setOLTCDeadband(0.01);
 
 		transformer->setParametersSaturationDefault(220000, 66000);
@@ -582,6 +607,36 @@ TopologicalPowerComp::Ptr Reader::mapSynchronousMachine(SynchronousMachine* mach
 						Real setPointActivePower = 0;
 						Real setPointVoltage = 0;
 						Real maximumReactivePower = 1e12;
+						Real baseVoltage = 0;
+
+						// first look for baseVolt object to set baseVoltage
+						for (auto obj : mModel->Objects) {
+							if (IEC61970::Base::Core::BaseVoltage* baseVolt = dynamic_cast<IEC61970::Base::Core::BaseVoltage*>(obj)) {
+								for (auto comp : baseVolt->ConductingEquipment) {
+									if (comp->name == machine->name) {
+										baseVoltage = unitValue(baseVolt->nominalVoltage.value, UnitMultiplier::k);
+									}
+								}
+							}
+						}
+						// as second option take baseVoltage of topologicalNode where line is connected to
+						if (baseVoltage == 0) {
+							for (auto obj : mModel->Objects) {
+								if (IEC61970::Base::Topology::TopologicalNode* topNode = dynamic_cast<IEC61970::Base::Topology::TopologicalNode*>(obj)) {
+									for (auto term : topNode->Terminal) {
+										if (term->ConductingEquipment->name == machine->name) {
+											baseVoltage = unitValue(topNode->BaseVoltage->nominalVoltage.value, UnitMultiplier::k);
+										}
+									}
+								}
+							}
+						}
+
+						if (machine->ratedU.value.initialized)
+						{
+							baseVoltage = unitValue(machine->ratedU.value, UnitMultiplier::k);
+						}
+
 						try{
 							setPointActivePower = unitValue(genUnit->initialP.value, UnitMultiplier::M);
 							mSLog->info("    setPointActivePower={}", setPointActivePower);
@@ -592,7 +647,7 @@ TopologicalPowerComp::Ptr Reader::mapSynchronousMachine(SynchronousMachine* mach
 							setPointVoltage = unitValue(machine->RegulatingControl->targetValue.value, UnitMultiplier::k);
 							mSLog->info("    setPointVoltage={}", setPointVoltage);
 						} else {
-							std::cerr << "Uninitalized setPointVoltage for GeneratingUnit " <<  machine->name << ". Using default value of " << setPointVoltage << std::endl;
+							std::cerr << "Uninitalized setPointVoltage for GeneratingUnit " <<  machine->name << ". Using default value of " << baseVoltage << std::endl;
 						}
 						try{
 							maximumReactivePower = unitValue(machine->maxQ.value, UnitMultiplier::M);
@@ -600,15 +655,16 @@ TopologicalPowerComp::Ptr Reader::mapSynchronousMachine(SynchronousMachine* mach
 						}catch(ReadingUninitializedField* e){
 							std::cerr << "Uninitalized maximumReactivePower for GeneratingUnit " <<  machine->name << ". Using default value of " << maximumReactivePower << std::endl;
 						}
+	
 
 						auto gen = std::make_shared<SP::Ph1::SynchronGenerator>(machine->mRID, machine->name, mComponentLogLevel);
 							gen->setParameters(unitValue(machine->ratedS.value, UnitMultiplier::M),
-									unitValue(machine->ratedU.value, UnitMultiplier::k),
+									baseVoltage,
 									setPointActivePower,
 									setPointVoltage,
 									maximumReactivePower,
 									PowerflowBusType::PV);
-							gen->setBaseVoltage(unitValue(machine->ratedU.value, UnitMultiplier::k));
+							gen->setBaseVoltage(baseVoltage);
 						return gen;
 					}
 				}
@@ -626,6 +682,31 @@ TopologicalPowerComp::Ptr Reader::mapSynchronousMachine(SynchronousMachine* mach
 
 TopologicalPowerComp::Ptr Reader::mapExternalNetworkInjection(ExternalNetworkInjection* extnet) {
 	mSLog->info("Found External Network Injection {}", extnet->name);
+	Real baseVoltage = 0;
+
+	// first look for baseVolt object to set baseVoltage
+	for (auto obj : mModel->Objects) {
+		if (IEC61970::Base::Core::BaseVoltage* baseVolt = dynamic_cast<IEC61970::Base::Core::BaseVoltage*>(obj)) {
+			for (auto comp : baseVolt->ConductingEquipment) {
+				if (comp->name == extnet->name) {
+					baseVoltage = unitValue(baseVolt->nominalVoltage.value, UnitMultiplier::k);
+				}
+			}
+		}
+	}
+	// as second option take baseVoltage of topologicalNode where line is connected to
+	if (baseVoltage == 0) {
+		for (auto obj : mModel->Objects) {
+			if (IEC61970::Base::Topology::TopologicalNode* topNode = dynamic_cast<IEC61970::Base::Topology::TopologicalNode*>(obj)) {
+				for (auto term : topNode->Terminal) {
+					if (term->ConductingEquipment->name == extnet->name) {
+						baseVoltage = unitValue(topNode->BaseVoltage->nominalVoltage.value, UnitMultiplier::k);
+					}
+				}
+			}
+		}
+	}
+
 	if (mDomain == Domain::EMT) {
 		if (mPhase == PhaseType::ABC) {
 			return std::make_shared<EMT::Ph3::NetworkInjection>(extnet->mRID, extnet->name, mComponentLogLevel);
@@ -637,12 +718,38 @@ TopologicalPowerComp::Ptr Reader::mapExternalNetworkInjection(ExternalNetworkInj
 	} else if(mDomain == Domain::SP) {
 		if (mPhase == PhaseType::Single) {
 			auto cpsextnet = std::make_shared<SP::Ph1::externalGridInjection>(extnet->mRID, extnet->name, mComponentLogLevel);
-			cpsextnet->modifyPowerFlowBusType(PowerflowBusType::VD); // for powerflow solver set as VD component as default
+
+			Real P = unitValue(extnet->p.value, UnitMultiplier::M);
+			Real Q = unitValue(extnet->q.value, UnitMultiplier::M);
+			cpsextnet->updatePowerInjection(Complex(P, Q));
+
+			if (extnet->name.find("Slack") != std::string::npos) {
+				mSLog->info("       Model as VD-Node (Slack).");
+				cpsextnet->modifyPowerFlowBusType(PowerflowBusType::VD); // for powerflow solver set as VD component as default
+			}
+			else
+			{
+				mSLog->info("       Model as PQ-Node (VSI).");
+				auto vsiextnet = std::make_shared<SP::Ph1::AvVoltageSourceInverterDQ>(extnet->mRID, extnet->name, mComponentLogLevel);
+				vsiextnet->setParameters(2 * M_PI * mFrequency, baseVoltage, -P, -Q);
+				//cpsextnet->modifyPowerFlowBusType(PowerflowBusType::PQ);
+				return vsiextnet;
+			}
+			
 			if(extnet->RegulatingControl){
-				mSLog->info("       Voltage set-point={}", (float) extnet->RegulatingControl->targetValue);
-				cpsextnet->setParameters(extnet->RegulatingControl->targetValue); // assumes that value is specified in CIM data in per unit
-			} else
-				mSLog->info("       No voltage set-point defined.");
+				Real puValue = unitValue(extnet->RegulatingControl->targetValue, UnitMultiplier::k);
+				if (puValue > 2)
+				{
+					mSLog->info("       Convert Voltage Set Point in pu-system.");
+					puValue = puValue / baseVoltage;
+				}
+				mSLog->info("       Voltage set-point={}", (float)puValue);
+				cpsextnet->setParameters(puValue); // assumes that value is specified in CIM data in per unit
+			}
+			else {
+				//cpsextnet->setParameters(1);
+				mSLog->info("       No voltage set-point defined. Set to 1 p.u.");
+			}
 			return cpsextnet;
 		}
 		else {
@@ -689,7 +796,7 @@ TopologicalPowerComp::Ptr Reader::mapExternalNetworkInjection(ExternalNetworkInj
 			}
 			else
 			{
-				//return nullptr;
+				return nullptr;
 				mSLog->info("NetworkInjection for DP single-phase modeled as VSI in DQ-Frame");
 				Bool has_trafo = true;
 				Bool switchActive = true;
@@ -725,7 +832,7 @@ TopologicalPowerComp::Ptr Reader::mapExternalNetworkInjection(ExternalNetworkInj
 				Real tr_ratioAbs = tr_nomVoltEnd1 / tr_nomVoltEnd2;
 				Real tr_ratioPhase = 0;
 				Real tr_resistance = 0.001;
-				Real tr_inductance = 0.001;
+				Real tr_inductance = 0.001;	
 
 				// set parameters for NetworkInjection that is modeled as VSI
 				ext_vsi->setParameters(omegeN, tr_nomVoltEnd2, Pref, Qref, Sn);
@@ -740,7 +847,7 @@ TopologicalPowerComp::Ptr Reader::mapExternalNetworkInjection(ExternalNetworkInj
 				Real VRef = tr_nomVoltEnd1 * (1 + 0.05);
 				Real Deadband = 0.01;
 				Real SGain = 20;
-				Real DGain = 4;
+				Real DGain = 0;
 				ext_vsi->setQControlParameters(true, VRef, SGain, DGain, Deadband, Qmax, Qmin);
 
 				return ext_vsi;

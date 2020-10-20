@@ -129,7 +129,7 @@ void DP::Ph1::Inductor::mnaApplySystemMatrixStamp(Matrix& systemMatrix) {
 			Math::addToMatrixElement(systemMatrix, matrixNodeIndex(1), matrixNodeIndex(0), -mEquivCond(freq,0), mNumFreqs, freq);
 		}
 
-		/*
+		
 		mSLog->info("-- Stamp frequency {:d} ---", freq);
 		if (terminalNotGrounded(0))
 			mSLog->info("Add {:s} to system at ({:d},{:d})",
@@ -143,7 +143,7 @@ void DP::Ph1::Inductor::mnaApplySystemMatrixStamp(Matrix& systemMatrix) {
 			mSLog->info("Add {:s} to system at ({:d},{:d})",
 				Logger::complexToString(-mEquivCond(freq,0)), matrixNodeIndex(1), matrixNodeIndex(0));
 		}
-		*/
+		
 	}
 }
 

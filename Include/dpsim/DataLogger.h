@@ -55,6 +55,9 @@ namespace DPsim {
 		void logPhasorNodeValues(Real time, const Matrix& data, Int freqNum = 1);
 		void logEMTNodeValues(Real time, const Matrix& data);
 
+		void logPhasorNodeValues(Real time, const MatrixComp& data, Int freqNum = 1);
+
+
 		void setColumnNames(std::vector<String> names);
 
 		void addAttribute(const String &name, CPS::AttributeBase::Ptr attr);

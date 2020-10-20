@@ -73,7 +73,10 @@ void DataLogger::logDataLine(Real time, const Matrix& data) {
 
 	mLogFile << std::scientific << std::right << std::setw(14) << time;
 	for (Int i = 0; i < data.rows(); i++) {
-		mLogFile << ", " << std::right << std::setw(13) << data(i, 0);
+		//mLogFile << ", " << std::right << std::setw(13) << data(i, 0);
+		for (Int k = 0; k < data.cols(); k++) {
+			mLogFile << ", " << std::right << std::setw(13) << data(i, k);
+		}
 	}
 	mLogFile << '\n';
 }
@@ -81,12 +84,51 @@ void DataLogger::logDataLine(Real time, const Matrix& data) {
 void DataLogger::logDataLine(Real time, const MatrixComp& data) {
 	if (!mEnabled)
 		return;
-	mLogFile << std::scientific << std::right << std::setw(14) << time;
+	/*
+	
 	for (Int i = 0; i < data.rows(); i++) {
 		mLogFile << ", " << std::right << std::setw(13) << data(i, 0);
 	}
+	*/
+
+	mLogFile << std::scientific << std::right << std::setw(14) << time;
+	for (Int i = 0; i < data.rows(); i++) {
+		//mLogFile << ", " << std::right << std::setw(13) << data(i, 0);
+		for (Int k = 0; k < data.cols(); k++) {
+			mLogFile << ", " << std::right << std::setw(13) << data(i, k);
+		}
+	}
 	mLogFile << '\n';
 }
+
+void DataLogger::logPhasorNodeValues(Real time, const MatrixComp& data, Int freqNum) {
+	/*
+	if (mLogFile.tellp() == std::ofstream::pos_type(0)) {
+		std::vector<String> names;
+
+		Int harmonicOffset = data.rows() / freqNum;
+		Int complexOffset = harmonicOffset / 2;
+
+		for (Int freq = 0; freq < freqNum; freq++) {
+			for (Int node = 0; node < complexOffset; node++) {
+				std::stringstream name;
+				name << "n" << std::setfill('0') << std::setw(5) << node
+					<< "f" << std::setfill('0') << std::setw(2) << freq << ".re";
+				names.push_back(name.str());
+			}
+			for (Int node = 0; node < complexOffset; node++) {
+				std::stringstream name;
+				name << "n" << std::setfill('0') << std::setw(5) << node
+					<< "f" << std::setfill('0') << std::setw(2) << freq << ".im";
+				names.push_back(name.str());
+			}
+		}
+		setColumnNames(names);
+	}
+	*/
+	logDataLine(time, data);
+}
+
 
 void DataLogger::logPhasorNodeValues(Real time, const Matrix& data, Int freqNum) {
 	if (mLogFile.tellp() == std::ofstream::pos_type(0)) {
