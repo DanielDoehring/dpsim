@@ -404,6 +404,7 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSetPoint(Real time){
 
 	// calculate measured voltage with PT1
 	Real Vmeas = PT1ControlStep(mVpcc, mVppPrev, mVmeasPrev, 1, 0.01, mDeltaT);
+	Vmeas = Vmeas > 0 ? Vmeas : 0;
 
 	// voltage difference wrt reference voltage of Control
 	mDeltaV = (Vmeas - mVRef) / mVRef;
@@ -434,12 +435,21 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSetPoint(Real time){
 					mDeltaV);
 			}
 
-			if (mPReduced)
-			{
+			if (mPReduced) {
 				mSLog->info("Increasing active power input to pre-fault value");
-				mPref = mPRefStatic;
-				// To Do: Use Pt1 for smooth recovery
+				if (mPRecoveryMethod == 1)
+				{
+					mSLog->info("(Time: {}) Recover active Power with PT1 (fast)", time);
+				}
+				else
+				{
+					mPRamp = (mPRefStatic - mPref) / mPRampTime;
+					mSLog->info("(Time: {}) Recover active Power with ramp of {} [p.u./s]",
+						time, Math::abs(mPRamp/mSn));
+				}
+				
 			}
+
 			mFaultStartTime = 0;
 			mDeltaIPrev = 0;
 			mDeltaIpu = 0;
@@ -475,6 +485,29 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSetPoint(Real time){
 	// calc new Qref
 	if (QCalcStatic)
 	{
+		if (mPReduced) {
+			if (Math::abs((mPref - mPRefStatic) / mPRefStatic) > 0.03)
+			{
+				if (mPRecoveryMethod == 1) {
+					// PT1
+					Real deltaP = mPRefStatic - mPref;
+					mPref = PT1ControlStep(deltaP, mDeltaPPrev, mPRefStatic, 1, 0.05, mDeltaT);
+					mDeltaPPrev = deltaP;
+				}
+				else
+				{
+					// ramp of active power recovery
+					mPref = mPref + mPRamp * mDeltaT;
+				}
+			}
+			else
+			{
+				mPref = mPRefStatic;
+				mPReduced = false;
+				mSLog->info("(Time: {}) Active Power now at pre fault value", time);
+			}
+		}
+
 		// static calculation
 		if (Math::abs(mDeltaV) > mQUDeadband) {
 			if (mResetQ){
@@ -522,59 +555,84 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSetPoint(Real time){
 		mQRefStatic = mQref;
 		mFaultCounter = 0;
 	}
-	else if(mDynamicGain != 0)
+	//else if(mDynamicGain != 0)
+	else
 	{
-		// dynamic calculation
-		// set dV Value according to VDE 4130 with deadband of 10 %
-		//Real u1 = mDeltaVNom > 0 ? (mDeltaVNom - 0.1) : (mDeltaVNom + 0.1);
-		//Real u2 = mDeltaVNomPrev > 0 ? (mDeltaVNomPrev - 0.1) : (mDeltaVNomPrev + 0.1);
-		Real deltaI = PT1ControlStep(mDeltaVNom, mDeltaVNomPrev, mDeltaIPrev/mInom, -mDynamicGain, mTD, mDeltaT);
-		mDeltaIpu = deltaI;
-		deltaI = deltaI * mInom;
+		if (mDynamicGain != 0) {
+			// set dV Value according to VDE 4130 with deadband of 10 %
+			//Real u1 = mDeltaVNom > 0 ? (mDeltaVNom - 0.1) : (mDeltaVNom + 0.1);
+			//Real u2 = mDeltaVNomPrev > 0 ? (mDeltaVNomPrev - 0.1) : (mDeltaVNomPrev + 0.1);
+			// calculate reative current
+			Real deltaI = PT1ControlStep(mDeltaVNom, mDeltaVNomPrev, mDeltaIPrev / mInom, -mDynamicGain, mTD, mDeltaT);
+			mDeltaIpu = deltaI;
+			deltaI = deltaI * mInom;
 
-		// set new Qref value
-		mQref = mQRefStatic + deltaI * Vmeas;
+			// set new Qref value
+			//mQref = mQRefStatic + deltaI * Vmeas;
+			mQref = mQRefStatic + deltaI * mVnomHV;
 
-		// limit Qref wrt to rated power of device
-		if (Math::abs(mQref) > mSn * mCurrentOverload) {
-			if (mQref > 0) {
-				// undervoltage -> Q positiv (voltage increase, capacitive behaviour)
-				mSLog->info("Injecting maximum of reactive current (inductive) for dynamic voltage support");
-				mQref = mSn * mCurrentOverload;
+			// limit Qref wrt to rated power of device
+			if (Math::abs(mQref) > mSn * mCurrentOverload) {
+				if (mQref > 0) {
+					// undervoltage -> Q positiv (voltage increase, capacitive behaviour)
+					//mSLog->info("Injecting maximum of reactive current (inductive) for dynamic voltage support");
+					mQref = mSn * mCurrentOverload;
+				}
+				else
+				{
+					// overvoltage -> Q negativ (voltage decrease, inductive behaviour)
+					//mSLog->info("Injecting maximum of reactive current (capacitive) for dynamic voltage support");
+					mQref = -mSn * mCurrentOverload;
+				}
 			}
-			else
-			{
-				// overvoltage -> Q negativ (voltage decrease, inductive behaviour)
-				mSLog->info("Injecting maximum of reactive current (capacitive) for dynamic voltage support");
-				mQref = -mSn * mCurrentOverload;
+
+			// is power excedding rated power?
+			//if ((sqrt(pow(mPref, 2) + pow(mQref, 2)) / Vmeas) > (mInom * mCurrentOverload) && (Math::abs(mPref) > 0)) {
+			if (sqrt(pow(mPref, 2) + pow(mQref, 2)) > mSn && (Math::abs(mPref) > 0)) {
+				if (mDeltaVNom < 0) {
+					// if LVRT, then reduce active power input
+					//Real newIactive = mInom * mCurrentOverload - Math::abs(deltaI) - Math::abs((mQRefStatic / Vmeas));
+					Real newIactive = mInom * mCurrentOverload - Math::abs(deltaI) - Math::abs((mQRefStatic / mVnomHV));
+
+					if (!mPReduced) {
+						// save pre reduced value
+						mPRefStatic = mPref;
+						// initialize value of new P calc
+						mPNewPrev = mPref;
+						mPReduced = true;
+					}
+
+					// use PT1 to smoothly decrease P
+					//Real PNew = (-newIactive * Vmeas) < 0 ? -newIactive * Vmeas : 0;
+					Real PNew = (-newIactive * mVnomHV) < 0 ? -newIactive * mVnomHV : 0;
+					mPref = PT1ControlStep(PNew, mPNewPrev, mPref, 1, 0.01, mDeltaT);
+					mPNewPrev = PNew;
+					// To Do: Also could be set directly to zero
+
+					//mSLog->info("Time: {}", time);
+					//mSLog->info("LVRT -> Reducing active power input for dynamic reactive power support");
+					//mSLog->info("New P: {}", mPref);
+				}
+				else
+				{
+					// if HVRT, then reduce reactive current
+					//Real newIreactive = mInom * mCurrentOverload - Math::abs((mPref / Vmeas));
+					// mQref = -1 * newIreactive * mVmeas;
+					//Real newIreactive = mInom * mCurrentOverload - Math::abs((mPref / mVnomHV));
+					//mQref = -1 * newIreactive * mVnomHV;
+					mQref = -1 * sqrt(pow(mSn, 2) - pow(mPref, 2));
+
+					//mSLog->info("Time: {}", time);
+					//mSLog->info("HVRT -> Reducing reactive power input for dynamic active power support");
+					//mSLog->info("New Q: {}", mQref);
+				}
+				
 			}
+			mDeltaIPrev = deltaI;
 		}
-
-		// is power excedding rated power?
-		if ((sqrt(pow(mPref, 2) + pow(mQref, 2)) / Vmeas) > (mInom * mCurrentOverload) && (Math::abs(mPref) > 0)) {
-			// then reduce active power input
-			Real newIactive = mInom * mCurrentOverload - Math::abs(deltaI) - Math::abs((mQRefStatic / Vmeas));
-
-			if (!mPReduced) {
-				// save pre reduced value
-				mPRefStatic = mPref;
-				// initialize value of new P calc
-				mPNewPrev = mPref;
-				mPReduced = true;
-			}
-			// use PT1 to smoothly decrease P
-			Real PNew = (-newIactive * Vmeas) < 0 ? -newIactive * Vmeas : 0;
-			mPref = PT1ControlStep(PNew, mPNewPrev, mPref, 1, 0.01, mDeltaT);
-			mPNewPrev = PNew;
-
-			mSLog->info("Time: {}", time);
-			mSLog->info("Reducing active power input for dynamic reactive power support");
-			mSLog->info("New P: {}", mPref);
-		}
-
 		mFaultCounter = time - mFaultStartTime;
-		mDeltaIPrev = deltaI;
 	}
+
 	// reset update counter
 	mUpdateCounter = 0;
 	mDeltaVPrev = mDeltaV;
@@ -666,7 +724,8 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSwitchState(Real time) {
 		// implementation of TAR Hochspannung VDE AR N 4120
 		if (mFaultState)
 		{
-			disconnect = checkFRTGuidelineValue(time, mFRTGuideline);
+			if (mFaultCounter > 0.04)
+				disconnect = checkFRTGuidelineValue(time, mFRTGuideline);
 			/*
 			if (mFaultCounter > 0.05)
 			{

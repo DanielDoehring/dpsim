@@ -554,7 +554,7 @@ TopologicalPowerComp::Ptr Reader::mapPowerTransformer(PowerTransformer* trans) {
 
 		Real NumTaps = 10;
 		transformer->setOLTCParamters(NumTaps, voltageNode2*1.05);
-		transformer->setOLTCTimeDelay(0.3);
+		transformer->setOLTCTimeDelay(15);
 		transformer->setOLTCDeadband(0.01);
 
 		transformer->setParametersSaturationDefault(220000, 66000);
@@ -719,9 +719,9 @@ TopologicalPowerComp::Ptr Reader::mapExternalNetworkInjection(ExternalNetworkInj
 		if (mPhase == PhaseType::Single) {
 			auto cpsextnet = std::make_shared<SP::Ph1::externalGridInjection>(extnet->mRID, extnet->name, mComponentLogLevel);
 
-			Real P = unitValue(extnet->p.value, UnitMultiplier::M);
-			Real Q = unitValue(extnet->q.value, UnitMultiplier::M);
-			cpsextnet->updatePowerInjection(Complex(P, Q));
+			Real p = unitValue(extnet->p.value, UnitMultiplier::M);
+			Real q = unitValue(extnet->q.value, UnitMultiplier::M);
+			cpsextnet->updatePowerInjection(Complex(p, q));
 
 			if (extnet->name.find("Slack") != std::string::npos) {
 				mSLog->info("       Model as VD-Node (Slack).");
@@ -731,8 +731,8 @@ TopologicalPowerComp::Ptr Reader::mapExternalNetworkInjection(ExternalNetworkInj
 			{
 				mSLog->info("       Model as PQ-Node (VSI).");
 				auto vsiextnet = std::make_shared<SP::Ph1::AvVoltageSourceInverterDQ>(extnet->mRID, extnet->name, mComponentLogLevel);
-				vsiextnet->setParameters(2 * M_PI * mFrequency, baseVoltage, -P, -Q);
-				//cpsextnet->modifyPowerFlowBusType(PowerflowBusType::PQ);
+				vsiextnet->setParameters(2 * M_PI * mFrequency, baseVoltage, -p, -q);
+				vsiextnet->modifyPowerFlowBusType(PowerflowBusType::PQ);
 				return vsiextnet;
 			}
 			
@@ -796,7 +796,7 @@ TopologicalPowerComp::Ptr Reader::mapExternalNetworkInjection(ExternalNetworkInj
 			}
 			else
 			{
-				return nullptr;
+				//return nullptr;
 				mSLog->info("NetworkInjection for DP single-phase modeled as VSI in DQ-Frame");
 				Bool has_trafo = true;
 				Bool switchActive = true;
@@ -843,11 +843,12 @@ TopologicalPowerComp::Ptr Reader::mapExternalNetworkInjection(ExternalNetworkInj
 
 				// Q Control param
 				Real Qmax = unitValue(extnet->maxQ.value, UnitMultiplier::M);
+				Qmax = Qmax > 1e9 ? 1e6 : Qmax;
 				Real Qmin = -Qmax;
 				Real VRef = tr_nomVoltEnd1 * (1 + 0.05);
 				Real Deadband = 0.01;
 				Real SGain = 20;
-				Real DGain = 0;
+				Real DGain = 5;
 				ext_vsi->setQControlParameters(true, VRef, SGain, DGain, Deadband, Qmax, Qmin);
 
 				return ext_vsi;
@@ -894,7 +895,7 @@ TopologicalPowerComp::Ptr Reader::mapEquivalentShunt(EquivalentShunt* shunt){
 
 TopologicalPowerComp::Ptr Reader::mapStaticVarCompensator(StaticVarCompensator* svc) {
 	//mSLog->info("Found FACTS Element: {}", svc->name);
-	return nullptr;
+	//return nullptr;
 	Real baseVoltage = 0;
 	// first look for baseVolt object to set baseVoltage
 	for (auto obj : mModel->Objects) {
@@ -976,8 +977,8 @@ TopologicalPowerComp::Ptr Reader::mapStaticVarCompensator(StaticVarCompensator* 
 			Real VRef = unitValue(svc->voltageSetPoint.value, UnitMultiplier::k);
 			Real Deadband = 0.01;
 			Real SGain = 20;
-			//Real DGain = 5;
-			Real DGain = 6;
+			Real DGain = 5;
+			//Real DGain = 6;
 			statcom->setQControlParameters(true, VRef, SGain, DGain, Deadband, -QIndMax, -QCapMax);
 
 			return statcom;
@@ -1000,7 +1001,8 @@ TopologicalPowerComp::Ptr Reader::mapStaticVarCompensator(StaticVarCompensator* 
 
 			cpsSVC->setParameters(Bmax, Bmin, Qmax, baseVoltage, RefVoltage);
 			// vorher K = 40
-			cpsSVC->setControllerParameters(0.2, 40);
+			// t vorher 0.2
+			cpsSVC->setControllerParameters(0.1, 40);
 			return cpsSVC;
 		}
 	}
@@ -1008,7 +1010,7 @@ TopologicalPowerComp::Ptr Reader::mapStaticVarCompensator(StaticVarCompensator* 
 
 
 TopologicalPowerComp::Ptr Reader::mapLinearShuntCompensator(LinearShuntCompensator* shunt) {
-	return nullptr;
+	//return nullptr;
 	mSLog->info("Found LinearShuntCompensator {}", shunt->name);
 
 	Real baseVoltage = 0;

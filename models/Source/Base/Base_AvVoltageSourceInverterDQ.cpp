@@ -155,4 +155,7 @@ void Base::AvVoltageSourceInverterDQ::setQControlParameters(Bool ctrlActive, Rea
 	mQUDeadband = Deadband;
 	mQmax = Qmax;
 	mQmin = Qmin;
+
+	// 1=PT1 2=Rampe 1s 3 = Rampe 5s
+	mPRecoveryMethod = 2;
 };

@@ -68,9 +68,11 @@ void SP::Ph1::AvVoltageSourceInverterDQ::setTransformerParameters(Real nomVoltag
 void SP::Ph1::AvVoltageSourceInverterDQ::setParameters(Real sysOmega, Complex sysVoltNom, Real Pref, Real Qref) {
 	mPref = Pref;
 	mQref = Qref;
-
 	mVoltNom = sysVoltNom;
 	mOmegaN = sysOmega;
+
+	mPowerflowBusType = PowerflowBusType::PQ;
+
 
 	mPFAvVoltageSourceInverter = SP::Ph1::Load::make(mName + "_pf", mName + "_pf", mLogLevel);
 	mPFAvVoltageSourceInverter->setParameters(mPref, mQref, 0);

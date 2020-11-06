@@ -46,9 +46,13 @@ namespace DPsim {
         /// Vector with indices of both PQ and PV buses
         std::vector<CPS::UInt> mPQPVBusIndices;
 
+		/// Vector with indices of buses with VSI
+		std::vector<CPS::UInt> mVSIBusIndices;
+
 		/// System matrix logger
 		std::shared_ptr<DataLogger> mAdmittanceMatrixLog;
 		std::shared_ptr<DataLogger> mJacobianLog;
+		std::shared_ptr<DataLogger> mBusDataLogger;
 
         /// Admittance matrix
         CPS::SparseMatrixCompRow mY;

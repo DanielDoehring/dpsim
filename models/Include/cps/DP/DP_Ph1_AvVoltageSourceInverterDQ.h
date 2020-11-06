@@ -114,7 +114,10 @@ namespace Ph1 {
 		Real mPRefStatic = 0;
 		// was P reduced during fault?
 		Bool mPReduced = false;
+		Real mDeltaPPrev;
 		Real mPNewPrev;
+		Real mPRamp;
+		Real mPRampTime = 1;
 
 		//
 		// voltage at PCC

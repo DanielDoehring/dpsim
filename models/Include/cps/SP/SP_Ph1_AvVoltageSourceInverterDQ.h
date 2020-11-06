@@ -135,6 +135,8 @@ namespace Ph1 {
 
 	public:
 		///
+		Real getNomVoltage() { return Math::abs(mVoltNom); };
+		///
 		std::shared_ptr<SP::Ph1::Load> mPFAvVoltageSourceInverter;
 		///
 		std::shared_ptr<SP::Ph1::Transformer> mConnectionTransformer;

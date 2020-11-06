@@ -101,6 +101,29 @@ void DataLogger::logDataLine(Real time, const MatrixComp& data) {
 	mLogFile << '\n';
 }
 
+void DataLogger::logBusData(String name, String uid, Real id, Real baseV, String bustype, Real vsi_connected) {
+	// set column names
+	if (mLogFile.tellp() == std::ofstream::pos_type(0)) {
+		mLogFile << std::right << std::setw(13) << "Name";
+		mLogFile << ", " << std::right << std::setw(13) << "UID";
+		mLogFile << ", " << std::right << std::setw(13) << "ID";
+		mLogFile << ", " << std::right << std::setw(13) << "V";
+		mLogFile << ", " << std::right << std::setw(13) << "BusType";
+		mLogFile << ", " << std::right << std::setw(13) << "VSI_Connected";
+		mLogFile << '\n';
+	}
+
+	mLogFile << std::right << std::setw(13) << name;
+	mLogFile << ", " << std::right << std::setw(13) << uid;
+	mLogFile << ", " << std::right << std::setw(13) << id;
+	mLogFile << ", " << std::right << std::setw(13) << baseV;
+	mLogFile << ", " << std::right << std::setw(13) << bustype;
+	mLogFile << ", " << std::right << std::setw(13) << vsi_connected;
+
+	mLogFile << '\n';
+}
+
+
 void DataLogger::logPhasorNodeValues(Real time, const MatrixComp& data, Int freqNum) {
 	/*
 	if (mLogFile.tellp() == std::ofstream::pos_type(0)) {

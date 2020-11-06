@@ -24,6 +24,7 @@ PFSolver::PFSolver(CPS::String name, CPS::SystemTopology system, CPS::Real timeS
 	mTimeStep = timeStep;
 	mAdmittanceMatrixLog = std::make_shared<DataLogger>(name + "_SystemMatrix", true);
 	mJacobianLog = std::make_shared<DataLogger>(name + "_jacobianMatrix", true);
+	mBusDataLogger = std::make_shared<DataLogger>(name + "_BusData", true);
 
     initialize();
 }
@@ -143,6 +144,8 @@ void PFSolver::determinePFBusType() {
 		bool connectedPQ = false;
 		bool connectedVD = false;
 
+		Real connectedVSI = 0;
+
 		for (auto comp : mSystem.mComponentsAtNode[node]) {
 			if (std::shared_ptr<CPS::SP::Ph1::Load> load = std::dynamic_pointer_cast<CPS::SP::Ph1::Load>(comp)) {
 				if (load->mPowerflowBusType == CPS::PowerflowBusType::PQ) {
@@ -168,41 +171,51 @@ void PFSolver::determinePFBusType() {
 			else if (std::shared_ptr<CPS::SP::Ph1::AvVoltageSourceInverterDQ> vsi = std::dynamic_pointer_cast<CPS::SP::Ph1::AvVoltageSourceInverterDQ>(comp)){
 				if (vsi->mPowerflowBusType == CPS::PowerflowBusType::PQ) {
 					connectedPQ = true;
+					connectedVSI = 1;
 				}
+				mVSIBusIndices.push_back(node->matrixNodeIndex());
 			}
 		}
 
 		// determine powerflow bus types according connected type of connected components
 		// only PQ type component connected -> set as PQ bus
+		CPS::String busType;
 		if (!connectedPV && connectedPQ && !connectedVD) {
 			mPQBusIndices.push_back(node->matrixNodeIndex());
 			mPQBuses.push_back(node);
+			busType = "PQ";
 		} // no component connected -> set as PQ bus (P & Q will be zero)
 		else if (!connectedPV && !connectedPQ && !connectedVD) {
 			mPQBusIndices.push_back(node->matrixNodeIndex());
 			mPQBuses.push_back(node);
+			busType = "PQ";
 		} // only PV type component connected -> set as PV bus
 		else if (connectedPV && !connectedPQ && !connectedVD) {
 			mPVBusIndices.push_back(node->matrixNodeIndex());
 			mPVBuses.push_back(node);
+			busType = "PV";
 		} // PV and PQ type component connected -> set as PV bus (TODO: bus type should be modifiable by user afterwards)
 		else if (connectedPV && connectedPQ && !connectedVD) {
 			mPVBusIndices.push_back(node->matrixNodeIndex());
 			mPVBuses.push_back(node);
+			busType = "PV";
 			mSLog->info("Note: node with uuid {} set as PV bus. Both PV and PQ type components were connected.", node->attribute<String>("uid")->get());
 		} // only VD type component connected -> set as VD bus
 		else if (!connectedPV && !connectedPQ && connectedVD) {
 			mVDBusIndices.push_back(node->matrixNodeIndex());
 			mVDBuses.push_back(node);
+			busType = "VD";
 		} // VD and PV type component connect -> set as VD bus
 		else if (connectedPV && !connectedPQ && connectedVD) {
 			mVDBusIndices.push_back(node->matrixNodeIndex());
 			mVDBuses.push_back(node);
+			busType = "VD";
 			mSLog->info("Note: node with uuid {} set as VD bus. Both VD and PV type components were connected.", node->attribute<String>("uid")->get());
 		} // VD, PV and PQ type component connect -> set as VD bus
 		else if (connectedPV && connectedPQ && connectedVD) {
 			mVDBusIndices.push_back(node->matrixNodeIndex());
 			mVDBuses.push_back(node);
+			busType = "VD";
 			mSLog->info("Note: node with uuid {} set as VD bus. VD, PV and PQ type components were connected.", node->attribute<String>("uid")->get());
 		}
 		else {
@@ -210,6 +223,13 @@ void PFSolver::determinePFBusType() {
 			ss << "Node>>" << node->name() << ": combination of connected components is invalid";
 			throw std::invalid_argument(ss.str());
 		}
+
+		// log Data of Bus
+		Real baseVoltage = Math::abs(node->attribute<MatrixComp>("voltage_init")->get()(0,0));
+		CPS::String name = node->name();
+		Real ID = node->matrixNodeIndex();
+		CPS::String UID = node->attribute<String>("uid")->get();
+		mBusDataLogger->logBusData(name, UID, ID, baseVoltage, busType, connectedVSI);
 	}
 
     mNumPQBuses = mPQBusIndices.size();
@@ -226,6 +246,7 @@ void PFSolver::determinePFBusType() {
     mSLog->info("PQ Buses: {}", logVector(mPQBusIndices));
     mSLog->info("PV Buses: {}", logVector(mPVBusIndices));
     mSLog->info("VD Buses: {}", logVector(mVDBusIndices));
+	mSLog->info("VSI Buses: {}", logVector(mVSIBusIndices));
 }
 
 void PFSolver::setVDNode(CPS::String name) {

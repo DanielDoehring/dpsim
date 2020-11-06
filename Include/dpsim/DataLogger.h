@@ -56,7 +56,7 @@ namespace DPsim {
 		void logEMTNodeValues(Real time, const Matrix& data);
 
 		void logPhasorNodeValues(Real time, const MatrixComp& data, Int freqNum = 1);
-
+		void logBusData(String name, String uid, Real id, Real baseV, String bustype, Real vsi_connected);
 
 		void setColumnNames(std::vector<String> names);
 

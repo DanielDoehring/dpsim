@@ -99,6 +99,7 @@ namespace Base {
 
 		/// QU Control parameters
 		Bool mQUControl = false;
+		Real mPRecoveryMethod = 1;
 		Real mVRef;
 		Real mStaticGain;
 		Real mDynamicGain;
