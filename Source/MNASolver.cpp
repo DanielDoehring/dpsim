@@ -12,6 +12,7 @@
 #include <cps/DP/DP_Ph1_Transformer.h>
 #include <cps/DP/DP_Ph1_AvVoltageSourceInverterDQ.h>
 #include <cps/DP/DP_Ph1_RXLoad.h>
+#include <cps/DP/DP_Ph1_ShortCircuit.h>
 
 using namespace DPsim;
 using namespace CPS;
@@ -85,6 +86,10 @@ void MnaSolver<VarType>::initialize() {
 		auto loadswitch = std::dynamic_pointer_cast<DP::Ph1::RXLoad>(comp);
 		if (loadswitch) {
 			mVarElemsSwitches.push_back(loadswitch->getProtectionSwitch());
+		}
+		auto sc = std::dynamic_pointer_cast<DP::Ph1::ShortCircuit>(comp);
+		if (sc) {
+			mVarElemsSwitches.push_back(sc->getProtectionSwitch());
 		}
 	}
 
