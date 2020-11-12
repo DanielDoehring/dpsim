@@ -147,9 +147,10 @@ void Base::AvVoltageSourceInverterDQ::setInitialStateValues(Real thetaPLLInit, R
 	mSLog->info("Gamma_dInit = {}, Gamma_qInit = {}", mGamma_dInit, mGamma_qInit);
 }
 
-void Base::AvVoltageSourceInverterDQ::setQControlParameters(Bool ctrlActive, Real VRef, Real SGain, Real DGain, Real Deadband, Real Qmax, Real Qmin) {
+void Base::AvVoltageSourceInverterDQ::setQControlParameters(Bool ctrlActive, Real VRef, Real VnomCtrl, Real SGain, Real DGain, Real Deadband, Real Qmax, Real Qmin) {
 	mQUControl = ctrlActive;
 	mVRef = VRef;
+	mVnomCtrl = VnomCtrl;
 	mStaticGain = SGain;
 	mDynamicGain = DGain;
 	mQUDeadband = Deadband;

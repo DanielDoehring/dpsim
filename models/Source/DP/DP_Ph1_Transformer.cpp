@@ -45,7 +45,8 @@ DP::Ph1::Transformer::Transformer(String uid, String name,
 	addAttribute<Real>("deltaFlux", &mDeltaFlux, Flags::write | Flags::read);
 	addAttribute<Complex>("ISrcRef", &mISrcRef, Flags::write | Flags::read);
 	addAttribute<Real>("IMag", &mIMag, Flags::write | Flags::read);
-	addAttribute<Real>("DeltaT", &mDeltaT, Flags::write | Flags::read);
+	addAttribute<Real>("Vm", &mVm, Flags::write | Flags::read);
+	addAttribute<Complex>("VmDP", &mVmDP, Flags::write | Flags::read);
 	addAttribute<Real>("LV Voltage", &mLVVoltage, Flags::write | Flags::read);
 }
 
@@ -95,6 +96,9 @@ void DP::Ph1::Transformer::initializeFromPowerflow(Real frequency) {
 		//                             Lm
 		//					           |
 		//---------------------------------------------------------------GND
+		if (!mSaturationParametersSet) {
+			setParametersSaturationDefault(110000);
+		}
 
 		Real omega = 2.*PI* frequency;
 		//Complex impedance = { mResistance, omega * mInductance };
@@ -201,7 +205,6 @@ void DP::Ph1::Transformer::initializeFromPowerflow(Real frequency) {
 		mSLog->info("Saturation Constant B: {} ", mSatConstB);
 		mSLog->info("Saturation Constant C: {} ", mSatConstC);
 		mSLog->info("Saturation Constant D: {} ", mSatConstD);
-
 
 		mSLog->info(
 			"\n--- Initialization from powerflow ---"
@@ -559,7 +562,7 @@ void DP::Ph1::Transformer::updateSatCurrentSrcDP(Real time, const Matrix& leftVe
 	// calc magnetizing current
 	Real iMag_sqrt = sqrt((mCurrentFlux - mLambdaK) * (mCurrentFlux - mLambdaK) + 4 * mSatConstD * mLA);
 	mIMag = ((iMag_sqrt + mCurrentFlux - mLambdaK) / (2 * mLA)) - (mSatConstD / mLambdaK);
-	//mSLog->info("\nCurrent Flux of {} leads to magnetizing current of {}", mCurrentFlux, mIMag);
+	mSLog->info("\nCurrent Flux of {} leads to magnetizing current of {}", mCurrentFlux, mIMag);
 
 	// transform mag current to DP domain
 	// multiply with e^-jw_s*t

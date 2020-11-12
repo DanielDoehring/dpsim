@@ -69,6 +69,7 @@ namespace Ph1 {
 		Real mPrevStepTime = 0;
 
 		Bool mSatConstantsSet = false;
+		Bool mSaturationParametersSet = false;
 		Bool mSatConstantsSetDP = false;
 
 		// constants for calculation of magnetizing current from flux
@@ -132,9 +133,10 @@ namespace Ph1 {
 			mLA = LA;
 			mLm = LM;
 			mIM = IM;
+			mSaturationParametersSet = true;
 		}
 
-		void setParametersSaturationDefault(Real HV, Real LV) {
+		void setParametersSaturationDefault(Real HV, Real LV = 0) {
 			// set Saturation Parameters for standard Transformer depending on low and high voltage level
 			if (HV == 220000 && LV == 66000) {
 				mLambdaM = 686.611426;
@@ -200,6 +202,7 @@ namespace Ph1 {
 				}
 
 			}
+			mSaturationParametersSet = true;
 		}
 
 		void setSaturationConstants() {

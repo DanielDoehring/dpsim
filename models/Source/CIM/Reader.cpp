@@ -557,7 +557,7 @@ TopologicalPowerComp::Ptr Reader::mapPowerTransformer(PowerTransformer* trans) {
 		transformer->setOLTCTimeDelay(15);
 		transformer->setOLTCDeadband(0.01);
 
-		transformer->setParametersSaturationDefault(220000, 66000);
+		//transformer->setParametersSaturationDefault(220000, 66000);
 		//transformer->setMagnetizingInductance(350);
 		//transformer->setSaturationCalculationMethod(true);
 		return transformer;
@@ -572,6 +572,91 @@ TopologicalPowerComp::Ptr Reader::mapSynchronousMachine(SynchronousMachine* mach
 		Real inertiaCoefficient;
 		Real ratedPower;
 		Real ratedVoltage;
+
+		// first look for baseVolt object to set baseVoltage
+		Real baseVoltage = 0;
+		for (auto obj : mModel->Objects) {
+			if (IEC61970::Base::Core::BaseVoltage* baseVolt = dynamic_cast<IEC61970::Base::Core::BaseVoltage*>(obj)) {
+				for (auto comp : baseVolt->ConductingEquipment) {
+					if (comp->name == machine->name) {
+						baseVoltage = unitValue(baseVolt->nominalVoltage.value, UnitMultiplier::k);
+					}
+				}
+			}
+		}
+		// as second option take baseVoltage of topologicalNode where ExternalNetworkInjection is connected to
+		if (baseVoltage == 0) {
+			for (auto obj : mModel->Objects) {
+				if (IEC61970::Base::Topology::TopologicalNode* topNode = dynamic_cast<IEC61970::Base::Topology::TopologicalNode*>(obj)) {
+					for (auto term : topNode->Terminal) {
+						if (term->ConductingEquipment->name == machine->name) {
+							baseVoltage = unitValue(topNode->BaseVoltage->nominalVoltage.value, UnitMultiplier::k);
+						}
+					}
+				}
+			}
+		}
+		
+		// return VSI if it is WEA
+		Real Pref = unitValue(machine->p.value, UnitMultiplier::M);
+		if (machine->name.find("WEA") != std::string::npos && Math::abs(Pref) < 70e6) {
+			mSLog->info("WEA-Element from Integral for DP single-phase modeled as VSI in DQ-Frame");
+			Bool has_trafo = true;
+			Bool switchActive = true;
+			auto ext_vsi = std::make_shared<DP::Ph1::AvVoltageSourceInverterDQ>(machine->mRID, machine->name, Logger::Level::debug, has_trafo, switchActive);
+
+			// parameters for vsi
+			Real omegeN = 2 * M_PI * mFrequency;
+
+			Real Qmax = unitValue(machine->maxQ.value, UnitMultiplier::M);
+			Qmax = Math::abs(Qmax) > 1e9 ? Math::abs(unitValue(machine->q.value, UnitMultiplier::M)) : Qmax;
+			Real Sn = unitValue(machine->ratedS.value, UnitMultiplier::M);
+
+			Real Qref = 0;
+			//Real Qref = unitValue(machine->q.value, UnitMultiplier::M);
+			Real kp_pll = 0.25;
+			Real ki_pll = 2;
+			//Real Kp_powerCtrl = 0.001;
+			//Real Ki_powerCtrl = 0.08;
+			//Real Kp_currCtrl = 0.3;
+			//Real Ki_currCtrl = 10;
+			Real Kp_powerCtrl = 0.0005;
+			Real Ki_powerCtrl = 0.01;
+			Real Kp_currCtrl = 0.1;
+			Real Ki_currCtrl = 2;
+			Real Lf = 0.002;
+			Real Cf = 7.89e-07;
+			Real Rf = 0.01;
+			Real Rc = 0.01;
+
+			// parameters for connection transformer
+			Real tr_nomVoltEnd1 = baseVoltage;
+			Real tr_nomVoltEnd2 = baseVoltage <= 10000 ? 1.5e3 : 1.5e3;
+			Real Vnom = has_trafo ? tr_nomVoltEnd2 : tr_nomVoltEnd1;
+			Real tr_ratedPower = 50e6;
+			Real tr_ratioAbs = tr_nomVoltEnd1 / tr_nomVoltEnd2;
+			Real tr_ratioPhase = 0;
+			Real tr_resistance = 0.001;
+			Real tr_inductance = 0.001;
+
+			// set parameters for NetworkInjection that is modeled as VSI
+			ext_vsi->setParameters(omegeN, Vnom, Pref, Qref, Sn);
+			ext_vsi->setControllerParameters(kp_pll, ki_pll, Ki_powerCtrl, Ki_powerCtrl, Kp_currCtrl, Ki_currCtrl, omegeN);
+			ext_vsi->setFilterParameters(Lf, Cf, Rf, Rc);
+			ext_vsi->setTransformerParameters(tr_nomVoltEnd1, tr_nomVoltEnd2, tr_ratedPower, tr_ratioAbs, tr_ratioPhase, tr_resistance, tr_inductance, omegeN);
+			ext_vsi->setInitialStateValues(0, 0, Pref, Qref, 0, 0, 0, 0);
+
+			// Q Control param
+			Real Qmin = -Qmax;
+			Real VRef = tr_nomVoltEnd1 * (1.05);
+			Real VnomCtrl = tr_nomVoltEnd2;
+			Real Deadband = 0.01;
+			Real SGain = 20;
+			Real DGain = 5;
+			Bool ctrActive = Qmax > 0 ? true : false;
+			ext_vsi->setQControlParameters(ctrActive, VRef, VnomCtrl, SGain, DGain, Deadband, Qmax, Qmin);
+			return ext_vsi;
+		}
 
 		for (auto obj : mModel->Objects) {
 			// Check if object is not TopologicalNode, SvVoltage or SvPowerFlow
@@ -794,21 +879,30 @@ TopologicalPowerComp::Ptr Reader::mapExternalNetworkInjection(ExternalNetworkInj
 				auto cpsext = std::make_shared<DP::Ph1::NetworkInjection>(extnet->mRID, extnet->name, mComponentLogLevel);
 				return cpsext;
 			}
+			else if (extnet->name.find("Pumpspeicher") != std::string::npos) {
+				mSLog->info("Pumpspeicher not modelled");
+				return nullptr;
+			}
 			else
 			{
 				//return nullptr;
 				mSLog->info("NetworkInjection for DP single-phase modeled as VSI in DQ-Frame");
 				Bool has_trafo = true;
 				Bool switchActive = true;
-				auto ext_vsi = std::make_shared<DP::Ph1::AvVoltageSourceInverterDQ>(extnet->mRID, extnet->name, mComponentLogLevel, has_trafo, switchActive);
+				auto ext_vsi = std::make_shared<DP::Ph1::AvVoltageSourceInverterDQ>(extnet->mRID, extnet->name, Logger::Level::debug, has_trafo, switchActive);
 
 				// parameters for vsi
 				Real omegeN = 2 * M_PI * mFrequency;
 				Real Pref = unitValue(extnet->p.value, UnitMultiplier::M);
 				//Real Qref = unitValue(extnet->q.value, UnitMultiplier::M);
-				Real Sn = sqrt(pow(unitValue(extnet->maxP.value, UnitMultiplier::M), 2) + pow(unitValue(extnet->maxQ.value, UnitMultiplier::M),2));
 
-				//Real Qref = unitValue(extnet->q.value, UnitMultiplier::M);
+				Real Qmax = unitValue(extnet->maxQ.value, UnitMultiplier::M);
+				Qmax = Math::abs(Qmax) > 1e9 ? Math::abs(unitValue(extnet->q.value, UnitMultiplier::M)) : Qmax;
+				Real Pmax = unitValue(extnet->maxP.value, UnitMultiplier::M);
+				Pmax = Math::abs(Pmax) > 1e9 ? Math::abs(unitValue(extnet->p.value, UnitMultiplier::M)) : Pmax;
+
+				Real Sn = sqrt(pow(Pmax, 2) + pow(Qmax,2));
+
 				Real Qref = 0;
 				Real kp_pll = 0.25;
 				Real ki_pll = 2;
@@ -827,7 +921,8 @@ TopologicalPowerComp::Ptr Reader::mapExternalNetworkInjection(ExternalNetworkInj
 
 				// parameters for connection transformer
 				Real tr_nomVoltEnd1 = baseVoltage;
-				Real tr_nomVoltEnd2 = 15e3;
+				Real tr_nomVoltEnd2 = baseVoltage <= 10000 ? 1.5e3 : 1.5e3;
+				Real Vnom = has_trafo ? tr_nomVoltEnd2 : tr_nomVoltEnd1;
 				Real tr_ratedPower = 50e6;
 				Real tr_ratioAbs = tr_nomVoltEnd1 / tr_nomVoltEnd2;
 				Real tr_ratioPhase = 0;
@@ -835,21 +930,21 @@ TopologicalPowerComp::Ptr Reader::mapExternalNetworkInjection(ExternalNetworkInj
 				Real tr_inductance = 0.001;	
 
 				// set parameters for NetworkInjection that is modeled as VSI
-				ext_vsi->setParameters(omegeN, tr_nomVoltEnd2, Pref, Qref, Sn);
+				ext_vsi->setParameters(omegeN, Vnom, Pref, Qref, Sn);
 				ext_vsi->setControllerParameters(kp_pll, ki_pll, Ki_powerCtrl, Ki_powerCtrl, Kp_currCtrl, Ki_currCtrl, omegeN);
 				ext_vsi->setFilterParameters(Lf, Cf, Rf, Rc);
 				ext_vsi->setTransformerParameters(tr_nomVoltEnd1, tr_nomVoltEnd2, tr_ratedPower, tr_ratioAbs, tr_ratioPhase, tr_resistance, tr_inductance, omegeN);
 				ext_vsi->setInitialStateValues(0,0,Pref,Qref,0,0,0,0);
 
 				// Q Control param
-				Real Qmax = unitValue(extnet->maxQ.value, UnitMultiplier::M);
-				Qmax = Qmax > 1e9 ? 1e6 : Qmax;
 				Real Qmin = -Qmax;
-				Real VRef = tr_nomVoltEnd1 * (1 + 0.05);
+				Real VRef = tr_nomVoltEnd1 * (1.05);
+				Real VnomCtrl = tr_nomVoltEnd2;
 				Real Deadband = 0.01;
 				Real SGain = 20;
 				Real DGain = 5;
-				ext_vsi->setQControlParameters(true, VRef, SGain, DGain, Deadband, Qmax, Qmin);
+				Bool ctrActive = Qmax > 0 ? true : false;
+				ext_vsi->setQControlParameters(ctrActive, VRef, VnomCtrl, SGain, DGain, Deadband, Qmax, Qmin);
 
 				return ext_vsi;
 			}
@@ -979,7 +1074,7 @@ TopologicalPowerComp::Ptr Reader::mapStaticVarCompensator(StaticVarCompensator* 
 			Real SGain = 20;
 			Real DGain = 5;
 			//Real DGain = 6;
-			statcom->setQControlParameters(true, VRef, SGain, DGain, Deadband, -QIndMax, -QCapMax);
+			statcom->setQControlParameters(true, VRef, VRef, SGain, DGain, Deadband, -QIndMax, -QCapMax);
 
 			return statcom;
 

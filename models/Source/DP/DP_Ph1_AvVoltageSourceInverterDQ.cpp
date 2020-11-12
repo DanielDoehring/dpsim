@@ -17,7 +17,16 @@ DP::Ph1::AvVoltageSourceInverterDQ::AvVoltageSourceInverterDQ(String uid, String
 	TopologicalPowerComp(uid, name, logLevel) {
 	if (withTrafo) {
 		setVirtualNodeNumber(6);
-		mConnectionTransformer = DP::Ph1::Transformer::make(mName + "_trans", Logger::Level::debug);
+		Bool withSat = false;
+		if (withSat) {
+			mSLog->info("Model connection transformer with saturation effects");
+			mConnectionTransformer = DP::Ph1::Transformer::make(mName + "_trans", mName + "_trans", Logger::Level::debug, true, true);
+		}
+		else
+		{
+			mSLog->info("Model connection transformer without saturation effects");
+			mConnectionTransformer = DP::Ph1::Transformer::make(mName + "_trans", Logger::Level::debug);
+		}
 		mSubComponents.push_back(mConnectionTransformer);
 	} else {
 		setVirtualNodeNumber(5);
@@ -248,6 +257,7 @@ void DP::Ph1::AvVoltageSourceInverterDQ::initializeFromPowerflow(Real frequency)
 		mConnectionTransformer->initialize(mFrequencies);
 		mConnectionTransformer->initializeFromPowerflow(frequency);
 
+		// #
 		mVnomHV = (mVnom * mTransformerRatioAbs);
 		mInom = mSn / mVnomHV;
 		mIBnom = Math::abs(mQmax) / mVnomHV;
@@ -260,7 +270,7 @@ void DP::Ph1::AvVoltageSourceInverterDQ::initializeFromPowerflow(Real frequency)
 		mInom = mSn / mVnom;
 		mIBnom = Math::abs(mQmax) / mVnom;
 	}
-
+	
 	// derive initialization quantities of filter
 	Complex vcInit = filterInterfaceInitialVoltage - filterInterfaceInitialCurrent * mRc;
 	Complex icfInit = vcInit * Complex(0., 2. * PI * frequency * mCf);
@@ -315,8 +325,6 @@ void DP::Ph1::AvVoltageSourceInverterDQ::initializeFromPowerflow(Real frequency)
 	mSubProtectionSwitch->initializeFromPowerflow(frequency);
 
 	if (mQUControl) {
-		//mNomVoltPCC = mWithConnectionTransformer ? mVnom * mTransformerRatioAbs : mVnom;
-
 		mSLog->info("Q(U)-Control Parameters:");
 		mSLog->info("Vref = {} [V]", mVRef);
 		mSLog->info("Vnom = {} [V] Vnom (HV) = {} [V]", mVnom, mVnomHV);
@@ -431,8 +439,8 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSetPoint(Real time){
 			else
 			{
 				mSLog->info("Reason -> Voltage returned into allowed band"
-					"\nVoltage Difference is {} [p.u.]. Allowed: 0.1 p.u.",
-					mDeltaV);
+					"\nVoltage Difference (wrt to Vnom) is {} [p.u.]. Allowed: +/- 0.1 p.u.",
+					mDeltaVNom);
 			}
 
 			if (mPReduced) {
@@ -466,10 +474,10 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSetPoint(Real time){
 		}
 
 		//if (mFaultState) {
-		if (mFaultStartDelay > 0.05) {
+		if (mFaultStartDelay > 0.05 && time > 0.2) {
 			mSLog->info("Time: {}", time);
 			mSLog->info("Detected Fault at {} (with Delay of {})"
-				"\nVoltage Difference is {} [p.u.]. Allowed: 0.1 p.u.", (float)time, mFaultStartDelay, mDeltaVNom);
+				"\nVoltage Difference is {} [p.u.]. Allowed: +/- 0.1 p.u.", (float)time, mFaultStartDelay, mDeltaVNom);
 			mFaultStartTime = (mFaultStartTime > 0) ? 0 : (time - mFaultStartDelay);
 			mFaultStartDelay = 0;
 		}
@@ -486,13 +494,14 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSetPoint(Real time){
 	if (QCalcStatic)
 	{
 		if (mPReduced) {
-			if (Math::abs((mPref - mPRefStatic) / mPRefStatic) > 0.03)
+			if (Math::abs((mPref - mPRefStatic) / mPRefStatic) > 0.01)
 			{
 				if (mPRecoveryMethod == 1) {
 					// PT1
-					Real deltaP = mPRefStatic - mPref;
-					mPref = PT1ControlStep(deltaP, mDeltaPPrev, mPRefStatic, 1, 0.05, mDeltaT);
-					mDeltaPPrev = deltaP;
+					//Real deltaP = (mPRefStatic - mPref) / mPRefStatic;
+					mPref = PT1ControlStep(1, 1, mPref/ mPRefStatic, 1, 0.05, mDeltaT);
+					mPref = mPref * mPRefStatic;
+					//mDeltaPPrev = deltaP;
 				}
 				else
 				{
@@ -514,11 +523,11 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSetPoint(Real time){
 				if (mQref > (1.01 * mQmax) || mQref < (1.01 * mQmin)) {
 					// if Q exceeds ratings, reset Q slowly to prefault value (maximum or minimum)
 					if (mQref < mQmin) {
-						mQref = mQmin * (mDeltaT / (2. * 0.02)) + mQref * (1. - (mDeltaT / (2. * 0.02)));
+						mQref = mQmin * (mDeltaT / (2. * 0.05)) + mQref * (1. - (mDeltaT / (2. * 0.05)));
 					}
 					else
 					{
-						mQref = mQmax * (mDeltaT / (2. * 0.02)) + mQref * (1. - (mDeltaT / (2. * 0.02)));
+						mQref = mQmax * (mDeltaT / (2. * 0.05)) + mQref * (1. - (mDeltaT / (2. * 0.05)));
 					}
 				}
 				else
@@ -530,14 +539,19 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSetPoint(Real time){
 			else
 			{
 				// calc new Q with static factor
-				newQRef = PT1ControlStep(mDeltaV, mDeltaVPrev, mQref / mSn, -mStaticGain, mTS, mDeltaT);
+				//newQRef = PT1ControlStep(mDeltaV, mDeltaVPrev, mQref / mSn, -mStaticGain, mTS, mDeltaT);
+				//mQRefStaticpu = newQRef;
+				//newQRef = newQRef * mSn;
+				newQRef = PT1ControlStep(mDeltaV, mDeltaVPrev, mQref / mQmax, -mStaticGain, mTS, mDeltaT);
 				mQRefStaticpu = newQRef;
-				newQRef = newQRef * mSn;
+				newQRef = newQRef * mQmax;
 				if (newQRef > 0) {
+					// undervoltage -> Q positiv (voltage increase, capacitive behaviour)
 					mQref = (newQRef > mQmax) ? mQmax : newQRef;
 				}
 				else
 				{
+					// overvoltage -> Q negativ (voltage decrease, inductive behaviour)
 					mQref = (newQRef < mQmin) ? mQmin : newQRef;
 				}
 			}
@@ -607,6 +621,8 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSetPoint(Real time){
 					Real PNew = (-newIactive * mVnomHV) < 0 ? -newIactive * mVnomHV : 0;
 					mPref = PT1ControlStep(PNew, mPNewPrev, mPref, 1, 0.01, mDeltaT);
 					mPNewPrev = PNew;
+					// save for later increase after fault is cleared
+					mDeltaPPrev = (mPRefStatic - mPNewPrev) / mPRefStatic;
 					// To Do: Also could be set directly to zero
 
 					//mSLog->info("Time: {}", time);
@@ -713,8 +729,6 @@ void DP::Ph1::AvVoltageSourceInverterDQ::mnaUpdateCurrent(const Matrix& leftvect
 
 /// new for protection Switch
 void DP::Ph1::AvVoltageSourceInverterDQ::updateSwitchState(Real time) {
-	//mSLog->info("Switch Status: {}", (float)mSubProtectionSwitch->attribute<Bool>("is_closed")->get());
-
 	Real Vmin, Vmax;
 	Bool disconnect = false;
 
@@ -726,61 +740,8 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSwitchState(Real time) {
 		{
 			if (mFaultCounter > 0.04)
 				disconnect = checkFRTGuidelineValue(time, mFRTGuideline);
-			/*
-			if (mFaultCounter > 0.05)
-			{
-
-				if (mDeltaVNom > 0)
-				{
-					// Overvoltage
-					Vmax = (mFaultCounter < 0.15) ? 1.3 : 1.25;
-					if ((1 + mDeltaVNom) > Vmax) {
-						mSLog->info("Disonnect VSI. Reason: Overvoltage"
-							"\nTime: {}"
-							"\nGuideline limit: {}"
-							"\nActual value: {}",
-							time, Vmax, (1 + mDeltaVNom));
-						disconnect = true;
-					}
-				}
-				else
-				{
-					// Undervoltage
-					if (mFaultCounter < 0.15) {
-						Vmin = 0;
-					}
-					else if (mFaultCounter < 3)
-					{
-						Vmin = (0.85 / 2.85) * mFaultCounter - 0.0447;
-					}
-					else if (mFaultCounter >= 3)
-					{
-						Vmin = 0.85;
-					}
-
-					if ((1 + mDeltaVNom) < Vmin) {
-						mSLog->info("Disonnect VSI. Reason: Undervoltage"
-							"\nTime: {}"
-							"\nGuideline limit: {}"
-							"\nActual value: {}",
-							time, Vmin, (1 + mDeltaVNom));
-						disconnect = true;
-					}
-				}
-			}
-			*/
 		}
-		// To Do: better coordination with fault and steady state 
-		/*
-		else
-		{
-			if ((Math::abs(mDeltaV) > 0.1))
-			{
-				mSLog->info("Disconnect VSI. Reason: Steady state violation");
-				disconnect = true;
-			}
-		}
-		*/
+
 		// disconnect if guideline is violated
 		if (disconnect) {
 			mDisconnected = true;

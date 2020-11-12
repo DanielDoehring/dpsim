@@ -20,6 +20,7 @@ namespace Base {
         /// Complex nominal voltage [V]
 		Real mVnom;
 		Real mVnomHV;
+		Real mVnomCtrl;
 
 		// rated Power [VA]
 		Real mSn;
@@ -136,7 +137,7 @@ namespace Base {
 		void setInitialStateValues(Real thetaPLLInit, Real phiPLLInit, Real pInit, Real qInit,
 			Real phi_dInit, Real phi_qInit, Real gamma_dInit, Real gamma_qInit);
 		/// Setter for QU Control parameters
-		void setQControlParameters(Bool ctrlActive, Real VRef, Real SGain, Real DGain, Real Deadband, Real Qmax, Real Qmin);
+		void setQControlParameters(Bool ctrlActive, Real VRef, Real VnomCtrl, Real SGain, Real DGain, Real Deadband, Real Qmax, Real Qmin);
 		/// set FRT guideline
 		void setFRTGuidline(Real FRTGuideline) { mFRTGuideline = FRTGuideline; };
     };
