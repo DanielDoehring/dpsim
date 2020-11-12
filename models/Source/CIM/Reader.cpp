@@ -349,7 +349,7 @@ TopologicalPowerComp::Ptr Reader::mapEnergyConsumer(EnergyConsumer* consumer) {
 		return load;
 	}
 	else {
-		Bool switchActive = false;
+		Bool switchActive = true;
 		return std::make_shared<DP::Ph1::RXLoad>(consumer->mRID, consumer->name, mComponentLogLevel, switchActive);
 	}
 }
@@ -598,7 +598,7 @@ TopologicalPowerComp::Ptr Reader::mapSynchronousMachine(SynchronousMachine* mach
 		}
 		
 		// return VSI if it is WEA
-		Real Pref = unitValue(machine->p.value, UnitMultiplier::M);
+		Real Pref = -1 * unitValue(machine->p.value, UnitMultiplier::M);
 		if (machine->name.find("WEA") != std::string::npos && Math::abs(Pref) < 70e6) {
 			mSLog->info("WEA-Element from Integral for DP single-phase modeled as VSI in DQ-Frame");
 			Bool has_trafo = true;
@@ -612,8 +612,8 @@ TopologicalPowerComp::Ptr Reader::mapSynchronousMachine(SynchronousMachine* mach
 			Qmax = Math::abs(Qmax) > 1e9 ? Math::abs(unitValue(machine->q.value, UnitMultiplier::M)) : Qmax;
 			Real Sn = unitValue(machine->ratedS.value, UnitMultiplier::M);
 
-			Real Qref = 0;
-			//Real Qref = unitValue(machine->q.value, UnitMultiplier::M);
+			//Real Qref = 0;
+			Real Qref = -1* unitValue(machine->q.value, UnitMultiplier::M);
 			Real kp_pll = 0.25;
 			Real ki_pll = 2;
 			//Real Kp_powerCtrl = 0.001;
@@ -893,8 +893,8 @@ TopologicalPowerComp::Ptr Reader::mapExternalNetworkInjection(ExternalNetworkInj
 
 				// parameters for vsi
 				Real omegeN = 2 * M_PI * mFrequency;
-				Real Pref = unitValue(extnet->p.value, UnitMultiplier::M);
-				//Real Qref = unitValue(extnet->q.value, UnitMultiplier::M);
+				Real Pref = -1 * unitValue(extnet->p.value, UnitMultiplier::M);
+				
 
 				Real Qmax = unitValue(extnet->maxQ.value, UnitMultiplier::M);
 				Qmax = Math::abs(Qmax) > 1e9 ? Math::abs(unitValue(extnet->q.value, UnitMultiplier::M)) : Qmax;
@@ -903,7 +903,8 @@ TopologicalPowerComp::Ptr Reader::mapExternalNetworkInjection(ExternalNetworkInj
 
 				Real Sn = sqrt(pow(Pmax, 2) + pow(Qmax,2));
 
-				Real Qref = 0;
+				//Real Qref = 0;
+				Real Qref = -1 * unitValue(extnet->q.value, UnitMultiplier::M);
 				Real kp_pll = 0.25;
 				Real ki_pll = 2;
 				//Real Kp_powerCtrl = 0.001;

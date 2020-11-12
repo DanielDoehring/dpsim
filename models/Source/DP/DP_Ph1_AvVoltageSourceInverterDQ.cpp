@@ -618,16 +618,12 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSetPoint(Real time){
 
 					// use PT1 to smoothly decrease P
 					//Real PNew = (-newIactive * Vmeas) < 0 ? -newIactive * Vmeas : 0;
-					Real PNew = (-newIactive * mVnomHV) < 0 ? -newIactive * mVnomHV : 0;
+					Real PNew = (newIactive * mVnomHV) > 0 ? newIactive * mVnomHV : 0;
 					mPref = PT1ControlStep(PNew, mPNewPrev, mPref, 1, 0.01, mDeltaT);
 					mPNewPrev = PNew;
 					// save for later increase after fault is cleared
 					mDeltaPPrev = (mPRefStatic - mPNewPrev) / mPRefStatic;
 					// To Do: Also could be set directly to zero
-
-					//mSLog->info("Time: {}", time);
-					//mSLog->info("LVRT -> Reducing active power input for dynamic reactive power support");
-					//mSLog->info("New P: {}", mPref);
 				}
 				else
 				{
@@ -637,10 +633,6 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSetPoint(Real time){
 					//Real newIreactive = mInom * mCurrentOverload - Math::abs((mPref / mVnomHV));
 					//mQref = -1 * newIreactive * mVnomHV;
 					mQref = -1 * sqrt(pow(mSn, 2) - pow(mPref, 2));
-
-					//mSLog->info("Time: {}", time);
-					//mSLog->info("HVRT -> Reducing reactive power input for dynamic active power support");
-					//mSLog->info("New Q: {}", mQref);
 				}
 				
 			}

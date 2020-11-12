@@ -10,6 +10,7 @@
 
 #include <cps/SimPowerComp.h>
 #include <cps/Solver/MNAInterface.h>
+//#include <cps/Solver/MNAVarElemInterface.h>
 #include <cps/DP/DP_Ph1_Capacitor.h>
 #include <cps/DP/DP_Ph1_Inductor.h>
 #include <cps/DP/DP_Ph1_Resistor.h>
@@ -69,6 +70,15 @@ namespace Ph1 {
 		Real mPrevTime = 0;
 		Real mSwitchDelayTime = 0.1;
 
+		// voltage constraints
+		Real mVmin;
+		Real mVmax;
+		Bool mVconsSet = false;
+
+		// load shedding
+		Real mEventTime;
+		Bool mLoadSheddingSet = false;
+
 	public:
 		/// Defines UID, name and logging level
 		RXLoad(String uid, String name,
@@ -115,6 +125,12 @@ namespace Ph1 {
 		/// new update switch state function
 		//void updateSwitchState(const Matrix& leftVector, Real time);
 		void updateSwitchState(Real time);
+		//Bool ValueChanged() { return mSwitchStateChange; };
+		// sets Constraints for voltage 
+		void setVoltageConstraints(Real Vmax, Real Vmin);
+		// defines load shedding event
+		void setLoadSheddingEvent(Real eventTime);
+
 
 		Bool mnaStateChanged() { return mSwitchStateChange; };
 

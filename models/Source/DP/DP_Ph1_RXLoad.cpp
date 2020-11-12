@@ -243,7 +243,6 @@ void DP::Ph1::RXLoad::MnaPreStep::execute(Real time, Int timeStepCount) {
 	mLoad.mnaApplyRightSideVectorStamp(mLoad.mRightVector);
 	// NEW for protection switch
 	if (mLoad.mSwitchActive) {
-		mLoad.mSwitchStateChange = false;
 		mLoad.updateSwitchState(time);
 	}
 }
@@ -251,6 +250,7 @@ void DP::Ph1::RXLoad::MnaPreStep::execute(Real time, Int timeStepCount) {
 void DP::Ph1::RXLoad::MnaPostStep::execute(Real time, Int timeStepCount) {
 	mLoad.mnaUpdateVoltage(*mLeftVector);
 	mLoad.mnaUpdateCurrent(*mLeftVector);
+	//mLoad.mSwitchStateChange = false;
 	if (mLoad.mSwitchActive)
 		mLoad.mSubProtectionSwitch->setValueChange(false);
 }
@@ -273,35 +273,60 @@ void DP::Ph1::RXLoad::mnaUpdateCurrent(const Matrix& leftVector) {
 void DP::Ph1::RXLoad::updateSwitchState(Real time) {
 	//mSLog->info("Switch Status: {}", (float)mSubProtectionSwitch->attribute<Bool>("is_closed")->get());
 	if (time > 0 && mSubProtectionSwitch->attribute<Bool>("is_closed")->get()) {
-		Real VRef = Math::abs(mNomVoltage);
-		Real V = mIntfVoltage(0, 0).real();
-		Real Vpu = V/VRef;
-
-		Real deltaV =  Vpu - 1;
-
-		mDeltaT = time - mPrevTime;
-		if (Math::abs(deltaV > 0.1))
+		if (mVconsSet)
 		{
-			if (mCounter > mSwitchDelayTime) {
+			Real VRef = Math::abs(mNomVoltage);
+			Real V = mIntfVoltage(0, 0).real();
+			Real Vpu = V / VRef;
+
+			Real deltaV = Vpu - 1;
+
+			mDeltaT = time - mPrevTime;
+			if (Math::abs(deltaV > 0.1))
+			{
+				if (mCounter > mSwitchDelayTime) {
+					mSwitchStateChange = true;
+					mSubProtectionSwitch->open();
+					mSLog->info("Opened Switch at {}", (float)time);
+					if (Vpu > 1) {
+						mSLog->info("Reason -> Overvoltage (Voltage at PCC: {} [p.u.])", Vpu);
+					}
+					else
+					{
+						mSLog->info("Reason -> Undervoltage (Voltage at PCC: {} [p.u.])", Vpu);
+					}
+
+					mSubProtectionSwitch->setValueChange(true);
+				}
+				mCounter = mCounter + mDeltaT;
+			}
+			else
+			{
+				mCounter = 0;
+			}
+		}
+		else if (mLoadSheddingSet)
+		{
+			if (time > mEventTime)
+			{
 				mSwitchStateChange = true;
 				mSubProtectionSwitch->open();
 				mSLog->info("Opened Switch at {}", (float)time);
-				if (Vpu > 1) {
-					mSLog->info("Reason -> Overvoltage (Voltage at PCC: {} [p.u.])", Vpu);
-				}
-				else
-				{
-					mSLog->info("Reason -> Undervoltage (Voltage at PCC: {} [p.u.])", Vpu);
-				}
-				
+				mSLog->info("Reason -> Load shedding (Pre defined event)");
 				mSubProtectionSwitch->setValueChange(true);
 			}
-			mCounter = mCounter + mDeltaT;
 		}
-		else
-		{
-			mCounter = 0;
-		}
+		mPrevTime = time;
 	}
-	mPrevTime = time;
+}
+
+void DP::Ph1::RXLoad::setLoadSheddingEvent(Real eventTime){
+	mEventTime = eventTime;
+	mLoadSheddingSet = true;
+}
+
+void DP::Ph1::RXLoad::setVoltageConstraints(Real Vmax, Real Vmin) {
+	mVmax = Vmax;
+	mVmin = Vmin;
+	mVconsSet = true;
 }
