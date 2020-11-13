@@ -133,6 +133,7 @@ void DP::Ph1::ShortCircuit::mnaApplySystemMatrixStamp(Matrix& systemMatrix) {
 }
 
 void DP::Ph1::ShortCircuit::MnaPreStep::execute(Real time, Int timeStepCount) {
+	mSC.mSubProtectionSwitch->setValueChange(false);
 	mSC.mnaApplyRightSideVectorStamp(mSC.mRightVector);
 	// NEW for protection switch
 	if (mSC.mEventSet) {

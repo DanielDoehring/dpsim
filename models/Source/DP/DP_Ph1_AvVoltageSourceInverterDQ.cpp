@@ -411,7 +411,7 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSetPoint(Real time){
 		//mQref = mQRefInput->get();
 
 	// calculate measured voltage with PT1
-	Real Vmeas = PT1ControlStep(mVpcc, mVppPrev, mVmeasPrev, 1, 0.01, mDeltaT);
+	Real Vmeas = PT1ControlStep(mVpcc, mVppPrev, mVmeasPrev, 1, 0.005, mDeltaT);
 	Vmeas = Vmeas > 0 ? Vmeas : 0;
 
 	// voltage difference wrt reference voltage of Control
@@ -474,7 +474,7 @@ void DP::Ph1::AvVoltageSourceInverterDQ::updateSetPoint(Real time){
 		}
 
 		//if (mFaultState) {
-		if (mFaultStartDelay > 0.05 && time > 0.2) {
+		if (mFaultStartDelay > 0.02 && time > 0.2) {
 			mSLog->info("Time: {}", time);
 			mSLog->info("Detected Fault at {} (with Delay of {})"
 				"\nVoltage Difference is {} [p.u.]. Allowed: +/- 0.1 p.u.", (float)time, mFaultStartDelay, mDeltaVNom);
@@ -658,6 +658,9 @@ Real DP::Ph1::AvVoltageSourceInverterDQ::PT1ControlStep(Real u, Real u_prev, Rea
 
 
 void DP::Ph1::AvVoltageSourceInverterDQ::MnaPreStep::execute(Real time, Int timeStepCount) {
+	// ##
+	mAvVoltageSourceInverterDQ.mSubProtectionSwitch->setValueChange(false);
+	// ## 
 	if (mAvVoltageSourceInverterDQ.mCtrlOn) {
 		MatrixComp vsDqOmegaS = MatrixComp::Zero(1,1);
 		vsDqOmegaS(0,0) = mAvVoltageSourceInverterDQ.rotatingFrame2to1(Complex(mAvVoltageSourceInverterDQ.mVsdq(0, 0), mAvVoltageSourceInverterDQ.mVsdq(1, 0)), mAvVoltageSourceInverterDQ.mOmegaN * time, mAvVoltageSourceInverterDQ.mThetaPLL);
